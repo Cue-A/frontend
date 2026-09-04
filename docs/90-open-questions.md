@@ -62,15 +62,16 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
 
 ## API 연동
 
-### Q5. 🟡 인증 방식이 정해지지 않았습니다
+### Q5. ✅ 인증은 헤더 `Authorization: Bearer` 입니다
 
+백엔드 `common/security/JwtAuthFilter.java` 를 확인했습니다. **쿠키가 아니라 헤더입니다.**
+토큰이 깨지면 `INVALID_TOKEN` 으로 401 이 옵니다.
+
+- **결정: `Authorization: Bearer <accessToken>` 헤더로 보냅니다.**
 - **결정: 환경변수 키는 `VITE_API_BASE_URL` · `VITE_USE_MOCK` 를 씁니다.**
-- **결정: 인증 토큰은 `shared/api` 한 곳에서만 붙입니다.** 쿠키로 오든 헤더로 오든
-  그 파일 하나만 고치면 되도록 설계합니다. 그래서 이 항목이 화면 작업을 막지 않습니다.
-- 남은 결정: **쿠키인지 헤더 토큰인지** — 백엔드 결정입니다.
-  백엔드 `docs/10-ai-client.md` 에도 "프론트 ↔ Spring 메시지 스키마는 백엔드가 자유롭게
-  설계" 라고만 있고 아직 정해진 게 없습니다. 백엔드 저장소 이슈로 요청해둡니다.
-- 걸리는 작업: 로그인 화면(막힘). `shared/api` 골격은 지금 만들 수 있습니다.
+- **결정: 토큰 부착은 `shared/api` 한 곳에서만 합니다.**
+- 아직 백엔드에 없는 것: **refresh token.** 지금은 access token 하나뿐이라 만료되면
+  재로그인밖에 없습니다. 로그인 화면을 만들기 전에 정해져야 합니다 → `Cue-A/backend#3`
 
 ### Q6a. 🟡 면접 중 대기 화면 (다음 질문 생성)
 
@@ -88,8 +89,25 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
   | `GENERATING` | 질문 준비 중 |
   | `SYNTHESIZING` | 음성 만드는 중 |
 
+- **메시지 형식도 이미 코드에 있습니다.** 공통 봉투는 `{ type, payload }` 이고,
+  연결 주소는 `/ws/interviews/{sessionId}` 입니다.
+
+  | `type` | payload |
+  |---|---|
+  | `progress` | `stage` (위 3종) |
+  | `question` | `questionId` `questionType` `text` `audioUrl` `audioAvailable` `category` `difficulty` `questionNumber` `questionTotal` |
+  | `error` | `errorCode` `message` `retryable` `needsRerecord` |
+  | `session-end` | 세션 종료 |
+
+  `questionType` 은 `QUESTION` / `FOLLOWUP` / `REASK` 이고, **진행률은 `questionNumber`
+  기준**입니다(되묻기에서는 올라가지 않습니다). `audioUrl` 이 null 이면 `audioAvailable`
+  로 이유를 구분합니다.
+
 - **타임아웃은 두 개입니다.** 세션 시작 **90초**, 답변 처리 **60초**.
   하나로 뭉치면 세션 시작에서 오탐이 납니다.
+
+- 아직 백엔드에 없는 것: **WebSocket 연결 인증.** 지금은 `sessionId` 만 알면 누구나 붙습니다.
+  프론트가 연결 시 무엇을 실어 보내야 하는지 아직 정해지지 않았습니다 → `Cue-A/backend#3`
 - 남은 결정: 타임아웃 후 안내 순서. 제안은 **재시도 → 계속 실패 시 "여기까지로 리포트 생성"**.
 - 하지 말 것
   - 무한 스피너 — 20초쯤이면 멈춘 줄 알고 새로고침하게 됩니다
