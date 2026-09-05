@@ -1,18 +1,28 @@
-import { ApiError } from './ApiError'
+import { getAccessToken } from './accessToken'
+import { ApiError } from './apiError'
 import { findMock, USE_MOCK } from './mock'
 import type { HttpMethod, Result } from './types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 /**
- * 인증을 붙이는 유일한 자리입니다.
- *
- * 쿠키 방식인지 헤더 토큰 방식인지 아직 안 정해져서(Q5) 지금은 아무것도
- * 붙이지 않습니다. 어느 쪽으로 정해지든 이 함수 하나만 고치면 되도록
- * 호출부는 전부 이 클라이언트를 거치게 두었습니다.
+ * 토큰을 붙이는 유일한 자리입니다.
+ * 백엔드는 쿠키가 아니라 `Authorization: Bearer` 헤더를 읽습니다 (Q5 결정).
+ * 토큰이 깨지면 INVALID_TOKEN 으로 401 이 옵니다.
  */
-function withAuth(init: RequestInit): RequestInit {
-  return init
+function buildHeaders(hasBody: boolean): HeadersInit {
+  const headers: Record<string, string> = {}
+
+  if (hasBody) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  const token = getAccessToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  return headers
 }
 
 async function parseResult<T>(response: Response): Promise<Result<T>> {
@@ -33,14 +43,13 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
     return mock() as T
   }
 
-  const response = await fetch(
-    `${BASE_URL}${path}`,
-    withAuth({
-      method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    }),
-  )
+  const hasBody = body !== undefined
+
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: buildHeaders(hasBody),
+    body: hasBody ? JSON.stringify(body) : undefined,
+  })
 
   const result = await parseResult<T>(response)
 
