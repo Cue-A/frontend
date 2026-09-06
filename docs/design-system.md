@@ -39,9 +39,8 @@
 
 임의로 채우지 않고 열어둔다.
 
-- **다크모드**: Figma 파일에 다크 변형이 없다. 다크 팔레트는 별도 논의 필요.
-- **`neutral-900`과 `neutral-1000`**: Figma 카드에 용도 설명이 둘 다 "제목·본문 기본색"으로 동일하게 적혀 있다 (§2.2 참고). 실수인지 의도인지 디자이너 확인 필요.
-- **타이포그래피 이름 유사**: `text-body-md`(14px)와 `text-body`(13px)처럼 이름이 비슷한 토큰이 있다 (§3.3). 원본 그대로 반영하되, 재검토를 권장한다.
+- **다크모드**: Figma 파일에 다크 변형이 없다. 다크 팔레트는 별도 논의 필요. (PR #1 리뷰: MVP 기능 개발 이후로 미룸)
+- **타이포그래피 이름 유사**: `text-body-md`(14px)와 `text-body`(13px)처럼 이름이 비슷한 토큰이 있다 (§3.3). 랜딩 전용이면 `text-landing-body`처럼 접두어로 구분 — 프론트 팀 상의 + 피그마 디자인 시스템 선수정 후 리팩토링 예정.
 
 ---
 
@@ -73,7 +72,6 @@
 | `neutral-500` (Text Sub) | `#70707B` | 보조 텍스트 · 캡션 |
 | `neutral-700` | `#46464F` | 중간 강도 텍스트 |
 | `neutral-900` (Text Strong) | `#26262B` | 제목 · 본문 기본색 |
-| `neutral-1000` (Text Black) | `#000000` | 제목 · 본문 기본색 ⚠️ (900과 설명 중복, §1.4 참고) |
 
 ### 2.3 Semantic
 
@@ -88,15 +86,15 @@
 
 *출처: Figma frame `954:2008`, "04 · 컬러 스펙"*
 
-배지는 위 팔레트와 별개로 **"메인 색(solid) + 동일 색상의 20% 배경 + 진한 텍스트"** 3색 규칙을 쓴다. 5종 모두 값을 그대로 옮긴다.
+배지는 위 팔레트와 별개로 **"메인 색(solid) + 동일 색상의 20% 배경 + 진한 텍스트"** 3색 규칙을 쓴다. 값은 primary/semantic과 완전히 동일하므로, 배지 내용(slug)이 아닌 **의미(semantic) 5종**으로 토큰화한다 — 배지 종류가 늘어도 토큰 수는 늘지 않는다 (PR #1 리뷰 반영).
 
-| 배지 | 메인(solid) | 배경(20% 톤) | 칩 텍스트 |
-|---|---|---|---|
-| 첫 연습 | `#5345F0` | `#E4E1FE` | `#3529AB` |
-| 3일 연속 | `#FF9500` | `#FFEEDA` | `#B36800` |
-| 압박 극복 | `#FF383C` | `#FFE1E2` | `#C41E22` |
-| 우상향 | `#0088FF` | `#D6EBFF` | `#0066CC` |
-| 10회 달성 | `#34C759` | `#DEF5E4` | `#1E7E38` |
+| 토큰 | 메인(solid) | 배경(20% 톤) | 칩 텍스트 | 적용 예 |
+|---|---|---|---|---|
+| `badge-brand` | `#5345F0` | `#E4E1FE` | `#3529AB` | 첫 연습 |
+| `badge-warning` | `#FF9500` | `#FFEEDA` | `#B36800` | 3일 연속 |
+| `badge-danger` | `#FF383C` | `#FFE1E2` | `#C41E22` | 압박 극복 |
+| `badge-info` | `#0088FF` | `#D6EBFF` | `#0066CC` | 우상향 |
+| `badge-success` | `#34C759` | `#DEF5E4` | `#1E7E38` | 10회 달성 |
 
 > 열려있는 결정: 이 3색을 매번 하드코딩할지, "메인 색 → 20% 배경 → 진한 텍스트"를 계산하는 공식(`color-mix()` 등)으로 만들지는 배지 종류가 더 늘어날 때 다시 판단.
 
@@ -220,8 +218,8 @@ Tailwind 기본 radius 스케일과 값이 달라 **오버라이드가 필요**�
   <p className="text-body-md text-neutral-500">기본 본문 텍스트</p>
 </div>
 
-// 배지: main/bg/text 3색 + radius-full
-<span className="w-fit rounded-full bg-badge-streak-3-bg px-3 py-1 text-body-sm text-badge-streak-3-text">
+// 배지: main/bg/text 3색 + radius-full (의미 5종 중 하나를 고른다)
+<span className="w-fit rounded-full bg-badge-warning-bg px-3 py-1 text-body-sm text-badge-warning-text">
   3일 연속
 </span>
 
@@ -230,7 +228,7 @@ Tailwind 기본 radius 스케일과 값이 달라 **오버라이드가 필요**�
 ```
 
 - 여백(padding/gap/margin)은 커스텀 토큰이 없다 — §5에서 설명했듯 Tailwind 기본 spacing 숫자(`p-6`, `gap-5` 등)를 그대로 쓰면 Figma 스펙과 맞다.
-- 새 배지가 추가되면 `--color-badge-<영문-slug>[-bg|-text]` 형식으로 `tokens.css`에 이어서 추가하고, 한글 배지명 → 영문 slug 매핑을 같은 파일 주석에 남긴다 (§2.4 참고).
+- 새 배지가 추가되면 새 토큰을 만들지 말고 `badge-brand/warning/danger/info/success` 5종 중 의미가 맞는 것을 그대로 재사용한다 (§2.4 참고).
 
 ---
 
@@ -238,6 +236,7 @@ Tailwind 기본 radius 스케일과 값이 달라 **오버라이드가 필요**�
 
 CSS 구현(`src/styles/tokens.css`)과 Figma 값 대조·실제 렌더링 검증까지는 완료된 상태. 남은 일:
 
-1. §1.4의 열린 질문(다크모드 부재, `neutral-900`/`neutral-1000` 용도 중복, `text-body-md`/`text-body` 이름 유사)을 디자이너와 확인
-2. §2.4 배지 영문 slug(`first-practice` 등)가 팀 컨벤션으로 문제없는지 확인 — 처음 도입하는 이름이라 리뷰 필요
-3. 프로젝트가 커져서 "이 색이 왜 여기 쓰였는지" 추적이 어려워지면, §1.1에서 미룬 Semantic 별칭 레이어 도입을 다시 검토
+1. §1.4의 열린 질문(다크모드 부재, `text-body-md`/`text-body` 이름 유사)을 디자이너·프론트 팀과 확인
+2. 프로젝트가 커져서 "이 색이 왜 여기 쓰였는지" 추적이 어려워지면, §1.1에서 미룬 Semantic 별칭 레이어 도입을 다시 검토
+
+> `neutral-1000` 삭제, 배지 토큰의 slug→semantic 리네이밍(`first-practice`→`badge-brand` 등)은 PR #1 리뷰 반영 완료.

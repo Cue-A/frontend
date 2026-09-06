@@ -40,7 +40,6 @@
   --color-neutral-500: #70707b; /* Text Sub · 보조 텍스트 · 캡션 */
   --color-neutral-700: #46464f; /* 중간 강도 텍스트 */
   --color-neutral-900: #26262b; /* Text Strong · 제목 · 본문 기본색 */
-  --color-neutral-1000: #000000; /* Text Black */
 
   /* ---------------------------------------------------------------------
    * Color · Semantic
@@ -54,29 +53,28 @@
   /* ---------------------------------------------------------------------
    * Color · Badge (컴포넌트 전용 팔레트)
    * 출처: docs/design-system.md §2.4 — "메인 solid + 동일색 20% 배경 + 진한 텍스트" 규칙
-   * 한글 배지명 → 영문 slug 매핑 (Figma에는 영문 토큰명이 없어 이번에 새로 붙임):
-   *   첫 연습 → first-practice · 3일 연속 → streak-3 · 압박 극복 → pressure
-   *   우상향 → uptrend · 10회 달성 → milestone-10
+   * 배지 종류(첫 연습, 3일 연속, 압박 극복 등)별이 아닌 의미(semantic)별로 5종만 둔다 —
+   * 배지가 늘어나도 토큰은 늘지 않으며, 값은 primary/semantic과 동일하다.
    * ------------------------------------------------------------------- */
-  --color-badge-first-practice: #5345f0;
-  --color-badge-first-practice-bg: #e4e1fe;
-  --color-badge-first-practice-text: #3529ab;
+  --color-badge-brand: #5345f0;
+  --color-badge-brand-bg: #e4e1fe;
+  --color-badge-brand-text: #3529ab;
 
-  --color-badge-streak-3: #ff9500;
-  --color-badge-streak-3-bg: #ffeeda;
-  --color-badge-streak-3-text: #b36800;
+  --color-badge-warning: #ff9500;
+  --color-badge-warning-bg: #ffeeda;
+  --color-badge-warning-text: #b36800;
 
-  --color-badge-pressure: #ff383c;
-  --color-badge-pressure-bg: #ffe1e2;
-  --color-badge-pressure-text: #c41e22;
+  --color-badge-danger: #ff383c;
+  --color-badge-danger-bg: #ffe1e2;
+  --color-badge-danger-text: #c41e22;
 
-  --color-badge-uptrend: #0088ff;
-  --color-badge-uptrend-bg: #d6ebff;
-  --color-badge-uptrend-text: #0066cc;
+  --color-badge-info: #0088ff;
+  --color-badge-info-bg: #d6ebff;
+  --color-badge-info-text: #0066cc;
 
-  --color-badge-milestone-10: #34c759;
-  --color-badge-milestone-10-bg: #def5e4;
-  --color-badge-milestone-10-text: #1e7e38;
+  --color-badge-success: #34c759;
+  --color-badge-success-bg: #def5e4;
+  --color-badge-success-text: #1e7e38;
 
   /* ---------------------------------------------------------------------
    * Font family
