@@ -13,6 +13,10 @@
  */
 
 @theme {
+  /* Tailwind 기본 팔레트/스케일과 이름이 겹쳐서 값이 섞이는 것을 막는다 */
+  --color-neutral-*: initial;
+  --radius-*: initial;
+
   /* ---------------------------------------------------------------------
    * Color · Primary
    * 출처: docs/design-system.md §2.1
