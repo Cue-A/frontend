@@ -303,7 +303,7 @@ chore:    빌드·설정·의존성
 스코프는 **어디를 건드렸는지**입니다. 도메인 이름이나 계층 이름을 씁니다.
 
 ```
-도메인   auth  user  document  interview  report  growth  company
+도메인   auth  user  document  interview  report  growth  company  landing
 계층     shared  ui  api  hooks  router  styles  types
 기타     build  deps  github  guide
 ```
