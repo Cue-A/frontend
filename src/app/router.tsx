@@ -13,19 +13,20 @@ import NotFoundPage from './NotFoundPage'
 import { ROUTES } from './routes'
 
 /**
- * 랜딩과 로그인은 사이드바가 없어서 껍데기 밖에 둡니다.
- * 그 외 화면은 AppLayout 안에서 그립니다.
+ * 껍데기(사이드바·헤더) 밖에서 그리는 화면입니다.
+ * 랜딩·로그인은 로그인 전 화면이고, 면접 진행·분석 중은 8/5 회의에서
+ * "화면을 꽉 차게, 사이드바 제거"로 정해졌습니다.
  */
 export const router = createBrowserRouter([
   { path: ROUTES.LANDING, element: <LandingPage /> },
   { path: ROUTES.LOGIN, element: <LoginPage /> },
+  { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
+  { path: ROUTES.ANALYZING, element: <AnalyzingPage /> },
   {
     element: <AppLayout />,
     children: [
       { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
       { path: ROUTES.DEVICE_CHECK, element: <DeviceCheckPage /> },
-      { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
-      { path: ROUTES.ANALYZING, element: <AnalyzingPage /> },
       { path: ROUTES.REPORT, element: <ReportPage /> },
     ],
   },
