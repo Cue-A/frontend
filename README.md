@@ -95,16 +95,22 @@ PR 을 올리기 전에 `npm run build` 를 한 번 돌려주세요.
 
 ## 4. 환경 변수
 
-아직 필요한 환경 변수가 없습니다. 백엔드를 붙이면서 추가하게 되면 아래 규칙을 씁니다.
-
-- 파일은 `.env.local` (git 에 올라가지 않음), 공유용 예시는 `.env.example`
-- **브라우저로 내려가는 값은 `VITE_` 접두어가 필요합니다.** 접두어가 없으면 Vite 가 주입하지 않습니다.
-- 접두어가 붙은 값은 번들에 그대로 박혀 누구나 볼 수 있습니다. **비밀 키를 넣지 마세요.**
+`.env.example` 을 `.env.local` 로 복사해서 씁니다. `.env.local` 은 git 에 올라가지 않습니다.
 
 ```bash
-# .env.local 예시
-VITE_API_BASE_URL=http://localhost:8080
+cp .env.example .env.local
 ```
+
+| 변수 | 설명 |
+|---|---|
+| `VITE_API_BASE_URL` | 백엔드 REST 기본 주소. 미정이면 비워둡니다 |
+| `VITE_USE_MOCK` | `true` 면 실제 API 대신 목업 응답을 씁니다 |
+
+백엔드가 준비되기 전에는 `VITE_USE_MOCK=true` 로 두고 화면을 만듭니다.
+실제 API 가 오면 스위치만 끄면 되고, 화면 코드는 건드리지 않습니다.
+
+- **브라우저로 내려가는 값은 `VITE_` 접두어가 필요합니다.** 접두어가 없으면 Vite 가 주입하지 않습니다.
+- 접두어가 붙은 값은 번들에 그대로 박혀 누구나 볼 수 있습니다. **비밀 키를 넣지 마세요.**
 
 ```ts
 const baseUrl = import.meta.env.VITE_API_BASE_URL
@@ -117,11 +123,16 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL
 ```
 src/
 ├── main.tsx          진입점
-├── App.tsx           라우트 루트
 ├── index.css         Tailwind · 폰트 · 디자인 토큰 import
-└── styles/
-    └── tokens.css    디자인 토큰 (@theme / @utility)
+├── app/              라우터 · 전역 프로바이더 · 공통 레이아웃
+├── shared/
+│   └── api/          apiClient · 에러 · 목업 스위치
+├── styles/
+│   └── tokens.css    디자인 토큰 (@theme / @utility)
+└── domain/{도메인}/   components · hooks · api · types
 ```
+
+`@/` 로 `src/` 를 가리킵니다. `import { api } from '@/shared/api/apiClient'` 처럼 씁니다.
 
 도메인 폴더가 늘어날 때의 구조와 파일 네이밍 규칙은
 [`docs/01-conventions.md`](./docs/01-conventions.md) 를 따릅니다.
