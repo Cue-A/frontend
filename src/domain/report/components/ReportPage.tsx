@@ -19,6 +19,9 @@ import TimelineSection from './TimelineSection'
  * 제목 · 종합 점수 → 리포트 옵션 → 안내 → 이번 면접 요약 → 세부 점수
  * → XAI 타임라인 → 개선 답변 예시 → 다음 단계
  *
+ * 사이드바 없이 혼자 그립니다. 시안에 사이드바가 없고 자체 상단바를 쓰기 때문에
+ * AppLayout 밖에 두었습니다. (router.tsx)
+ *
  * 색 · 타이포는 토큰이 dev 에 들어온 뒤에 한 번에 입힙니다.
  * 지금 임의 클래스를 쓰면 나중에 전부 되돌려야 해서 구조만 먼저 잡았습니다.
  */
@@ -28,12 +31,12 @@ export default function ReportPage() {
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
 
   if (isLoading) {
-    return <p>리포트를 불러오는 중이에요…</p>
+    return <p className="p-6">리포트를 불러오는 중이에요…</p>
   }
 
   if (error || !data) {
     return (
-      <section className="flex flex-col items-start gap-4">
+      <section className="flex flex-col items-start gap-4 p-6">
         <p>{error ?? '리포트를 찾을 수 없어요.'}</p>
         <ReportActions />
       </section>
@@ -45,7 +48,7 @@ export default function ReportPage() {
     : data.metrics.filter((metric) => metric.key !== 'vision')
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
       <ReportHeader report={data} />
 
       <ReportOptions

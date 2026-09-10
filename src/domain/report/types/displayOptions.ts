@@ -9,10 +9,6 @@ export type DisplayOptions = {
   showVision: boolean
 }
 
-/**
- * 시안에서는 "시선 지표 포함"이 꺼져 있는데 시선 줄은 그대로 보입니다.
- * 이 토글이 정확히 뭘 끄는 건지 확인이 필요해서, 일단 켜둔 상태를 기본으로 뒀습니다.
- */
 export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
   showTimeline: true,
   showImprovedAnswer: true,
