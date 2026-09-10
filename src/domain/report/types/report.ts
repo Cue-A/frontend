@@ -1,5 +1,5 @@
 /**
- * 리포트 화면이 쓰는 타입입니다.
+ * 리포트 화면(C-01)이 쓰는 타입입니다.
  *
  * 서버 응답 타입이 아니라 **화면용 타입**입니다. 백엔드 계약이 확정되면
  * `domain/report/api/` 에서 응답을 이 모양으로 변환합니다.
@@ -7,53 +7,100 @@
  * (docs/01-conventions.md "타입" 절)
  */
 
-export type ScoreBreakdown = {
-  /** 0~100 */
-  content: number
-  speech: number
-  vision: number
-  total: number
-}
-
-/** 답변 구간에서 눈에 띈 지점. 비어 있으면 타임라인을 그리지 않습니다. */
-export type TimelineMark = {
-  /** 턴 시작 기준 상대 초 */
-  start: number
-  end: number
+/** 세부 점수 항목. 디자인의 "세부 점수" 네 줄입니다. */
+export type ScoreMetric = {
+  key: string
   label: string
+  /** 0~100. 분석에 실패했으면 null 이고 막대 대신 사유를 보여줍니다 */
+  score: number | null
+  /** score 가 null 일 때만 씁니다. 예) '분석 실패' */
+  unavailableLabel: string | null
 }
 
-export type TurnReport = {
+/** 회복력, 답변 마무리처럼 100점 척도가 아닌 보조 지표입니다. */
+export type SubMetric = {
+  key: string
+  label: string
+  /** '75%', '4 / 5' 처럼 단위가 제각각이라 문자열로 받습니다 */
+  value: string
+  description: string
+}
+
+/** 질문 하나가 어땠는지. 디자인의 "면접 흐름" 한 줄입니다. */
+export type TurnFlow = {
   turnId: number
-  question: string
-  /** 답변 전문. 아직 정리 중이면 null */
-  transcript: string | null
-  scores: ScoreBreakdown | null
-  strength: string | null
-  weakness: string | null
-  /** 개선 답변 예시. 없으면 섹션을 숨깁니다 */
-  improvedAnswer: string | null
-  timeline: TimelineMark[]
+  /** 'Q1 자기소개' 처럼 번호까지 포함한 제목 */
+  title: string
+  comment: string
+  /** '안정' · '보통' · '흔들림' */
+  status: string
+  /** 영상 기준 시작 초. XAI 타임라인의 마커 위치로도 씁니다 */
+  startSeconds: number
+  /** 0~100. 아직 못 매겼으면 null */
+  score: number | null
+}
+
+/** 총 소요, 평균 답변처럼 면접 자체의 개요입니다. */
+export type OverviewFact = {
+  key: string
+  label: string
+  value: string
+}
+
+/** 회차 선택 칩 하나. */
+export type AttemptRef = {
+  attempt: number
+  reportId: string
+  isLatest: boolean
+}
+
+/** 지난 회차 대비 총점 변화. 첫 회차면 리포트에서 null 입니다. */
+export type ScoreDelta = {
+  fromAttempt: number
+  /** 오른 점수. 떨어졌으면 음수 */
+  diff: number
+}
+
+/** 개선 답변 예시. 한 질문에 대해서만 옵니다. */
+export type ImprovedAnswer = {
+  turnTitle: string
+  myAnswer: string
+  example: string
 }
 
 export type ReportSummary = {
-  overallComment: string
+  /** 한 줄 총평 */
+  verdict: string
+  overview: OverviewFact[]
+  turns: TurnFlow[]
   strengths: string[]
   weaknesses: string[]
-  /** 첫 회차면 null — "첫 연습입니다" 로 대체합니다 */
-  growthNarrative: string | null
-  priorityImprovement: string | null
 }
 
 export type Report = {
   reportId: string
-  /** 재연습 회차. 1 이면 첫 연습 */
-  attempt: number
-  totalAttempts: number
   companyName: string | null
   jobRole: string
-  createdAt: string
-  scores: ScoreBreakdown
+  /** 'YYYY.MM.DD' 로 이미 다듬어서 넘깁니다 */
+  interviewDate: string
+  questionCount: number
+
+  attempt: number
+  /** 회차 선택 칩에 쓸 목록 */
+  attempts: AttemptRef[]
+
+  /** 0~100 */
+  totalScore: number
+  totalScoreDelta: ScoreDelta | null
+
+  /** 시선 분석 실패처럼 화면 위에 띄울 안내. 없으면 빈 배열 */
+  notices: string[]
+
   summary: ReportSummary
-  turns: TurnReport[]
+  metrics: ScoreMetric[]
+  subMetrics: SubMetric[]
+  /** 세부 점수 소제목. 예) '2회차 대비 내용 구성이 가장 크게 좋아졌어요' */
+  metricsComment: string | null
+
+  improvedAnswer: ImprovedAnswer | null
 }

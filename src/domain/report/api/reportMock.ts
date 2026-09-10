@@ -4,55 +4,113 @@ import type { Report } from '../types/report'
 
 /**
  * 백엔드가 준비되기 전까지 화면을 그리기 위한 가짜 리포트입니다.
- * 실제 값이 아니라 **모양만** 맞춘 것이라, 계약이 확정되면 교체합니다.
+ * 값은 C-01 시안에 적힌 것을 그대로 옮겼습니다. 계약이 확정되면 교체합니다.
  *
- * 일부러 빈 값을 섞어두었습니다. 빈 필드일 때 섹션이 숨겨지는지
- * 확인해야 하기 때문입니다. (2번 턴은 timeline 과 improvedAnswer 가 비어 있음)
+ * 시안대로 **시선 분석이 실패한 상태**로 두었습니다. 빈 값·실패 값일 때
+ * 화면이 어떻게 되는지가 리포트에서 제일 자주 겪을 상황이기 때문입니다.
  */
 const SAMPLE_REPORT: Report = {
-  reportId: 'r1',
-  attempt: 2,
-  totalAttempts: 3,
-  companyName: '카카오',
-  jobRole: '프론트엔드 개발',
-  createdAt: '2026-09-10T14:32:00+09:00',
-  scores: { content: 78, speech: 64, vision: 71, total: 71 },
+  reportId: 'r3',
+  companyName: '네이버',
+  jobRole: '기획 직무',
+  interviewDate: '2026.07.18',
+  questionCount: 4,
+
+  attempt: 3,
+  attempts: [
+    { attempt: 1, reportId: 'r1', isLatest: false },
+    { attempt: 2, reportId: 'r2', isLatest: false },
+    { attempt: 3, reportId: 'r3', isLatest: true },
+  ],
+
+  totalScore: 82,
+  totalScoreDelta: { fromAttempt: 2, diff: 6 },
+
+  notices: [
+    '시선 분석에 실패해 시선 점수는 이번 회차에서 제외되었습니다. 말하기 · 내용 · 답변 마무리는 정상 분석되었습니다.',
+  ],
+
   summary: {
-    overallComment:
-      '질문 의도를 잘 파악했고 경험을 구체적으로 풀었습니다. 다만 말이 빨라지는 구간에서 문장이 끊겼습니다.',
-    strengths: ['질문 의도 파악이 정확함', '경험을 수치와 함께 설명함'],
-    weaknesses: ['답변 후반부에 말 속도가 빨라짐', '시선이 화면 아래로 자주 내려감'],
-    growthNarrative: '지난 회차보다 내용 점수가 12점 올랐습니다.',
-    priorityImprovement: '답변을 마무리할 때 한 박자 쉬고 결론을 말해보세요.',
+    verdict:
+      '자기소개와 협업 경험은 안정적으로 풀었지만, 3번 꼬리질문에서 흐름이 한 번 끊겼습니다. 끊긴 뒤 다시 페이스를 찾는 데 40초가 걸렸어요.',
+    overview: [
+      { key: 'total', label: '총 소요', value: '05:48' },
+      { key: 'average', label: '평균 답변', value: '1:27' },
+      { key: 'questions', label: '질문 수', value: '4문항' },
+      { key: 'style', label: '면접관 스타일', value: '압박형' },
+    ],
+    turns: [
+      {
+        turnId: 1,
+        title: 'Q1 자기소개',
+        comment: '두괄식으로 정리해 도입이 매끄러웠습니다',
+        status: '안정',
+        startSeconds: 12,
+        score: 82,
+      },
+      {
+        turnId: 2,
+        title: 'Q2 지원동기',
+        comment: '근거는 충분했지만 한 문장이 길어졌습니다',
+        status: '보통',
+        startSeconds: 105,
+        score: 79,
+      },
+      {
+        turnId: 3,
+        title: 'Q3 직무역량 · 압박 꼬리질문',
+        comment: '8초 침묵 후 답변이 추상적으로 흘렀습니다',
+        status: '흔들림',
+        startSeconds: 200,
+        score: 71,
+      },
+      {
+        turnId: 4,
+        title: 'Q4 협업경험',
+        comment: '사례가 구체적이어서 톤을 회복했습니다',
+        status: '안정',
+        startSeconds: 302,
+        score: 85,
+      },
+    ],
+    strengths: ['결론을 먼저 말하는 구조', '경험을 수치와 함께 제시'],
+    weaknesses: ['예상 밖 질문에서 침묵', '추상적 표현으로 마무리'],
   },
-  turns: [
+
+  metrics: [
+    { key: 'content', label: '내용', score: 84, unavailableLabel: null },
+    { key: 'speech', label: '말하기', score: 78, unavailableLabel: null },
     {
-      turnId: 1,
-      question: '자기소개를 1분 내로 해주세요.',
-      transcript:
-        '안녕하세요. 프론트엔드 개발자를 준비하고 있는 김희주입니다. 최근에는 팀 프로젝트에서 면접 코칭 서비스의 프론트엔드를 맡아 라우팅과 공통 레이아웃을 설계했습니다.',
-      scores: { content: 82, speech: 70, vision: 74, total: 75 },
-      strength: '경험을 역할 중심으로 설명했습니다.',
-      weakness: '마지막 문장이 흐려졌습니다.',
-      improvedAnswer:
-        '…라우팅과 공통 레이아웃을 설계했습니다. 덕분에 팀원 세 명이 서로 충돌 없이 화면을 만들 수 있었습니다.',
-      timeline: [
-        { start: 12.4, end: 15.1, label: '시선 이탈' },
-        { start: 38.2, end: 41.0, label: '말 속도 상승' },
-      ],
+      key: 'vision',
+      label: '시선',
+      score: null,
+      unavailableLabel: '분석 실패',
+    },
+    { key: 'closing', label: '답변 마무리', score: 76, unavailableLabel: null },
+  ],
+  subMetrics: [
+    {
+      key: 'resilience',
+      label: '회복력',
+      value: '75%',
+      description: '압박 질문(Q3) 이후 약 40초 만에 답변 안정도를 회복했어요.',
     },
     {
-      turnId: 2,
-      question: '협업 중 의견이 갈렸을 때 어떻게 해결했나요?',
-      transcript:
-        '타이포 토큰 이름을 두고 의견이 갈렸는데, 기존에 쓰이던 이름과 충돌한다는 지적을 받고 제 제안을 접었습니다.',
-      scores: { content: 74, speech: 58, vision: 68, total: 67 },
-      strength: '근거를 듣고 판단을 바꾼 점이 좋습니다.',
-      weakness: '결론을 먼저 말하면 더 명확했겠습니다.',
-      improvedAnswer: null,
-      timeline: [],
+      key: 'closing',
+      label: '답변 마무리',
+      value: '4 / 5',
+      description: '깔끔한 맺음 · 다음 연습에서는 결론을 먼저 말하기를 시도해보세요.',
     },
   ],
+  metricsComment: '2회차 대비 내용 구성이 가장 크게 좋아졌어요',
+
+  improvedAnswer: {
+    turnTitle: 'Q3 직무역량',
+    myAnswer:
+      '저는 데이터 분석 프로젝트에서 전처리를 담당했고 어… 랜덤 포레스트를 사용해서 성능을 좀 올렸습니다.',
+    example:
+      '이탈률 예측 프로젝트에서 전처리를 맡아, 결측 구간을 재정의해 학습 데이터를 12% 늘렸습니다. 그 결과 모델 F1이 0.71에서 0.78로 개선됐습니다.',
+  },
 }
 
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => ({
