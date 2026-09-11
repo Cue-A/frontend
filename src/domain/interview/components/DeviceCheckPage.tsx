@@ -83,7 +83,8 @@ export default function DeviceCheckPage() {
         <div>
           <h2>마이크 입력</h2>
           <div className="mt-3 h-8 w-full border">
-            <div style={{ width: `${Math.round(micLevel * 100)}%` }} className="h-full" />
+            {/* 색 토큰이 아직 없어 bg-current 로 임시 채움 처리 — 토큰 도입 시 교체 */}
+            <div style={{ width: `${Math.round(micLevel * 100)}%` }} className="h-full bg-current" />
           </div>
         </div>
       </div>

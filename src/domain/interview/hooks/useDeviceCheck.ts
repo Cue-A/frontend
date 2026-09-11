@@ -115,6 +115,11 @@ export function useDeviceCheck(): UseDeviceCheckResult {
 
     const buffer = new Uint8Array(analyser.fftSize)
 
+    // 배경 잡음을 0으로 접어두고, 그 위 구간만 증폭해 평소 대화 음량에서도
+    // 막대가 눈에 띄게 움직이도록 합니다.
+    const NOISE_FLOOR = 0.01
+    const GAIN = 6
+
     const tick = () => {
       analyser.getByteTimeDomainData(buffer)
 
@@ -124,8 +129,9 @@ export function useDeviceCheck(): UseDeviceCheckResult {
         sumSquares += normalized * normalized
       }
       const rms = Math.sqrt(sumSquares / buffer.length)
+      const level = rms <= NOISE_FLOOR ? 0 : Math.min(1, (rms - NOISE_FLOOR) * GAIN)
 
-      setMicLevel(Math.min(1, rms * 4))
+      setMicLevel(level)
       animationFrameRef.current = requestAnimationFrame(tick)
     }
 
