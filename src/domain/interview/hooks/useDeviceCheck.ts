@@ -14,6 +14,35 @@ function getErrorName(error: unknown): string | undefined {
   return undefined
 }
 
+const RESUME_TRIGGER_EVENTS = ['pointerdown', 'keydown', 'touchstart'] as const
+
+/**
+ * 크롬·사파리는 사용자 제스처 없이 만든 AudioContext 를 'suspended' 로 시작합니다.
+ * 마운트 시 자동으로 점검을 시작하므로 제스처가 없을 수 있어, 다음 클릭·키 입력에
+ * resume 을 걸어둡니다. 이미 실행 중이면 즉시 resume 만 시도하고 리스너는 달지 않습니다.
+ */
+function resumeOnNextUserGesture(audioContext: AudioContext): () => void {
+  audioContext.resume().catch(() => {})
+
+  if (audioContext.state !== 'suspended') {
+    return () => {}
+  }
+
+  const handleGesture = () => {
+    audioContext.resume().catch(() => {})
+  }
+
+  for (const eventName of RESUME_TRIGGER_EVENTS) {
+    document.addEventListener(eventName, handleGesture)
+  }
+
+  return () => {
+    for (const eventName of RESUME_TRIGGER_EVENTS) {
+      document.removeEventListener(eventName, handleGesture)
+    }
+  }
+}
+
 function classifyFailure(error: unknown): DeviceFailureReason {
   const name = getErrorName(error)
 
@@ -51,6 +80,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   const audioContextRef = useRef<AudioContext | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const mountedRef = useRef(true)
+  const removeResumeListenersRef = useRef<(() => void) | null>(null)
 
   const stopCamera = useCallback(() => {
     videoStreamRef.current?.getTracks().forEach((track) => track.stop())
@@ -63,6 +93,8 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
     }
+    removeResumeListenersRef.current?.()
+    removeResumeListenersRef.current = null
     if (audioContextRef.current) {
       audioContextRef.current.close().catch(() => {})
       audioContextRef.current = null
@@ -79,8 +111,9 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     analyser.fftSize = 512
     source.connect(analyser)
     audioContextRef.current = audioContext
+    removeResumeListenersRef.current = resumeOnNextUserGesture(audioContext)
 
-    const buffer = new Uint8Array(analyser.frequencyBinCount)
+    const buffer = new Uint8Array(analyser.fftSize)
 
     const tick = () => {
       analyser.getByteTimeDomainData(buffer)
