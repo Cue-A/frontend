@@ -40,7 +40,7 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
     if (!mock) {
       throw new ApiError('MOCK_NOT_FOUND', `등록된 목업 응답이 없습니다: ${method} ${path}`)
     }
-    return mock() as T
+    return mock(body) as T
   }
 
   const hasBody = body !== undefined

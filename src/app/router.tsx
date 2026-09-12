@@ -18,6 +18,7 @@ import { ROUTES } from './routes'
  * "화면을 꽉 차게, 사이드바 제거"로 정해졌습니다.
  * 장치 테스트는 면접 진행 직전 흐름이라 이탈을 막고 웹캠·마이크 UI 를
  * 넓게 쓰기 위해 함께 밖에 둡니다. (PR #4 리뷰)
+ * 리포트는 C-01 시안에 사이드바가 없고 자체 상단바를 씁니다.
  */
 export const router = createBrowserRouter([
   { path: ROUTES.LANDING, element: <LandingPage /> },
@@ -25,12 +26,10 @@ export const router = createBrowserRouter([
   { path: ROUTES.DEVICE_CHECK, element: <DeviceCheckPage /> },
   { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
   { path: ROUTES.ANALYZING, element: <AnalyzingPage /> },
+  { path: ROUTES.REPORT, element: <ReportPage /> },
   {
     element: <AppLayout />,
-    children: [
-      { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
-      { path: ROUTES.REPORT, element: <ReportPage /> },
-    ],
+    children: [{ path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> }],
   },
   { path: '*', element: <NotFoundPage /> },
 ])
