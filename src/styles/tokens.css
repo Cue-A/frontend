@@ -1,0 +1,177 @@
+/**
+ * Cue&A 디자인 토큰
+ *
+ * 규칙 문서: docs/design-system.md (반드시 함께 읽을 것 — 각 토큰의 출처 Figma node id,
+ * 용도, 아직 정해지지 않은 항목이 정리되어 있음)
+ *
+ * 구조: Primitive 단일 계층. Figma에 있는 이름을 그대로 가져온다.
+ *   예) primary-500 → bg-primary-500 / text-primary-500 / border-primary-500
+ *
+ * Tailwind 기본값과 이름이 같은 토큰(radius-xs/sm/md/lg)은 의도적으로 값을 덮어쓴다.
+ * 반대로 기본값과 값이 이미 일치하는 spacing, font-weight는 새로 정의하지 않고
+ * Tailwind 기본 유틸리티를 그대로 쓴다 (docs/design-system.md §5 참고).
+ */
+
+@theme {
+  /* Tailwind 기본 팔레트/스케일과 이름이 겹쳐서 값이 섞이는 것을 막는다 */
+  --color-neutral-*: initial;
+  --radius-*: initial;
+
+  /* ---------------------------------------------------------------------
+   * Color · Primary
+   * 출처: docs/design-system.md §2.1
+   * ------------------------------------------------------------------- */
+  --color-primary-100: #e4e1fe; /* 연한 배경 · 선택 상태 */
+  --color-primary-200: #c9c3fc; /* 보더 · 비활성 배경 */
+  --color-primary-400: #827ae1; /* 그라디언트 시작 */
+  --color-primary-500: #5345f0; /* Base · 기본 브랜드 · CTA */
+  --color-primary-600: #4436d4; /* Hover */
+  --color-primary-700: #3529ab; /* Pressed */
+
+  /* ---------------------------------------------------------------------
+   * Color · Neutral
+   * 출처: docs/design-system.md §2.2
+   * ------------------------------------------------------------------- */
+  --color-neutral-0: #ffffff; /* Card · 카드 · 모달 배경 */
+  --color-neutral-50: #f6f7fa; /* Page BG · 페이지 전체 배경 */
+  --color-neutral-200: #e5e5ea; /* Divider · 구분선 */
+  --color-neutral-300: #d4d4da; /* Border · 테두리 · 비활성 버튼 */
+  --color-neutral-400: #a8a8b3; /* Icon · 아이콘 · placeholder */
+  --color-neutral-500: #70707b; /* Text Sub · 보조 텍스트 · 캡션 */
+  --color-neutral-700: #46464f; /* 중간 강도 텍스트 */
+  --color-neutral-900: #26262b; /* Text Strong · 제목 · 본문 기본색 */
+
+  /* ---------------------------------------------------------------------
+   * Color · Semantic
+   * 출처: docs/design-system.md §2.3
+   * ------------------------------------------------------------------- */
+  --color-semantic-danger: #ff383c; /* 녹화 중 · 실패 · D-day */
+  --color-semantic-success: #34c759; /* 완료 상태 · 고득점 */
+  --color-semantic-info: #0088ff; /* 안내 메시지 · 정보 배지 */
+  --color-semantic-warning: #ff9500; /* 주의 · 환경품질 fair */
+
+  /* ---------------------------------------------------------------------
+   * Color · Badge (컴포넌트 전용 팔레트)
+   * 출처: docs/design-system.md §2.4 — "메인 solid + 동일색 20% 배경 + 진한 텍스트" 규칙
+   * 배지 종류(첫 연습, 3일 연속, 압박 극복 등)별이 아닌 의미(semantic)별로 5종만 둔다 —
+   * 배지가 늘어나도 토큰은 늘지 않으며, 값은 primary/semantic과 동일하다.
+   * ------------------------------------------------------------------- */
+  --color-badge-brand: #5345f0;
+  --color-badge-brand-bg: #e4e1fe;
+  --color-badge-brand-text: #3529ab;
+
+  --color-badge-warning: #ff9500;
+  --color-badge-warning-bg: #ffeeda;
+  --color-badge-warning-text: #b36800;
+
+  --color-badge-danger: #ff383c;
+  --color-badge-danger-bg: #ffe1e2;
+  --color-badge-danger-text: #c41e22;
+
+  --color-badge-info: #0088ff;
+  --color-badge-info-bg: #d6ebff;
+  --color-badge-info-text: #0066cc;
+
+  --color-badge-success: #34c759;
+  --color-badge-success-bg: #def5e4;
+  --color-badge-success-text: #1e7e38;
+
+  /* ---------------------------------------------------------------------
+   * Font family
+   * Pretendard Variable을 기본 sans로 덮어써서, 별도 클래스 없이도
+   * 전역 기본 폰트로 적용되게 한다 (font-sans 유틸리티도 동일하게 동작).
+   * ------------------------------------------------------------------- */
+  --font-sans:
+    'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Malgun Gothic', system-ui, Roboto, sans-serif;
+
+  /* ---------------------------------------------------------------------
+   * Radius
+   * 출처: docs/design-system.md §4 — 기존 9종을 5단계로 축소
+   * Tailwind 기본값(--radius-xs/sm/md/lg)과 값이 달라 의도적으로 덮어씀.
+   * radius-full은 별도 토큰 없이 Tailwind 기본 `rounded-full`(완전한 원)을 그대로 쓴다 —
+   * Tailwind의 rounded-full은 테마 변수가 아니라 고정 유틸리티라 999px과 시각적으로 동일함.
+   * ------------------------------------------------------------------- */
+  --radius-xs: 6px; /* 체크박스, 소형 태그 */
+  --radius-sm: 10px; /* 버튼, 입력창, 리스트 행 */
+  --radius-md: 14px; /* 사이드바 Nav 슬롯 */
+  --radius-lg: 20px; /* 카드, 모달, CTA 필 */
+
+  /* ---------------------------------------------------------------------
+   * Elevation (Shadow)
+   * 출처: docs/design-system.md §6
+   * ------------------------------------------------------------------- */
+  --shadow-card: 0px 2px 8px 0px rgba(38, 38, 43, 0.06); /* 기본 카드 */
+  --shadow-float: 0px 8px 24px 0px rgba(38, 38, 43, 0.1); /* 모달, 드롭다운 */
+}
+
+/* ---------------------------------------------------------------------
+ * Gradient
+ * 출처: docs/design-system.md §2.1 gradient-brand
+ * Tailwind의 color 테마 네임스페이스는 그라디언트 값을 담지 못해 @theme 밖 일반
+ * CSS 변수로 둔다. 사용 예: className="bg-[image:var(--gradient-brand)]"
+ * ------------------------------------------------------------------- */
+:root {
+  --gradient-brand: linear-gradient(90deg, var(--color-primary-400) 0%, var(--color-primary-500) 100%);
+}
+
+/* ---------------------------------------------------------------------
+ * Typography — 완성형 텍스트 스타일 유틸리티
+ * 출처: docs/design-system.md §3 — 크기 + 굵기 + 줄높이를 한 번에 묶어서,
+ * 클래스 하나만 붙이면 Figma 텍스트 스타일과 동일하게 렌더링되도록 한다.
+ * (font-family는 위 --font-sans 전역 설정을 그대로 상속받는다.)
+ * ------------------------------------------------------------------- */
+
+/* 코어 시스템 세트 (docs §3.2) */
+@utility text-display {
+  font-size: 30px;
+  font-weight: 700; /* Bold */
+  line-height: 39px; /* 홈 인사말, 대시보드 강조 숫자 */
+}
+@utility text-h1 {
+  font-size: 24px;
+  font-weight: 700; /* Bold */
+  line-height: 31px; /* 화면 제목 (홈, 면접 연습) */
+}
+@utility text-h2 {
+  font-size: 18px;
+  font-weight: 600; /* SemiBold */
+  line-height: 25px; /* 섹션 제목, 질문 카드 텍스트 */
+}
+@utility text-body-lg {
+  font-size: 16px;
+  font-weight: 600; /* SemiBold */
+  line-height: 24px; /* 버튼 라벨, 강조 본문 */
+}
+@utility text-body-md {
+  font-size: 14px;
+  font-weight: 400; /* Regular */
+  line-height: 21px; /* 기본 본문, 리스트 항목, 네비게이션 */
+}
+@utility text-body-sm {
+  font-size: 12px;
+  font-weight: 400; /* Regular */
+  line-height: 18px; /* 보조 설명, 타임스탬프, 배지 텍스트 */
+}
+@utility text-micro {
+  font-size: 11px;
+  font-weight: 400; /* Regular */
+  line-height: 16.5px; /* 이메일, 최소 메타 정보 */
+}
+
+/* 랜딩 확장 세트 (docs §3.3) — ⚠️ text-body-md(14px)와 text-body(13px) 혼동 주의 */
+@utility text-body {
+  font-size: 13px;
+  font-weight: 400; /* Regular */
+  line-height: 20px; /* 카드 설명, 랜딩 보조 문구 */
+}
+@utility text-subtitle {
+  font-size: 15px;
+  font-weight: 600; /* SemiBold */
+  line-height: 23px; /* 랜딩 스텝 소제목 */
+}
+@utility text-stat {
+  font-size: 17px;
+  font-weight: 700; /* Bold */
+  line-height: 22px; /* 리포트 타임라인 수치, 짧은 라벨 */
+}
