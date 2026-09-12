@@ -12,6 +12,13 @@ import ScoreSection from './ScoreSection'
 import SummarySection from './SummarySection'
 import TimelineSection from './TimelineSection'
 
+/** 분석이 안 끝났을 때 보여줄 문구입니다. COMPLETED 는 여기 오지 않습니다. */
+const ANALYSIS_MESSAGE: Record<string, string> = {
+  QUEUED: '분석을 기다리는 중이에요. 잠시 후 다시 확인해 주세요.',
+  PROCESSING: '아직 분석 중이에요. 끝나면 리포트가 채워집니다.',
+  FAILED: '분석에 실패했어요. 다시 연습해 주세요.',
+}
+
 /**
  * 면접 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
  *
@@ -38,6 +45,16 @@ export default function ReportPage() {
     return (
       <section className="flex flex-col items-start gap-4 p-6">
         <p>{error ?? '리포트를 찾을 수 없어요.'}</p>
+        <ReportActions />
+      </section>
+    )
+  }
+
+  // 분석이 끝나기 전에는 점수가 비어 있습니다. 그대로 그리면 0점처럼 보입니다.
+  if (data.analysisStatus !== 'COMPLETED') {
+    return (
+      <section className="flex flex-col items-start gap-4 p-6">
+        <p>{ANALYSIS_MESSAGE[data.analysisStatus]}</p>
         <ReportActions />
       </section>
     )

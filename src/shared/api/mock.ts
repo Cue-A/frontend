@@ -9,8 +9,14 @@ import type { HttpMethod } from './types'
  */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
-/** 경로 파라미터를 받습니다. 예) '/api/reports/:reportId' → { reportId: 'r1' } */
-type MockHandler = (params: Record<string, string>) => unknown
+/**
+ * 경로 파라미터와 요청 본문을 받습니다.
+ *   '/api/reports/:reportId' → params { reportId: 'r1' }
+ *
+ * body 는 POST · PATCH 처럼 보낸 값에 따라 응답이 달라져야 할 때 씁니다.
+ * 안 쓰는 핸들러는 첫 번째 인자만 받으면 됩니다. (PR #8 리뷰)
+ */
+type MockHandler = (params: Record<string, string>, body?: unknown) => unknown
 
 type MockRoute = {
   method: HttpMethod
@@ -25,6 +31,9 @@ const routes: MockRoute[] = []
  *
  * 경로에 `:이름` 을 쓰면 그 자리는 아무 값이나 받습니다.
  *   registerMock('GET', '/api/reports/:reportId', ({ reportId }) => ...)
+ *
+ * 보낸 값에 따라 응답이 달라져야 하면 두 번째 인자로 본문을 받습니다.
+ *   registerMock('POST', '/api/interviews', (_params, body) => ...)
  *
  * 계약 타입과 AI 더미 JSON 이전은 별도 이슈로 진행합니다.
  * 옛 레포의 fixtures 가 snake_case 라 그대로 옮기면 컨벤션(camelCase)과
@@ -41,7 +50,7 @@ export function findMock(method: HttpMethod, path: string) {
     if (route.method !== method) continue
 
     const params = match(route.segments, actual)
-    if (params) return () => route.handler(params)
+    if (params) return (body?: unknown) => route.handler(params, body)
   }
 
   return undefined

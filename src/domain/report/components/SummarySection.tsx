@@ -56,7 +56,7 @@ export default function SummarySection({ summary, subtitle }: Props) {
             <h3>잘한 점</h3>
             <ul>
               {summary.strengths.map((item) => (
-                <li key={item}>{item}</li>
+                <li key={item.text}>{item.text}</li>
               ))}
             </ul>
           </div>
@@ -67,7 +67,7 @@ export default function SummarySection({ summary, subtitle }: Props) {
             <h3>아쉬운 점</h3>
             <ul>
               {summary.weaknesses.map((item) => (
-                <li key={item}>{item}</li>
+                <li key={item.text}>{item.text}</li>
               ))}
             </ul>
           </div>

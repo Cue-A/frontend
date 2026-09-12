@@ -36,8 +36,22 @@ export type TurnFlow = {
   status: string
   /** 영상 기준 시작 초. XAI 타임라인의 마커 위치로도 씁니다 */
   startSeconds: number
+  /** 영상 기준 종료 초. 구간 재생에 씁니다. 아직 없으면 null (PR #8 리뷰) */
+  endSeconds: number | null
   /** 0~100. 아직 못 매겼으면 null */
   score: number | null
+}
+
+/**
+ * 잘한 점 · 아쉬운 점 한 줄입니다.
+ *
+ * 지금 화면은 글만 보여주지만, 영상 구간으로 이동하는 기능이 붙을 예정이라
+ * 시각을 담을 자리를 열어둡니다. 없으면 null 입니다. (PR #8 리뷰)
+ */
+export type Highlight = {
+  text: string
+  startSeconds: number | null
+  endSeconds: number | null
 }
 
 /** 총 소요, 평균 답변처럼 면접 자체의 개요입니다. */
@@ -73,12 +87,24 @@ export type ReportSummary = {
   verdict: string
   overview: OverviewFact[]
   turns: TurnFlow[]
-  strengths: string[]
-  weaknesses: string[]
+  strengths: Highlight[]
+  weaknesses: Highlight[]
 }
+
+/**
+ * 분석 진행 상태입니다.
+ *
+ * 리포트 주소로 바로 들어오거나 새로고침하면 아직 분석이 안 끝났을 수 있습니다.
+ * 그때 빈 리포트를 그리면 "점수가 0점"처럼 보여서 상태를 따로 받습니다.
+ * 진행 중 화면 자체는 분석 중 페이지가 담당합니다. (PR #8 리뷰)
+ */
+export type AnalysisStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
 
 export type Report = {
   reportId: string
+  /** 면접 세션과 1:1 입니다. 면접이 끝나면 sessionId 로 리포트를 찾아옵니다 */
+  sessionId: string
+  analysisStatus: AnalysisStatus
   companyName: string | null
   jobRole: string
   /** 'YYYY.MM.DD' 로 이미 다듬어서 넘깁니다 */

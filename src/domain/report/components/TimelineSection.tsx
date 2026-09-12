@@ -32,7 +32,11 @@ export default function TimelineSection({ turns }: Props) {
         {turns.map((turn) => (
           <li key={turn.turnId} className="flex flex-wrap items-center gap-4 border p-4">
             <span className="min-w-0 flex-1">{turn.title}</span>
-            <span className="tabular-nums">{formatSeconds(turn.startSeconds)}</span>
+            <span className="tabular-nums">
+              {turn.endSeconds === null
+                ? formatSeconds(turn.startSeconds)
+                : `${formatSeconds(turn.startSeconds)} – ${formatSeconds(turn.endSeconds)}`}
+            </span>
             <span className="w-16 text-right tabular-nums">
               {turn.score === null ? '—' : `${turn.score}점`}
             </span>

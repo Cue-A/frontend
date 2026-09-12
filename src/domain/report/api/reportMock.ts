@@ -11,6 +11,8 @@ import type { Report } from '../types/report'
  */
 const SAMPLE_REPORT: Report = {
   reportId: 'r3',
+  sessionId: 's3',
+  analysisStatus: 'COMPLETED',
   companyName: '네이버',
   jobRole: '기획 직무',
   interviewDate: '2026.07.18',
@@ -46,6 +48,7 @@ const SAMPLE_REPORT: Report = {
         comment: '두괄식으로 정리해 도입이 매끄러웠습니다',
         status: '안정',
         startSeconds: 12,
+        endSeconds: 95,
         score: 82,
       },
       {
@@ -54,6 +57,7 @@ const SAMPLE_REPORT: Report = {
         comment: '근거는 충분했지만 한 문장이 길어졌습니다',
         status: '보통',
         startSeconds: 105,
+        endSeconds: 190,
         score: 79,
       },
       {
@@ -62,6 +66,7 @@ const SAMPLE_REPORT: Report = {
         comment: '8초 침묵 후 답변이 추상적으로 흘렀습니다',
         status: '흔들림',
         startSeconds: 200,
+        endSeconds: 295,
         score: 71,
       },
       {
@@ -70,11 +75,19 @@ const SAMPLE_REPORT: Report = {
         comment: '사례가 구체적이어서 톤을 회복했습니다',
         status: '안정',
         startSeconds: 302,
+        endSeconds: 348,
         score: 85,
       },
     ],
-    strengths: ['결론을 먼저 말하는 구조', '경험을 수치와 함께 제시'],
-    weaknesses: ['예상 밖 질문에서 침묵', '추상적 표현으로 마무리'],
+    strengths: [
+      { text: '결론을 먼저 말하는 구조', startSeconds: 14, endSeconds: 29 },
+      { text: '경험을 수치와 함께 제시', startSeconds: 316, endSeconds: 334 },
+    ],
+    weaknesses: [
+      { text: '예상 밖 질문에서 침묵', startSeconds: 208, endSeconds: 216 },
+      // 시각을 못 잡은 경우도 섞어둡니다
+      { text: '추상적 표현으로 마무리', startSeconds: null, endSeconds: null },
+    ],
   },
 
   metrics: [
