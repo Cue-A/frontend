@@ -12,6 +12,7 @@ import {
   DELIVERY_MODES,
   INTERVIEWER_STYLES,
   JOB_ROLES,
+  NO_TIME_LIMIT,
   QUESTION_COUNT_CHOICES,
   type Company,
 } from '../types/sessionSetup'
@@ -109,8 +110,13 @@ export default function SessionSetupPage() {
             <label className="flex min-w-60 flex-1 flex-col gap-2">
               <span>시간</span>
               <select
-                value={String(setup.answerSeconds)}
-                onChange={(event) => patch({ answerSeconds: Number(event.target.value) })}
+                value={setup.answerSeconds === null ? NO_TIME_LIMIT : String(setup.answerSeconds)}
+                onChange={(event) =>
+                  patch({
+                    answerSeconds:
+                      event.target.value === NO_TIME_LIMIT ? null : Number(event.target.value),
+                  })
+                }
                 className="border px-3 py-2"
               >
                 {ANSWER_SECONDS_CHOICES.map((choice) => (

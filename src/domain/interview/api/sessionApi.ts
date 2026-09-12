@@ -21,6 +21,7 @@ function toCreateBody(setup: SessionSetup) {
   return {
     jobRole: setup.jobRole,
     questionCount: setup.questionCount,
+    // "제한 없음"이면 null 입니다. 서버가 이걸 어떻게 받는지 확인이 필요합니다
     answerSeconds: setup.answerSeconds,
     interviewerStyle: setup.interviewerStyle,
     deliveryMode: setup.deliveryMode,

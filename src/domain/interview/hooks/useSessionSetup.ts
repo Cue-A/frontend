@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { SessionSetup } from '../types/sessionSetup'
+import { CUSTOM_COMPANY, type SessionSetup } from '../types/sessionSetup'
 
 const INITIAL_SETUP: SessionSetup = {
   jobRole: null,
@@ -43,8 +43,14 @@ export function useSessionSetup(): UseSessionSetupResult {
   if (!setup.interviewerStyle) missing.push('면접관 스타일')
 
   // 기업 맞춤 질문을 켰으면 어느 기업인지까지 골라야 합니다.
-  if (setup.useCompanyQuestion && !setup.companyId) {
-    missing.push('기업 선택')
+  // "직접 입력"을 골랐으면 인재상도 받아야 합니다. companyId 만 보면
+  // CUSTOM 이 truthy 라 통과해서, 인재상이 빈 채로 서버에 갑니다. (PR #13 리뷰)
+  if (setup.useCompanyQuestion) {
+    if (!setup.companyId) {
+      missing.push('기업 선택')
+    } else if (setup.companyId === CUSTOM_COMPANY && !setup.customCulture.trim()) {
+      missing.push('인재상 입력')
+    }
   }
 
   return {

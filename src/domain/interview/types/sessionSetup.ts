@@ -37,11 +37,21 @@ export const DELIVERY_MODES: Choice<DeliveryMode>[] = [
   { value: 'VOICE_ONLY', label: '음성만 듣기' },
 ]
 
-/** 답변 시간(초). 시안의 "질문당 90초" 가 기본값입니다. */
+/** 답변 시간을 "제한 없음"으로 둘 때 쓰는 값입니다. */
+export const NO_TIME_LIMIT = 'NONE'
+
+/**
+ * 답변 시간(초). 시안의 "질문당 90초" 가 기본값입니다.
+ *
+ * 기능명세서 INT-2 에 "질문당 응답 제한 시간 또는 제한 없음"으로 되어 있어
+ * 제한 없음을 넣었습니다. 나머지 값은 아직 확정이 아닙니다.
+ * (docs/90-open-questions.md Q10)
+ */
 export const ANSWER_SECONDS_CHOICES: Choice<string>[] = [
   { value: '60', label: '질문당 60초' },
   { value: '90', label: '질문당 90초' },
   { value: '120', label: '질문당 120초' },
+  { value: NO_TIME_LIMIT, label: '제한 없음' },
 ]
 
 export const QUESTION_COUNT_CHOICES: Choice<string>[] = [
@@ -75,7 +85,8 @@ export type SessionSetup = {
   /** companyId 가 CUSTOM 일 때만 씁니다 */
   customCulture: string
 
-  answerSeconds: number
+  /** 초. "제한 없음"이면 null */
+  answerSeconds: number | null
   questionCount: number
   interviewerStyle: InterviewerStyle | null
   deliveryMode: DeliveryMode

@@ -56,7 +56,10 @@ export default function SetupSummary({
     { label: '자기소개서', value: setup.resume ? '1개 연결됨' : NOT_SELECTED },
     { label: '기업 맞춤 질문', value: companyLabel(setup, companies) },
     { label: '질문 수', value: `${setup.questionCount}문항` },
-    { label: '답변 시간', value: `질문당 ${setup.answerSeconds}초` },
+    {
+      label: '답변 시간',
+      value: setup.answerSeconds === null ? '제한 없음' : `질문당 ${setup.answerSeconds}초`,
+    },
     { label: '면접관', value: labelOf(INTERVIEWER_STYLES, setup.interviewerStyle) },
     { label: '진행 방식', value: labelOf(DELIVERY_MODES, setup.deliveryMode) },
   ]
@@ -75,7 +78,13 @@ export default function SetupSummary({
           ))}
         </dl>
 
-        <p className="border p-3 text-center tabular-nums">총 예상 소요 {minutes}분</p>
+        {/*
+          어림값이라 "약"을 붙입니다. 질문 간 대기가 5~15초로 들쭉날쭉하고
+          답변 길이도 사람마다 달라서 정확한 값처럼 보이면 안 됩니다. (PR #13 리뷰)
+        */}
+        <p className="border p-3 text-center tabular-nums">
+          {minutes === null ? '답변 시간에 따라 달라져요' : `총 예상 소요 약 ${minutes}분`}
+        </p>
       </section>
 
       <section aria-label="다음 단계" className="flex flex-col gap-1 border p-4">
