@@ -97,7 +97,15 @@ export default function DeviceCheckPage() {
         </ul>
       </div>
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-col items-end gap-2">
+        {/*
+          INT-4 미확정 사항, 이슈 #9: 카메라 필수 여부 정책이 아직 확정되지 않았습니다.
+          canStartInterview 의 임시 정책(마이크만 필수)과 맞춰 카메라 실패는 시작을
+          막지 않고 안내만 합니다. 정책이 카메라도 필수로 바뀌면 이 안내를 시작
+          차단 사유로 옮겨야 합니다.
+        */}
+        {camera.status === 'failed' && <p>카메라 없이 진행하면 시선 점수는 나오지 않아요</p>}
+
         <button type="button" disabled={!canStart} onClick={handleStart} className="border px-6 py-3">
           면접 시작하기
         </button>
