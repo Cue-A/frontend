@@ -32,7 +32,7 @@ export default function ChipGroup<T extends string>({
     <fieldset className="flex flex-col gap-3">
       <legend className="flex items-center gap-2 text-body-lg text-neutral-900">
         {label}
-        {required && <Badge tone="brand">필수</Badge>}
+        {required && <Badge tone="danger">필수</Badge>}
       </legend>
 
       <div className="flex flex-wrap gap-2">

@@ -1,5 +1,3 @@
-import Card from '@/shared/ui/Card'
-
 import { CUSTOM_COMPANY, type Company } from '../types/sessionSetup'
 
 const QUICK_TAGS = ['도전정신', '고객 중심', '수평적 소통', '빠른 실행력']
@@ -45,9 +43,12 @@ export default function CompanyQuestionSection({
   }
 
   return (
-    <Card label="기업 맞춤 질문" className="flex flex-col gap-4">
+    <section
+      aria-label="기업 맞춤 질문"
+      className="flex flex-col gap-4 rounded-sm bg-neutral-50 p-5"
+    >
       <label className="flex cursor-pointer items-center justify-between gap-4">
-        <span className="text-body-lg text-neutral-900">기업 맞춤 질문</span>
+        <span className="text-body-lg font-semibold text-neutral-900">기업 맞춤 질문</span>
 
         <input
           type="checkbox"
@@ -77,12 +78,12 @@ export default function CompanyQuestionSection({
       {enabled && (
         <>
           <p className="text-body-md text-neutral-500">
-            등록된 기업의 인재상 데이터를 질문에 반영합니다. 목록에 없는 기업은 &quot;직접
-            입력&quot;을 골라 인재상을 알려주세요.
+            약 30개 기업의 인재상 데이터가 등록되어 있어요. 목록에 없는 기업은 &quot;직접
+            입력&quot;을 선택해 인재상을 알려주세요.
           </p>
 
           <label className="flex flex-col gap-2">
-            <span className="text-body-md text-neutral-700">기업</span>
+            <span className="text-body-md text-neutral-700">기업 선택</span>
             <select
               value={companyId ?? ''}
               onChange={(event) => onSelectCompany(event.target.value)}
@@ -121,7 +122,7 @@ export default function CompanyQuestionSection({
                     key={tag}
                     type="button"
                     onClick={() => appendTag(tag)}
-                    className="rounded-full border border-neutral-200 px-3 py-1 text-body-sm text-neutral-700 transition-colors hover:bg-neutral-50"
+                    className="rounded-full border border-primary-200 bg-neutral-0 px-3 py-1 text-body-sm text-primary-600 transition-colors hover:bg-primary-100"
                   >
                     + {tag}
                   </button>
@@ -131,6 +132,6 @@ export default function CompanyQuestionSection({
           )}
         </>
       )}
-    </Card>
+    </section>
   )
 }
