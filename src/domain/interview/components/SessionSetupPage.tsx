@@ -23,14 +23,18 @@ import ResumeField from './ResumeField'
 import SetupSummary from './SetupSummary'
 import StepIndicator from './StepIndicator'
 
+/** 셀렉트 모양은 기업 맞춤 질문 쪽과 같습니다. */
+const FIELD_CLASS =
+  'rounded-sm border border-neutral-200 bg-neutral-0 px-4 py-3 text-body-md text-neutral-900'
+
 /**
  * 면접 옵션 설정 화면입니다. (A-05)
  *
- * 왼쪽에서 조건을 고르고 오른쪽 요약에서 확인한 뒤 장치 테스트로 넘어갑니다.
- * 좁은 화면에서는 요약이 아래로 내려갑니다.
+ * 시안대로 한 줄로 쌓습니다. 위에서부터 단계 표시 → 제목 → 직무 → 자기소개서
+ * → 기업 맞춤 질문 → 시간 · 질문수 → 면접관 스타일 → 텍스트/음성 → 요약 · 다음 단계.
  *
- * 색 · 타이포는 토큰이 dev 에 들어온 뒤에 한 번에 입힙니다.
- * 지금 임의 클래스를 쓰면 나중에 전부 되돌려야 해서 구조만 먼저 잡았습니다.
+ * 시안에는 설정 요약이 없지만, 폼이 길어서 아래까지 내려가면 위에서 뭘
+ * 골랐는지 안 보입니다. 요약은 오른쪽 패널 대신 폼 아래에 남겼습니다.
  */
 export default function SessionSetupPage() {
   const navigate = useNavigate()
@@ -76,100 +80,94 @@ export default function SessionSetupPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
       <StepIndicator current={1} />
 
-      <div className="flex flex-wrap items-start gap-6">
-        <section className="flex min-w-80 flex-[2] flex-col gap-8 border p-6">
-          <div className="flex flex-col gap-1">
-            <h1>면접 옵션 설정</h1>
-            <p>면접할 조건을 선택해주세요</p>
-          </div>
-
-          <ChipGroup
-            label="직무 선택"
-            required
-            choices={JOB_ROLES}
-            value={setup.jobRole}
-            onChange={(jobRole) => patch({ jobRole })}
-          />
-
-          <ResumeField resume={setup.resume} onChange={(resume) => patch({ resume })} />
-
-          <CompanyQuestionSection
-            enabled={setup.useCompanyQuestion}
-            companies={companies}
-            companyId={setup.companyId}
-            customCulture={setup.customCulture}
-            onToggle={(useCompanyQuestion) => patch({ useCompanyQuestion })}
-            onSelectCompany={(companyId) => patch({ companyId })}
-            onChangeCulture={(customCulture) => patch({ customCulture })}
-          />
-
-          <div className="flex flex-wrap gap-6">
-            <label className="flex min-w-60 flex-1 flex-col gap-2">
-              <span>시간</span>
-              <select
-                value={setup.answerSeconds === null ? NO_TIME_LIMIT : String(setup.answerSeconds)}
-                onChange={(event) =>
-                  patch({
-                    answerSeconds:
-                      event.target.value === NO_TIME_LIMIT ? null : Number(event.target.value),
-                  })
-                }
-                className="border px-3 py-2"
-              >
-                {ANSWER_SECONDS_CHOICES.map((choice) => (
-                  <option key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex min-w-60 flex-1 flex-col gap-2">
-              <span>질문수</span>
-              <select
-                value={String(setup.questionCount)}
-                onChange={(event) => patch({ questionCount: Number(event.target.value) })}
-                className="border px-3 py-2"
-              >
-                {QUESTION_COUNT_CHOICES.map((choice) => (
-                  <option key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <ChipGroup
-            label="면접관 스타일"
-            required
-            choices={INTERVIEWER_STYLES}
-            value={setup.interviewerStyle}
-            onChange={(interviewerStyle) => patch({ interviewerStyle })}
-          />
-
-          <ChipGroup
-            label="진행 방식"
-            choices={DELIVERY_MODES}
-            value={setup.deliveryMode}
-            onChange={(deliveryMode) => patch({ deliveryMode })}
-          />
-        </section>
-
-        <aside className="min-w-72 flex-1">
-          <SetupSummary
-            setup={setup}
-            companies={companies}
-            missing={missing}
-            isStarting={isStarting}
-            error={error}
-            onStart={handleStart}
-          />
-        </aside>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-h1 text-neutral-900">면접 옵션 설정</h1>
+        <p className="text-body-md text-neutral-500">연습할 면접 조건을 선택해주세요</p>
       </div>
+
+      <ChipGroup
+        label="직무 선택"
+        required
+        choices={JOB_ROLES}
+        value={setup.jobRole}
+        onChange={(jobRole) => patch({ jobRole })}
+      />
+
+      <ResumeField resume={setup.resume} onChange={(resume) => patch({ resume })} />
+
+      <CompanyQuestionSection
+        enabled={setup.useCompanyQuestion}
+        companies={companies}
+        companyId={setup.companyId}
+        customCulture={setup.customCulture}
+        onToggle={(useCompanyQuestion) => patch({ useCompanyQuestion })}
+        onSelectCompany={(companyId) => patch({ companyId })}
+        onChangeCulture={(customCulture) => patch({ customCulture })}
+      />
+
+      <div className="flex flex-wrap gap-6">
+        <label className="flex min-w-52 flex-1 flex-col gap-2">
+          <span className="text-body-lg text-neutral-900">시간</span>
+          <select
+            value={setup.answerSeconds === null ? NO_TIME_LIMIT : String(setup.answerSeconds)}
+            onChange={(event) =>
+              patch({
+                answerSeconds:
+                  event.target.value === NO_TIME_LIMIT ? null : Number(event.target.value),
+              })
+            }
+            className={FIELD_CLASS}
+          >
+            {ANSWER_SECONDS_CHOICES.map((choice) => (
+              <option key={choice.value} value={choice.value}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex min-w-52 flex-1 flex-col gap-2">
+          <span className="text-body-lg text-neutral-900">질문수</span>
+          <select
+            value={String(setup.questionCount)}
+            onChange={(event) => patch({ questionCount: Number(event.target.value) })}
+            className={FIELD_CLASS}
+          >
+            {QUESTION_COUNT_CHOICES.map((choice) => (
+              <option key={choice.value} value={choice.value}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <ChipGroup
+        label="면접관 스타일"
+        required
+        choices={INTERVIEWER_STYLES}
+        value={setup.interviewerStyle}
+        onChange={(interviewerStyle) => patch({ interviewerStyle })}
+      />
+
+      <ChipGroup
+        label="텍스트/음성"
+        choices={DELIVERY_MODES}
+        value={setup.deliveryMode}
+        onChange={(deliveryMode) => patch({ deliveryMode })}
+      />
+
+      <SetupSummary
+        setup={setup}
+        companies={companies}
+        missing={missing}
+        isStarting={isStarting}
+        error={error}
+        onStart={handleStart}
+      />
     </div>
   )
 }

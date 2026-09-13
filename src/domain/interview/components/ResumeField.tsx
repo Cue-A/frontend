@@ -1,5 +1,9 @@
 import { useRef } from 'react'
 
+import Badge from '@/shared/ui/Badge'
+import Button from '@/shared/ui/Button'
+import Card from '@/shared/ui/Card'
+
 import type { ResumeFile } from '../types/sessionSetup'
 
 type Props = {
@@ -29,29 +33,32 @@ export default function ResumeField({ resume, onChange }: Props) {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="flex items-center gap-2">
+      <h2 className="flex items-center gap-2 text-body-lg text-neutral-900">
         자기소개서 불러오기
-        <span className="border px-2 py-0.5">필수</span>
+        <Badge tone="brand">필수</Badge>
       </h2>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 border p-4">
+      <Card padding="sm" className="flex flex-wrap items-center justify-between gap-4">
         {resume ? (
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate">{resume.name}</span>
-            <span>{formatSize(resume.size)}</span>
+          <span className="flex min-w-0 items-center gap-3">
+            {/* 시안의 파일 썸네일 자리입니다. 미리보기는 파싱이 붙은 뒤에 채웁니다. */}
+            <span aria-hidden className="h-10 w-10 shrink-0 rounded-sm bg-neutral-200" />
+
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-body-md text-neutral-900">{resume.name}</span>
+              <span className="text-body-sm text-neutral-400">{formatSize(resume.size)}</span>
+            </span>
           </span>
         ) : (
-          <span>아직 올린 파일이 없어요. PDF 또는 워드 파일을 올려주세요.</span>
+          <span className="text-body-md text-neutral-500">
+            아직 올린 파일이 없어요. PDF 또는 워드 파일을 올려주세요.
+          </span>
         )}
 
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="shrink-0 border px-4 py-2"
-        >
+        <Button size="sm" onClick={() => inputRef.current?.click()} className="shrink-0">
           {resume ? '불러오기/변경' : '불러오기'}
-        </button>
-      </div>
+        </Button>
+      </Card>
 
       <input
         ref={inputRef}
