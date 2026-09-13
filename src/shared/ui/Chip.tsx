@@ -1,13 +1,10 @@
 import type { ReactNode } from 'react'
 
-/**
- * 토큰이 들어오면 여기만 채우면 됩니다.
- * 예정) selected: 'bg-primary-100 border-primary-500 text-primary-700'
- */
-const SELECTED_CLASS = 'border'
-const UNSELECTED_CLASS = 'border'
+const SELECTED_CLASS = 'border-primary-500 bg-primary-100 text-primary-700 font-semibold'
+const UNSELECTED_CLASS = 'border-neutral-300 text-neutral-700 hover:bg-neutral-50'
 
-const BASE_CLASS = 'inline-flex items-center gap-2 px-4 py-2'
+const BASE_CLASS =
+  'inline-flex items-center gap-2 rounded-sm border px-4 py-2 text-body-md transition-colors'
 
 type Props = {
   children: ReactNode

@@ -29,8 +29,8 @@ const ANALYSIS_MESSAGE: Record<string, string> = {
  * 사이드바 없이 혼자 그립니다. 시안에 사이드바가 없고 자체 상단바를 쓰기 때문에
  * AppLayout 밖에 두었습니다. (router.tsx)
  *
- * 색 · 타이포는 토큰이 dev 에 들어온 뒤에 한 번에 입힙니다.
- * 지금 임의 클래스를 쓰면 나중에 전부 되돌려야 해서 구조만 먼저 잡았습니다.
+ * 색 · 타이포는 전부 토큰 클래스이고, 반복되는 판 · 버튼 · 칩 · 배지는
+ * shared/ui 를 씁니다. 이 파일에는 임의 값이 하나도 없습니다.
  */
 export default function ReportPage() {
   const { reportId } = useParams()
@@ -38,25 +38,29 @@ export default function ReportPage() {
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
 
   if (isLoading) {
-    return <p className="p-6">리포트를 불러오는 중이에요…</p>
+    return (
+      <div className="min-h-screen bg-neutral-50 p-6">
+        <p className="text-body-md text-neutral-500">리포트를 불러오는 중이에요…</p>
+      </div>
+    )
   }
 
   if (error || !data) {
     return (
-      <section className="flex flex-col items-start gap-4 p-6">
-        <p>{error ?? '리포트를 찾을 수 없어요.'}</p>
+      <div className="flex min-h-screen flex-col items-start gap-4 bg-neutral-50 p-6">
+        <p className="text-body-md text-neutral-700">{error ?? '리포트를 찾을 수 없어요.'}</p>
         <ReportActions />
-      </section>
+      </div>
     )
   }
 
   // 분석이 끝나기 전에는 점수가 비어 있습니다. 그대로 그리면 0점처럼 보입니다.
   if (data.analysisStatus !== 'COMPLETED') {
     return (
-      <section className="flex flex-col items-start gap-4 p-6">
-        <p>{ANALYSIS_MESSAGE[data.analysisStatus]}</p>
+      <div className="flex min-h-screen flex-col items-start gap-4 bg-neutral-50 p-6">
+        <p className="text-body-md text-neutral-700">{ANALYSIS_MESSAGE[data.analysisStatus]}</p>
         <ReportActions />
-      </section>
+      </div>
     )
   }
 
@@ -65,33 +69,46 @@ export default function ReportPage() {
     : data.metrics.filter((metric) => metric.key !== 'vision')
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <ReportHeader report={data} />
+    <div className="min-h-screen bg-neutral-50">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
+        <ReportHeader report={data} />
 
-      <ReportOptions
-        attempts={data.attempts}
-        currentAttempt={data.attempt}
-        options={options}
-        onChange={setOptions}
-      />
+        <ReportOptions
+          attempts={data.attempts}
+          currentAttempt={data.attempt}
+          options={options}
+          onChange={setOptions}
+        />
 
-      {data.notices.map((notice) => (
-        <p key={notice} role="status" className="border p-4">
-          {notice}
-        </p>
-      ))}
+        {data.notices.map((notice) => (
+          <p
+            key={notice}
+            role="status"
+            className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
+          >
+            ⚠ {notice}
+          </p>
+        ))}
 
-      <SummarySection summary={data.summary} subtitle={`${data.jobRole} · ${data.interviewDate}`} />
+        <SummarySection
+          summary={data.summary}
+          subtitle={`${data.jobRole} · ${data.interviewDate}`}
+        />
 
-      <ScoreSection metrics={metrics} subMetrics={data.subMetrics} comment={data.metricsComment} />
+        <ScoreSection
+          metrics={metrics}
+          subMetrics={data.subMetrics}
+          comment={data.metricsComment}
+        />
 
-      {options.showTimeline && <TimelineSection turns={data.summary.turns} />}
+        {options.showTimeline && <TimelineSection turns={data.summary.turns} />}
 
-      {options.showImprovedAnswer && data.improvedAnswer && (
-        <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
-      )}
+        {options.showImprovedAnswer && data.improvedAnswer && (
+          <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
+        )}
 
-      <ReportActions />
+        <ReportActions />
+      </div>
     </div>
   )
 }

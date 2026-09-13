@@ -2,22 +2,17 @@ import type { ReactNode } from 'react'
 
 type Tone = 'brand' | 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 
-/**
- * 토큰에 badge 전용 색 세트가 이미 있습니다 (--color-badge-*-bg / -text).
- * 토큰이 dev 에 들어오면 여기만 채우면 됩니다.
- *
- * 예정) brand: 'bg-badge-brand-bg text-badge-brand-text'
- */
+/** 토큰의 badge 전용 색 세트를 그대로 씁니다 (--color-badge-*-bg / -text). */
 const TONE_CLASS: Record<Tone, string> = {
-  brand: 'border',
-  success: 'border',
-  warning: 'border',
-  danger: 'border',
-  info: 'border',
-  neutral: 'border',
+  brand: 'bg-badge-brand-bg text-badge-brand-text',
+  success: 'bg-badge-success-bg text-badge-success-text',
+  warning: 'bg-badge-warning-bg text-badge-warning-text',
+  danger: 'bg-badge-danger-bg text-badge-danger-text',
+  info: 'bg-badge-info-bg text-badge-info-text',
+  neutral: 'bg-neutral-50 text-neutral-700',
 }
 
-const BASE_CLASS = 'inline-flex items-center px-2 py-0.5'
+const BASE_CLASS = 'inline-flex items-center rounded-xs px-2 py-0.5 text-body-sm font-medium'
 
 type Props = {
   children: ReactNode

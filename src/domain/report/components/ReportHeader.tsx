@@ -1,3 +1,5 @@
+import Card from '@/shared/ui/Card'
+
 import type { Report } from '../types/report'
 
 type Props = {
@@ -33,24 +35,35 @@ function buildDelta(report: Report) {
  */
 export default function ReportHeader({ report }: Props) {
   const delta = buildDelta(report)
+  const isUp = (report.totalScoreDelta?.diff ?? 0) >= 0
 
   return (
     <header className="flex flex-wrap items-start justify-between gap-6">
       <div className="flex flex-col gap-2">
-        <h1>리포트</h1>
-        <p>{buildMeta(report)}</p>
+        <h1 className="text-display text-neutral-900">리포트</h1>
+        <p className="text-body-md text-neutral-500">{buildMeta(report)}</p>
       </div>
 
-      <div className="flex w-64 flex-col gap-2 border p-5">
-        <p>종합 점수</p>
+      <Card padding="md" className="w-64 bg-primary-100">
+        <div className="flex flex-col gap-2">
+          <p className="text-body-sm text-neutral-700">종합 점수</p>
 
-        <p className="flex items-baseline gap-2 tabular-nums">
-          <span>{report.totalScore}</span>
-          <span>/ 100</span>
-        </p>
+          <p className="flex items-baseline gap-2 tabular-nums">
+            <span className="text-display text-primary-600">{report.totalScore}</span>
+            <span className="text-body-md text-neutral-500">/ 100</span>
+          </p>
 
-        {delta && <p className="tabular-nums">{delta}</p>}
-      </div>
+          {delta && (
+            <p
+              className={`text-body-sm font-semibold tabular-nums ${
+                isUp ? 'text-semantic-success' : 'text-semantic-danger'
+              }`}
+            >
+              {delta}
+            </p>
+          )}
+        </div>
+      </Card>
     </header>
   )
 }

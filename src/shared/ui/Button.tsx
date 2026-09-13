@@ -5,15 +5,13 @@ type Variant = 'primary' | 'secondary' | 'ghost'
 type Size = 'sm' | 'md' | 'lg'
 
 /**
- * 토큰이 dev 에 들어오면 여기만 채우면 됩니다.
- * 지금은 레이아웃만 있고 색 · 타이포는 비어 있습니다.
- *
- * 예정) primary: 'bg-primary-500 text-neutral-0 hover:bg-primary-600 …'
+ * 버튼 색은 여기서만 정합니다. 모양을 바꿀 일이 생기면 이 객체만 고치면
+ * 모든 화면에 반영됩니다.
  */
 const VARIANT_CLASS: Record<Variant, string> = {
-  primary: 'border',
-  secondary: 'border',
-  ghost: '',
+  primary: 'bg-primary-500 text-neutral-0 hover:bg-primary-600 active:bg-primary-700',
+  secondary: 'border border-neutral-300 text-neutral-900 hover:bg-neutral-50',
+  ghost: 'text-neutral-500 hover:text-neutral-900',
 }
 
 /** 여백은 Tailwind 기본값을 씁니다 (docs/01-conventions.md "스타일" 절) */
@@ -23,7 +21,9 @@ const SIZE_CLASS: Record<Size, string> = {
   lg: 'px-6 py-3',
 }
 
-const BASE_CLASS = 'inline-flex items-center justify-center gap-2 text-center'
+const BASE_CLASS =
+  'inline-flex items-center justify-center gap-2 rounded-sm text-center text-body-lg font-semibold ' +
+  'transition-colors disabled:cursor-not-allowed disabled:opacity-50'
 
 type Props = {
   children: ReactNode
