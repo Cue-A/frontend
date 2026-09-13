@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import LoginPage from '@/domain/auth/components/LoginPage'
 import DeviceCheckPage from '@/domain/interview/components/DeviceCheckPage'
 import InterviewPage from '@/domain/interview/components/InterviewPage'
+import InterviewSessionPreview from '@/domain/interview/components/InterviewSessionPreview'
 import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
   { path: ROUTES.LOGIN, element: <LoginPage /> },
   { path: ROUTES.DEVICE_CHECK, element: <DeviceCheckPage /> },
   { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
+  { path: ROUTES.DEV_INTERVIEW_PREVIEW, element: <InterviewSessionPreview /> },
   { path: ROUTES.ANALYZING, element: <AnalyzingPage /> },
   { path: ROUTES.REPORT, element: <ReportPage /> },
   {
