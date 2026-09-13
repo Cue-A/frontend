@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 
-const SELECTED_CLASS = 'border-primary-500 bg-primary-100 text-primary-700 font-semibold'
-const UNSELECTED_CLASS = 'border-neutral-300 text-neutral-700 hover:bg-neutral-50'
+/** 시안에서 고른 칩은 연한 배경이 아니라 primary 를 꽉 채웁니다 (A-05 · C-01). */
+const SELECTED_CLASS = 'border-primary-500 bg-primary-500 text-neutral-0 font-semibold'
+const UNSELECTED_CLASS = 'border-neutral-200 bg-neutral-0 text-neutral-700 hover:bg-neutral-50'
 
+/** 칩은 `radius-full` 입니다 (docs/design-system.md §4). */
 const BASE_CLASS =
-  'inline-flex items-center gap-2 rounded-sm border px-4 py-2 text-body-md transition-colors'
+  'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-body-md transition-colors'
 
 type Props = {
   children: ReactNode

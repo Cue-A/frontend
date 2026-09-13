@@ -12,7 +12,8 @@ const TONE_CLASS: Record<Tone, string> = {
   neutral: 'bg-neutral-50 text-neutral-700',
 }
 
-const BASE_CLASS = 'inline-flex items-center rounded-xs px-2 py-0.5 text-body-sm font-medium'
+/** 배지는 `radius-full` 에 px-3 py-1 입니다 (docs/design-system.md §4 · §8). */
+const BASE_CLASS = 'inline-flex items-center rounded-full px-3 py-1 text-body-sm font-medium'
 
 type Props = {
   children: ReactNode
