@@ -40,7 +40,7 @@ export default function ReportOptions({ attempts, currentAttempt, options, onCha
               to={toReport(item.reportId)}
               aria-current={item.attempt === currentAttempt ? 'page' : undefined}
             >
-              <Chip selected={item.attempt === currentAttempt}>
+              <Chip selected={item.attempt === currentAttempt} fill="solid">
                 {item.attempt}회차{item.isLatest ? ' (최신)' : ''}
               </Chip>
             </Link>
