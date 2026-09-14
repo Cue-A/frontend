@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom'
-
 import { ROUTES } from '@/app/routes'
+import Button from '@/shared/ui/Button'
 
 import { CLOSING_CTA, COPYRIGHT, FOOTER_LINKS } from '../lib/landingContent'
 
@@ -13,25 +12,27 @@ import { CLOSING_CTA, COPYRIGHT, FOOTER_LINKS } from '../lib/landingContent'
 export default function LandingFooter() {
   return (
     <>
-      <section className="flex flex-col items-center gap-4 border-t px-6 py-16 text-center">
-        <h2>{CLOSING_CTA.title}</h2>
-        <p>{CLOSING_CTA.description}</p>
+      <section className="flex flex-col items-center gap-4 bg-neutral-0 px-6 py-24 text-center">
+        <h2 className="text-h1 text-neutral-900">{CLOSING_CTA.title}</h2>
+        <p className="text-body-lg font-normal text-neutral-500">{CLOSING_CTA.description}</p>
 
-        <Link to={ROUTES.LOGIN} className="border px-6 py-3">
+        <Button variant="primary" size="lg" to={ROUTES.LOGIN} className="mt-4">
           {CLOSING_CTA.action}
-        </Link>
+        </Button>
       </section>
 
-      <footer className="flex flex-col items-center gap-3 border-t px-6 py-10 text-center">
-        <p>Cue&amp;A</p>
+      <footer className="flex flex-col items-center gap-4 bg-neutral-50 px-6 py-12 text-center">
+        <p className="text-h2 text-primary-600">Cue&amp;A</p>
 
-        <ul className="flex flex-wrap justify-center gap-4">
+        <ul className="flex flex-wrap justify-center gap-6">
           {FOOTER_LINKS.map((label) => (
-            <li key={label}>{label}</li>
+            <li key={label} className="text-body-md text-neutral-500">
+              {label}
+            </li>
           ))}
         </ul>
 
-        <p>{COPYRIGHT}</p>
+        <p className="text-body-sm text-neutral-400">{COPYRIGHT}</p>
       </footer>
     </>
   )

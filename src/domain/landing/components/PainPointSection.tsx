@@ -1,3 +1,5 @@
+import Card from '@/shared/ui/Card'
+
 import { PAIN_POINTS } from '../lib/landingContent'
 
 /**
@@ -6,18 +8,27 @@ import { PAIN_POINTS } from '../lib/landingContent'
  */
 export default function PainPointSection() {
   return (
-    <section aria-labelledby="pain-points" className="flex flex-col gap-8 px-6 py-16">
-      <h2 id="pain-points" className="text-center">
+    <section
+      aria-labelledby="pain-points"
+      className="flex flex-col gap-10 bg-neutral-50 px-6 py-20 md:px-12"
+    >
+      <h2 id="pain-points" className="text-center text-h1 text-neutral-900">
         이런 고민, 있으셨나요?
       </h2>
 
       {/* 시안대로 4열입니다. 좁아지면 2열 → 1열로 내려갑니다 */}
-      <ul className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {PAIN_POINTS.map((item) => (
-          <li key={item.problem} className="flex flex-col gap-3 border p-5">
-            <p>{item.problem}</p>
-            <p aria-hidden="true">↓</p>
-            <p>{item.solution}</p>
+          <li key={item.problem} className="flex">
+            <Card padding="lg" className="flex flex-1 flex-col gap-3">
+              <p className="text-body-md text-neutral-500">{item.problem}</p>
+
+              <p aria-hidden className="text-center text-body-lg text-primary-400">
+                ↓
+              </p>
+
+              <p className="text-body-md font-semibold text-primary-700">{item.solution}</p>
+            </Card>
           </li>
         ))}
       </ul>
