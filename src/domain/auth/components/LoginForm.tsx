@@ -60,6 +60,8 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       {/* 비밀번호 재설정은 기능명세서(AUTH-1~6)에 아직 없는 기능입니다. 시안엔 있어서 자리만 잡아둡니다. */}
       <button
         type="button"
+        disabled
+        title="준비 중이에요"
         className="self-end text-body-sm text-neutral-500 hover:text-neutral-700"
       >
         비밀번호 찾기
@@ -81,9 +83,11 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
         <span className="h-px flex-1 bg-neutral-200" />
       </div>
 
-      {/* AUTH-1(회원가입) 규칙에 구글 로그인은 없지만 시안에 있어 자리만 잡아둡니다. */}
+      {/* 기능명세서엔 없는 항목입니다. docs/90-open-questions.md Q12 참고. */}
       <button
         type="button"
+        disabled
+        title="준비 중이에요"
         className="rounded-sm border border-neutral-300 py-3 text-body-md text-neutral-700 hover:bg-neutral-50"
       >
         Google로 계속하기
@@ -91,6 +95,8 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       {/* AUTH-2 카카오 로그인. 실제 OAuth 연동은 백엔드 계약 확정 후 별도 이슈로 진행합니다. */}
       <button
         type="button"
+        disabled
+        title="준비 중이에요"
         className="rounded-sm border border-neutral-300 py-3 text-body-md text-neutral-700 hover:bg-neutral-50"
       >
         카카오로 계속하기
