@@ -33,7 +33,7 @@ export default function QuestionTypeBadge({ questionType }: Props) {
 
   if (questionType === 'FOLLOWUP') {
     return (
-      <span className="flex w-fit items-center gap-1 rounded-full bg-semantic-warning/20 px-3 py-1 text-body-sm text-semantic-warning">
+      <span className="flex w-fit items-center gap-1 rounded-full bg-badge-warning-bg px-3 py-1 text-body-sm text-badge-warning-text">
         <SparkIcon />
         {label}
       </span>
@@ -41,9 +41,7 @@ export default function QuestionTypeBadge({ questionType }: Props) {
   }
 
   return (
-    // TODO(design-token): design-system.md에 없는 값. 임의로 neutral-200 사용 중.
-    // 필요한 값: "REASK 배지 배경색"(스펙 문구는 neutral/100이나 해당 토큰이 정의돼 있지 않음)
-    <span className="flex w-fit items-center gap-1 rounded-full bg-neutral-200 px-3 py-1 text-body-sm text-neutral-700">
+    <span className="flex w-fit items-center gap-1 rounded-full bg-neutral-50 px-3 py-1 text-body-sm text-neutral-700">
       <RefreshIcon />
       {label}
     </span>

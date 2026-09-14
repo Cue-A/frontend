@@ -26,7 +26,8 @@ export const router = createBrowserRouter([
   { path: ROUTES.LOGIN, element: <LoginPage /> },
   { path: ROUTES.DEVICE_CHECK, element: <DeviceCheckPage /> },
   { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
-  { path: ROUTES.DEV_INTERVIEW_PREVIEW, element: <InterviewSessionPreview /> },
+  // B-01 확인용 프리뷰. 프로덕션 번들에는 포함하지 않는다 (PR #31 리뷰).
+  ...(import.meta.env.DEV ? [{ path: ROUTES.DEV_INTERVIEW_PREVIEW, element: <InterviewSessionPreview /> }] : []),
   { path: ROUTES.ANALYZING, element: <AnalyzingPage /> },
   { path: ROUTES.REPORT, element: <ReportPage /> },
   {
