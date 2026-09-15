@@ -1,3 +1,6 @@
+import Badge from '@/shared/ui/Badge'
+import Chip from '@/shared/ui/Chip'
+
 import type { Choice } from '../types/sessionSetup'
 
 type Props<T extends string> = {
@@ -14,6 +17,9 @@ type Props<T extends string> = {
  *
  * 라디오 버튼으로 만들었습니다. 보기엔 칩이지만 하는 일은 "여럿 중 하나 고르기"라,
  * 키보드와 스크린리더에서도 그렇게 동작해야 합니다.
+ *
+ * 라디오는 화면에서 숨기고 모양은 Chip 이 그립니다. 숨기면 초점 표시도 같이
+ * 사라지므로, 감싼 span 에 `peer-focus-visible` 로 테두리를 돌려줍니다.
  */
 export default function ChipGroup<T extends string>({
   label,
@@ -24,26 +30,26 @@ export default function ChipGroup<T extends string>({
 }: Props<T>) {
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="flex items-center gap-2">
+      <legend className="flex items-center gap-2 text-body-lg text-neutral-900">
         {label}
-        {required && <span className="border px-2 py-0.5">필수</span>}
+        {required && <Badge tone="danger">필수</Badge>}
       </legend>
 
       <div className="flex flex-wrap gap-2">
         {choices.map((choice) => (
-          <label
-            key={choice.value}
-            aria-current={choice.value === value ? 'true' : undefined}
-            className="flex items-center gap-2 border px-4 py-2"
-          >
+          <label key={choice.value} className="cursor-pointer">
             <input
               type="radio"
               name={label}
               value={choice.value}
               checked={choice.value === value}
               onChange={() => onChange(choice.value)}
+              className="peer sr-only"
             />
-            {choice.label}
+
+            <span className="inline-flex rounded-full peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-500">
+              <Chip selected={choice.value === value}>{choice.label}</Chip>
+            </span>
           </label>
         ))}
       </div>

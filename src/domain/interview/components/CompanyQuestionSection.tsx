@@ -2,6 +2,10 @@ import { CUSTOM_COMPANY, type Company } from '../types/sessionSetup'
 
 const QUICK_TAGS = ['도전정신', '고객 중심', '수평적 소통', '빠른 실행력']
 
+/** 셀렉트 · 입력칸 모양은 한 곳에서 정합니다. */
+const FIELD_CLASS =
+  'rounded-sm border border-neutral-200 bg-neutral-0 px-4 py-3 text-body-md text-neutral-900'
+
 type Props = {
   enabled: boolean
   companies: Company[]
@@ -18,6 +22,9 @@ type Props = {
  * 목록에 없는 기업이면 "직접 입력"을 고르고 인재상을 직접 받습니다.
  * 그 입력칸은 직접 입력을 골랐을 때만 보여줍니다. 켜지지도 않은 칸이
  * 계속 떠 있으면 뭘 채워야 하는지 헷갈립니다.
+ *
+ * 시안은 기업명을 입력칸 하나로 받지만, API 명세의 CMP-10(미등록 기업
+ * 인재상 직접 입력)이 살아 있어서 기업 선택 + 직접 입력을 그대로 둡니다.
  */
 export default function CompanyQuestionSection({
   enabled,
@@ -36,29 +43,51 @@ export default function CompanyQuestionSection({
   }
 
   return (
-    <section className="flex flex-col gap-4 border p-5">
-      <label className="flex items-center justify-between gap-4">
-        <span>기업 맞춤 질문</span>
+    <section
+      aria-label="기업 맞춤 질문"
+      className="flex flex-col gap-4 rounded-sm bg-neutral-50 p-5"
+    >
+      <label className="flex cursor-pointer items-center justify-between gap-4">
+        <span className="text-body-lg font-semibold text-neutral-900">기업 맞춤 질문</span>
+
         <input
           type="checkbox"
           checked={enabled}
           onChange={(event) => onToggle(event.target.checked)}
+          className="peer sr-only"
         />
+
+        {/* 시안의 토글 스위치입니다. 실제 상태는 위 체크박스가 갖습니다. */}
+        <span
+          aria-hidden
+          className={
+            'relative h-6 w-11 shrink-0 rounded-full transition-colors ' +
+            'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-500 ' +
+            (enabled ? 'bg-primary-500' : 'bg-neutral-300')
+          }
+        >
+          <span
+            className={
+              'absolute top-0.5 h-5 w-5 rounded-full bg-neutral-0 transition-all ' +
+              (enabled ? 'left-5.5' : 'left-0.5')
+            }
+          />
+        </span>
       </label>
 
       {enabled && (
         <>
-          <p>
-            등록된 기업의 인재상 데이터를 질문에 반영합니다. 목록에 없는 기업은 &quot;직접
-            입력&quot;을 골라 인재상을 알려주세요.
+          <p className="text-body-md text-neutral-500">
+            약 30개 기업의 인재상 데이터가 등록되어 있어요. 목록에 없는 기업은 &quot;직접
+            입력&quot;을 선택해 인재상을 알려주세요.
           </p>
 
           <label className="flex flex-col gap-2">
-            <span>기업</span>
+            <span className="text-body-md text-neutral-700">기업 선택</span>
             <select
               value={companyId ?? ''}
               onChange={(event) => onSelectCompany(event.target.value)}
-              className="border px-3 py-2"
+              className={FIELD_CLASS}
             >
               <option value="" disabled>
                 기업을 골라주세요
@@ -75,15 +104,15 @@ export default function CompanyQuestionSection({
           </label>
 
           {isCustom && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <label className="flex flex-col gap-2">
-                <span>인재상 직접 입력</span>
+                <span className="text-body-md text-neutral-700">인재상 직접 입력</span>
                 <textarea
                   rows={3}
                   value={customCulture}
                   onChange={(event) => onChangeCulture(event.target.value)}
                   placeholder="예: 도전정신, 고객 중심, 수평적 소통, 빠른 실행력 등 이 기업이 중요하게 생각하는 가치를 입력해주세요"
-                  className="border px-3 py-2"
+                  className={FIELD_CLASS}
                 />
               </label>
 
@@ -93,7 +122,7 @@ export default function CompanyQuestionSection({
                     key={tag}
                     type="button"
                     onClick={() => appendTag(tag)}
-                    className="border px-3 py-1"
+                    className="rounded-full border border-primary-200 bg-neutral-0 px-3 py-1 text-body-sm text-primary-600 transition-colors hover:bg-primary-100"
                   >
                     + {tag}
                   </button>

@@ -17,20 +17,23 @@ import {
   type Company,
 } from '../types/sessionSetup'
 
+import Card from '@/shared/ui/Card'
+
 import ChipGroup from './ChipGroup'
 import CompanyQuestionSection from './CompanyQuestionSection'
 import ResumeField from './ResumeField'
 import SetupSummary from './SetupSummary'
 import StepIndicator from './StepIndicator'
 
+/** 셀렉트 모양은 기업 맞춤 질문 쪽과 같습니다. */
+const FIELD_CLASS =
+  'rounded-sm border border-neutral-200 bg-neutral-0 px-4 py-3 text-body-md text-neutral-900'
+
 /**
  * 면접 옵션 설정 화면입니다. (A-05)
  *
- * 왼쪽에서 조건을 고르고 오른쪽 요약에서 확인한 뒤 장치 테스트로 넘어갑니다.
- * 좁은 화면에서는 요약이 아래로 내려갑니다.
- *
- * 색 · 타이포는 토큰이 dev 에 들어온 뒤에 한 번에 입힙니다.
- * 지금 임의 클래스를 쓰면 나중에 전부 되돌려야 해서 구조만 먼저 잡았습니다.
+ * 위에 단계 표시, 아래에 두 칸. 왼쪽 흰 카드에서 조건을 고르고 오른쪽 요약에서
+ * 확인한 뒤 장치 테스트로 넘어갑니다. 좁은 화면에서는 요약이 아래로 내려갑니다.
  */
 export default function SessionSetupPage() {
   const navigate = useNavigate()
@@ -76,14 +79,14 @@ export default function SessionSetupPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <StepIndicator current={1} />
 
       <div className="flex flex-wrap items-start gap-6">
-        <section className="flex min-w-80 flex-[2] flex-col gap-8 border p-6">
+        <Card padding="lg" className="flex min-w-80 flex-[3] flex-col gap-8">
           <div className="flex flex-col gap-1">
-            <h1>면접 옵션 설정</h1>
-            <p>면접할 조건을 선택해주세요</p>
+            <h1 className="text-h1 text-neutral-900">면접 옵션 설정</h1>
+            <p className="text-body-md text-neutral-500">면접할 조건을 선택해주세요</p>
           </div>
 
           <ChipGroup
@@ -107,8 +110,8 @@ export default function SessionSetupPage() {
           />
 
           <div className="flex flex-wrap gap-6">
-            <label className="flex min-w-60 flex-1 flex-col gap-2">
-              <span>시간</span>
+            <label className="flex min-w-52 flex-1 flex-col gap-2">
+              <span className="text-body-lg font-semibold text-neutral-900">시간</span>
               <select
                 value={setup.answerSeconds === null ? NO_TIME_LIMIT : String(setup.answerSeconds)}
                 onChange={(event) =>
@@ -117,7 +120,7 @@ export default function SessionSetupPage() {
                       event.target.value === NO_TIME_LIMIT ? null : Number(event.target.value),
                   })
                 }
-                className="border px-3 py-2"
+                className={FIELD_CLASS}
               >
                 {ANSWER_SECONDS_CHOICES.map((choice) => (
                   <option key={choice.value} value={choice.value}>
@@ -127,12 +130,12 @@ export default function SessionSetupPage() {
               </select>
             </label>
 
-            <label className="flex min-w-60 flex-1 flex-col gap-2">
-              <span>질문수</span>
+            <label className="flex min-w-52 flex-1 flex-col gap-2">
+              <span className="text-body-lg font-semibold text-neutral-900">질문수</span>
               <select
                 value={String(setup.questionCount)}
                 onChange={(event) => patch({ questionCount: Number(event.target.value) })}
-                className="border px-3 py-2"
+                className={FIELD_CLASS}
               >
                 {QUESTION_COUNT_CHOICES.map((choice) => (
                   <option key={choice.value} value={choice.value}>
@@ -157,7 +160,7 @@ export default function SessionSetupPage() {
             value={setup.deliveryMode}
             onChange={(deliveryMode) => patch({ deliveryMode })}
           />
-        </section>
+        </Card>
 
         <aside className="min-w-72 flex-1">
           <SetupSummary
