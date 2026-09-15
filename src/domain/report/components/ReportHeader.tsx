@@ -44,7 +44,7 @@ export default function ReportHeader({ report }: Props) {
         <p className="text-body-md text-neutral-500">{buildMeta(report)}</p>
       </div>
 
-      <Card padding="md" className="w-64 bg-primary-100">
+      <Card padding="md" surface="brand" className="w-64">
         <div className="flex flex-col gap-2">
           <p className="text-body-sm text-neutral-700">종합 점수</p>
 

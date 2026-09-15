@@ -14,15 +14,20 @@ const VARIANT_CLASS: Record<Variant, string> = {
   ghost: 'text-neutral-500 hover:text-neutral-900',
 }
 
-/** 여백은 Tailwind 기본값을 씁니다 (docs/01-conventions.md "스타일" 절) */
+/**
+ * 여백은 Tailwind 기본값을 씁니다 (docs/01-conventions.md "스타일" 절).
+ *
+ * 글자 크기도 여기서 같이 정합니다. 전에는 BASE_CLASS 에 `text-body-lg`(16px)
+ * 를 고정해둬서 작은 버튼도 글자만 16px 로 커졌습니다. (PR #28 리뷰)
+ */
 const SIZE_CLASS: Record<Size, string> = {
-  sm: 'px-4 py-2',
-  md: 'px-4 py-3',
-  lg: 'px-6 py-3',
+  sm: 'px-4 py-2 text-body-md',
+  md: 'px-4 py-3 text-body-md',
+  lg: 'px-6 py-3 text-body-lg',
 }
 
 const BASE_CLASS =
-  'inline-flex items-center justify-center gap-2 rounded-sm text-center text-body-lg font-semibold ' +
+  'inline-flex items-center justify-center gap-2 rounded-sm text-center font-semibold ' +
   'transition-colors disabled:cursor-not-allowed disabled:opacity-50'
 
 type Props = {
