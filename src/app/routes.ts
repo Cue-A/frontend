@@ -11,6 +11,8 @@ export const ROUTES = {
   INTERVIEW: '/interviews/:sessionId',
   ANALYZING: '/interviews/:sessionId/analyzing',
   REPORT: '/reports/:reportId',
+  /** B-01 확인용 정적 프리뷰. 리뷰 끝나면 지워도 되는 임시 라우트입니다. */
+  DEV_INTERVIEW_PREVIEW: '/dev/interview-preview',
 } as const
 
 export function toDeviceCheck(sessionId: string) {
