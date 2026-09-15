@@ -1,17 +1,31 @@
 import type { ReactNode } from 'react'
 
-/**
- * 토큰이 들어오면 여기만 채우면 됩니다.
- * 예정) selected: 'bg-primary-100 border-primary-500 text-primary-700'
- */
-const SELECTED_CLASS = 'border'
-const UNSELECTED_CLASS = 'border'
+type Fill = 'soft' | 'solid'
 
-const BASE_CLASS = 'inline-flex items-center gap-2 px-4 py-2'
+/**
+ * 고른 칩의 모양은 화면마다 다릅니다.
+ *
+ * - `soft`  옵션 설정(A-05)의 선택 칩 — 연한 배경 + 보라 테두리
+ * - `solid` 리포트(C-01)의 회차 칩 — primary 를 꽉 채운 탭 모양
+ *
+ * 둘 다 시안에 있는 모양이라 하나로 합치지 않고 이름을 나눴습니다.
+ */
+const SELECTED_CLASS: Record<Fill, string> = {
+  soft: 'border-primary-500 bg-primary-100 text-primary-700 font-semibold',
+  solid: 'border-primary-500 bg-primary-500 text-neutral-0 font-semibold',
+}
+
+const UNSELECTED_CLASS = 'border-neutral-200 bg-neutral-0 text-neutral-700 hover:bg-neutral-50'
+
+/** 칩은 `radius-full` 입니다 (docs/design-system.md §4). */
+const BASE_CLASS =
+  'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-body-md transition-colors'
 
 type Props = {
   children: ReactNode
   selected?: boolean
+  /** 고른 상태의 모양. 기본은 옵션 고르기에 쓰는 soft 입니다 */
+  fill?: Fill
 }
 
 /**
@@ -27,11 +41,11 @@ type Props = {
  *   </label>
  *
  *   <Link to={…}>
- *     <Chip selected={…}>3회차 (최신)</Chip>
+ *     <Chip selected={…} fill="solid">3회차 (최신)</Chip>
  *   </Link>
  */
-export default function Chip({ children, selected = false }: Props) {
-  const classes = [BASE_CLASS, selected ? SELECTED_CLASS : UNSELECTED_CLASS].join(' ')
+export default function Chip({ children, selected = false, fill = 'soft' }: Props) {
+  const classes = [BASE_CLASS, selected ? SELECTED_CLASS[fill] : UNSELECTED_CLASS].join(' ')
 
   return <span className={classes}>{children}</span>
 }

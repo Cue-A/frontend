@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 
 import { toReport } from '@/app/routes'
+import Card from '@/shared/ui/Card'
+import Chip from '@/shared/ui/Chip'
 
 import type { DisplayOptions } from '../types/displayOptions'
 import type { AttemptRef } from '../types/report'
@@ -27,36 +29,42 @@ type Props = {
  */
 export default function ReportOptions({ attempts, currentAttempt, options, onChange }: Props) {
   return (
-    <section aria-label="리포트 옵션" className="flex flex-col gap-4 border p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span>회차</span>
+    <Card label="리포트 옵션" padding="md">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-body-sm text-neutral-500">회차</span>
 
-        {attempts.map((item) => (
-          <Link
-            key={item.attempt}
-            to={toReport(item.reportId)}
-            aria-current={item.attempt === currentAttempt ? 'page' : undefined}
-            className="border px-3 py-1.5"
-          >
-            {item.attempt}회차{item.isLatest ? ' (최신)' : ''}
-          </Link>
-        ))}
+          {attempts.map((item) => (
+            <Link
+              key={item.attempt}
+              to={toReport(item.reportId)}
+              aria-current={item.attempt === currentAttempt ? 'page' : undefined}
+            >
+              <Chip selected={item.attempt === currentAttempt} fill="solid">
+                {item.attempt}회차{item.isLatest ? ' (최신)' : ''}
+              </Chip>
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-6">
+          {TOGGLES.map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-2 text-body-md text-neutral-700">
+              <input
+                type="checkbox"
+                checked={options[key]}
+                onChange={(event) => onChange({ ...options, [key]: event.target.checked })}
+                className="accent-primary-500"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+
+        <p className="text-body-sm text-neutral-400">
+          재연습 기록은 이 면접 리포트 안에 회차별로 저장됩니다
+        </p>
       </div>
-
-      <div className="flex flex-wrap gap-6">
-        {TOGGLES.map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={options[key]}
-              onChange={(event) => onChange({ ...options, [key]: event.target.checked })}
-            />
-            {label}
-          </label>
-        ))}
-      </div>
-
-      <p>재연습 기록은 이 면접 리포트 안에 회차별로 저장됩니다</p>
-    </section>
+    </Card>
   )
 }
