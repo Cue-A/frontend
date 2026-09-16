@@ -9,6 +9,9 @@ import { HERO, HIGHLIGHTS } from '../lib/landingContent'
  *
  * "데모 영상 보기"는 아직 영상이 없어서 비활성입니다. 눌러도 아무 일이 없는
  * 것보다 왜 못 누르는지 보이는 편이 낫습니다. 영상이 준비되면 링크로 바꿉니다.
+ *
+ * 이유는 `title` 이 아니라 버튼 아래에 글로 적습니다. 브라우저는 비활성 요소에
+ * 마우스 이벤트를 보내지 않아서 툴팁이 아예 안 뜹니다. (이슈 #32)
  */
 export default function LandingHero() {
   return (
@@ -31,10 +34,12 @@ export default function LandingHero() {
           {HERO.primaryCta}
         </Button>
 
-        <Button size="lg" disabled title="데모 영상은 준비 중이에요">
+        <Button size="lg" disabled>
           {HERO.secondaryCta}
         </Button>
       </div>
+
+      <p className="text-body-sm text-neutral-400">데모 영상은 아직 준비 중이에요</p>
 
       <ul className="flex w-full max-w-5xl flex-wrap justify-center gap-6 pt-8">
         {HIGHLIGHTS.map((item) => (
