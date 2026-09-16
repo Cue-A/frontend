@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { ROUTES } from '@/app/routes'
 import { setAccessToken } from '@/shared/api/accessToken'
+import Button from '@/shared/ui/Button'
 
 import { login } from '../api/authApi'
 import { useAuthSubmit } from '../hooks/useAuthSubmit'
@@ -57,25 +58,18 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
         />
       </label>
 
-      {/* 비밀번호 재설정은 기능명세서(AUTH-1~6)에 아직 없는 기능입니다. 시안엔 있어서 자리만 잡아둡니다. */}
-      <button
-        type="button"
-        disabled
-        title="준비 중이에요"
-        className="self-end text-body-sm text-neutral-500 hover:text-neutral-700"
-      >
-        비밀번호 찾기
-      </button>
+      {/*
+        비밀번호 재설정은 기능명세서(AUTH-1~6)에 아직 없는 기능입니다. 시안엔 있어서
+        자리만 잡아둡니다. 못 누르는 이유는 툴팁이 아니라 글로 적습니다 — 브라우저가
+        비활성 요소에 마우스 이벤트를 안 보내서 툴팁이 아예 안 뜹니다. (이슈 #32)
+      */}
+      <p className="self-end text-body-sm text-neutral-400">비밀번호 찾기 (준비 중)</p>
 
       {error && <p className="text-body-sm text-semantic-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-sm bg-primary-500 py-3 text-body-lg font-semibold text-neutral-0 hover:bg-primary-600 active:bg-primary-700 disabled:opacity-50"
-      >
+      <Button type="submit" variant="primary" size="lg" disabled={isSubmitting} className="w-full">
         {isSubmitting ? '로그인 중…' : '로그인'}
-      </button>
+      </Button>
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-neutral-200" />
@@ -83,27 +77,25 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
         <span className="h-px flex-1 bg-neutral-200" />
       </div>
 
-      {/* 기능명세서엔 없는 항목입니다. docs/90-open-questions.md Q12 참고. */}
-      <button
-        type="button"
-        disabled
-        title="준비 중이에요"
-        className="rounded-sm border border-neutral-300 py-3 text-body-md text-neutral-700 hover:bg-neutral-50"
-      >
+      {/* Google 은 기능명세서에 없는 항목입니다 (Q12). 카카오(AUTH-2)는 OAuth 계약 확정 후 별도 이슈. */}
+      <Button disabled className="w-full">
         Google로 계속하기
-      </button>
-      {/* AUTH-2 카카오 로그인. 실제 OAuth 연동은 백엔드 계약 확정 후 별도 이슈로 진행합니다. */}
-      <button
-        type="button"
-        disabled
-        title="준비 중이에요"
-        className="rounded-sm border border-neutral-300 py-3 text-body-md text-neutral-700 hover:bg-neutral-50"
-      >
+      </Button>
+
+      <Button disabled className="w-full">
         카카오로 계속하기
-      </button>
+      </Button>
+
+      <p className="text-center text-body-sm text-neutral-400">
+        소셜 로그인은 아직 연동 전이에요
+      </p>
 
       <p className="text-center text-body-sm text-neutral-500">
         계정이 없으신가요?{' '}
+        {/*
+          글 안에 섞여 있는 전환 버튼이라 shared/ui/Button 을 쓰지 않습니다.
+          Button 은 시안의 네모난 CTA 모양이고, 여기 필요한 건 문장 속 링크입니다.
+        */}
         <button
           type="button"
           onClick={onSwitchToSignup}

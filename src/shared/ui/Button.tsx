@@ -36,9 +36,17 @@ type Props = {
   size?: Size
   /** 값이 있으면 링크로, 없으면 버튼으로 그립니다 */
   to?: string
+  /** 폼을 제출하는 버튼이면 `submit` 을 주세요. 기본은 `button` 입니다 */
+  type?: 'button' | 'submit'
   onClick?: () => void
   disabled?: boolean
-  /** 왜 못 누르는지 알려줄 때 씁니다 */
+  /**
+   * 마우스를 올렸을 때 뜨는 설명입니다.
+   *
+   * **못 누르는 이유를 여기 적지 마세요.** 브라우저는 비활성 요소에 마우스
+   * 이벤트를 보내지 않아서 툴팁이 뜨지 않습니다. 결과적으로 이유를 아무도
+   * 못 봅니다. 이유는 버튼 옆에 글로 적어주세요. (이슈 #32)
+   */
   title?: string
   /** 레이아웃만 넣어주세요. 색 · 타이포는 variant 로 정합니다 */
   className?: string
@@ -59,6 +67,7 @@ export default function Button({
   variant = 'secondary',
   size = 'md',
   to,
+  type = 'button',
   onClick,
   disabled = false,
   title,
@@ -78,7 +87,7 @@ export default function Button({
   }
 
   return (
-    <button type="button" onClick={onClick} disabled={disabled} title={title} className={classes}>
+    <button type={type} onClick={onClick} disabled={disabled} title={title} className={classes}>
       {children}
     </button>
   )
