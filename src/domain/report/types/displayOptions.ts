@@ -7,10 +7,13 @@ export type DisplayOptions = {
   showTimeline: boolean
   showImprovedAnswer: boolean
   showVision: boolean
+  /** 켜면 리포트 판을 회색조로 그립니다. 인쇄하면 잉크를 덜 씁니다 */
+  printMono: boolean
 }
 
 export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
   showTimeline: true,
   showImprovedAnswer: true,
   showVision: true,
+  printMono: false,
 }

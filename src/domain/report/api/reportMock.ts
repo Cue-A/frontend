@@ -1,6 +1,6 @@
 import { registerMock } from '@/shared/api/mock'
 
-import type { Report } from '../types/report'
+import type { Report, ReportVideo } from '../types/report'
 
 /**
  * 백엔드가 준비되기 전까지 화면을 그리기 위한 가짜 리포트입니다.
@@ -124,9 +124,38 @@ const SAMPLE_REPORT: Report = {
     example:
       '이탈률 예측 프로젝트에서 전처리를 맡아, 결측 구간을 재정의해 학습 데이터를 12% 늘렸습니다. 그 결과 모델 F1이 0.71에서 0.78로 개선됐습니다.',
   },
+
+  // 재생 주소는 아직 계약이 없어서 비워둡니다. 화면은 "재생 자리"까지만 그리고
+  // 실제 재생은 계약이 온 뒤에 붙입니다. (이슈 #38)
+  video: {
+    playUrl: null,
+    isExpired: false,
+    durationSeconds: 348,
+    qualityLabel: '원본 화질',
+  },
 }
 
-registerMock('GET', '/api/reports/:reportId', ({ reportId }) => ({
-  ...SAMPLE_REPORT,
-  reportId,
-}))
+/**
+ * 링크 만료 상태(시안 `상태C`)도 확인할 수 있게 회차 하나를 만료로 둡니다.
+ * 오래된 회차가 먼저 만료되는 게 자연스러워서 1회차로 골랐습니다.
+ */
+const EXPIRED_VIDEO: ReportVideo = {
+  playUrl: null,
+  isExpired: true,
+  durationSeconds: 348,
+  qualityLabel: null,
+}
+
+const EXPIRED_NOTICE =
+  '보안을 위해 영상 재생 링크는 일정 시간이 지나면 만료됩니다. 점수와 분석 내용은 그대로 확인할 수 있습니다.'
+
+registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
+  const isExpired = reportId === 'r1'
+
+  return {
+    ...SAMPLE_REPORT,
+    reportId,
+    video: isExpired ? EXPIRED_VIDEO : SAMPLE_REPORT.video,
+    notices: isExpired ? [...SAMPLE_REPORT.notices, EXPIRED_NOTICE] : SAMPLE_REPORT.notices,
+  }
+})

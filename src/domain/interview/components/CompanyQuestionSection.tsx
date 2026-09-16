@@ -1,3 +1,5 @@
+import Switch from '@/shared/ui/Switch'
+
 import { CUSTOM_COMPANY, type Company } from '../types/sessionSetup'
 
 const QUICK_TAGS = ['도전정신', '고객 중심', '수평적 소통', '빠른 실행력']
@@ -47,33 +49,9 @@ export default function CompanyQuestionSection({
       aria-label="기업 맞춤 질문"
       className="flex flex-col gap-4 rounded-sm bg-neutral-50 p-5"
     >
-      <label className="flex cursor-pointer items-center justify-between gap-4">
+      <Switch checked={enabled} onChange={onToggle} labelFirst className="gap-4">
         <span className="text-body-lg font-semibold text-neutral-900">기업 맞춤 질문</span>
-
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(event) => onToggle(event.target.checked)}
-          className="peer sr-only"
-        />
-
-        {/* 시안의 토글 스위치입니다. 실제 상태는 위 체크박스가 갖습니다. */}
-        <span
-          aria-hidden
-          className={
-            'relative h-6 w-11 shrink-0 rounded-full transition-colors ' +
-            'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-500 ' +
-            (enabled ? 'bg-primary-500' : 'bg-neutral-300')
-          }
-        >
-          <span
-            className={
-              'absolute top-0.5 h-5 w-5 rounded-full bg-neutral-0 transition-all ' +
-              (enabled ? 'left-5.5' : 'left-0.5')
-            }
-          />
-        </span>
-      </label>
+      </Switch>
 
       {enabled && (
         <>

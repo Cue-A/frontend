@@ -4,8 +4,10 @@ import { useParams } from 'react-router-dom'
 import { useReport } from '../hooks/useReport'
 import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
 
+import AnswerVideoSection from './AnswerVideoSection'
 import ImprovedAnswerSection from './ImprovedAnswerSection'
 import ReportActions from './ReportActions'
+import ReportDocActions from './ReportDocActions'
 import ReportHeader from './ReportHeader'
 import ReportOptions from './ReportOptions'
 import ScoreSection from './ScoreSection'
@@ -23,8 +25,9 @@ const ANALYSIS_MESSAGE: Record<string, string> = {
  * 면접 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
  *
  * 시안 순서대로 위에서 아래로 한 줄로 쌓습니다.
- * 제목 · 종합 점수 → 리포트 옵션 → 안내 → 이번 면접 요약 → 세부 점수
- * → XAI 타임라인 → 개선 답변 예시 → 다음 단계
+ * 유틸리티(인쇄 · 공유) → 제목 · 종합 점수 → 리포트 옵션 → 안내 →
+ * 이번 면접 요약 → 세부 점수 → 답변 영상 → XAI 타임라인 → 개선 답변 예시
+ * → 다음 단계
  *
  * 사이드바 없이 혼자 그립니다. 시안에 사이드바가 없고 자체 상단바를 쓰기 때문에
  * AppLayout 밖에 두었습니다. (router.tsx)
@@ -70,7 +73,23 @@ export default function ReportPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
+      {/*
+        유틸리티 줄은 리포트 내용이 아니라 이 화면을 다루는 도구라, 시안에서도
+        인쇄 영역(`sheet`) 바깥에 있습니다. 흑백으로 바꿔도 여기는 그대로 둡니다.
+      */}
+      <div className="mx-auto w-full max-w-5xl px-6 pt-6">
+        <ReportDocActions />
+      </div>
+
+      {/*
+        "인쇄용 흑백"은 색을 하나하나 바꾸지 않고 판 전체를 회색조로 그립니다.
+        토큰을 흑백 세트로 따로 만들면 화면마다 두 벌을 관리해야 합니다.
+      */}
+      <div
+        className={`mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 ${
+          options.printMono ? 'grayscale' : ''
+        }`}
+      >
         <ReportHeader report={data} />
 
         <ReportOptions
@@ -100,6 +119,8 @@ export default function ReportPage() {
           subMetrics={data.subMetrics}
           comment={data.metricsComment}
         />
+
+        {data.video && <AnswerVideoSection video={data.video} />}
 
         {options.showTimeline && <TimelineSection turns={data.summary.turns} />}
 
