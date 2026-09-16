@@ -8,8 +8,7 @@
 export const HERO = {
   badge: '실전형 AI 면접 연습',
   titleLines: ['합격을 부르는 면접,', 'AI 코치와 미리 연습해보세요'],
-  description:
-    '직무·기업 맞춤 질문으로 압박면접까지 실전처럼. 리포트로 개선점까지 확인하세요.',
+  description: '직무·기업 맞춤 질문으로 압박면접까지 실전처럼. 리포트로 개선점까지 확인하세요.',
   primaryCta: '지금 면접 연습 시작',
   secondaryCta: '데모 영상 보기',
 }
@@ -33,26 +32,42 @@ export const PAIN_POINTS = [
   },
 ]
 
-export const FEATURES = {
+/**
+ * 카드 아이콘의 원 색입니다. 시안이 주황 · 초록 · 파랑 · 빨강 네 가지를 쓰는데
+ * 값이 semantic 토큰과 같아서 그대로 씁니다. (docs/design-system.md §2)
+ */
+export type FeatureTone = 'warning' | 'success' | 'info' | 'danger'
+
+type Feature = {
+  title: string
+  description: string
+  tone: FeatureTone
+}
+
+export const FEATURES: { subtitle: string; items: Feature[] } = {
   subtitle: '혼자서도 실전처럼, 끝나고 나면 왜 그랬는지까지',
   items: [
     {
       title: '실시간 모의면접',
+      tone: 'warning',
       description:
         '직무·기업·자소서를 선택해 맞춤 면접을 시작하고, AI가 텍스트와 음성으로 질문을 던지면 웹캠으로 답변합니다. 답변의 허점을 파고드는 꼬리질문을 실시간으로 생성하며, 압박 강도(순한맛/매운맛)를 직접 선택할 수 있어요.',
     },
     {
       title: '종합 분석 리포트',
+      tone: 'success',
       description:
         '내용·말하기·시선·답변 마무리를 종합 점수로 평가합니다. XAI 타임라인으로 몇 분 몇 초에 왜 점수가 낮았는지를 시간축에 표시하고, 압박 후 얼마나 빨리 평정심을 회복했는지도 보여줘요.',
     },
     {
       title: '성장 추적',
+      tone: 'info',
       description:
         '회차별 점수와 지표 변화를 그래프로 확인하고, "필러워드가 18회→9회로 감소"처럼 무엇이 왜 변했는지 서술로 알려드립니다. 연습 기록은 폴더·기업별로 관리할 수 있어요.',
     },
     {
       title: '맞춤 준비',
+      tone: 'danger',
       description:
         '자소서·포트폴리오를 업로드하면 그 내용을 근거로 질문을 생성합니다. 기업별 인재상과 면접 스타일을 탐색하고 관심 기업을 관리할 수 있어요.',
     },
@@ -64,11 +79,17 @@ export const DIFFERENCE = {
   body: '"시선 점수 65점" 같은 블랙박스 결과 대신, 언제·왜 그랬는지를 설명하고 어떻게 고칠지 구체적으로 제시하며 회차에 걸친 성장을 서술합니다.',
 }
 
+/**
+ * 단계별 화면 스크린샷입니다. `public/landing/` 에 넣으면 그대로 보입니다.
+ * 파일이 없으면 자리표시자가 대신 나옵니다 — 없다고 화면이 깨지지 않습니다.
+ * Figma `A-01 랜딩페이지 - Final` 의 step-image-01~05 를 내보내면 됩니다.
+ */
 export const HOW_IT_WORKS = {
   subtitle: '다섯 단계면 충분해요. 옵션 설정부터 재연습까지 한 번에 이어집니다.',
   steps: [
     {
       step: '01',
+      image: '/landing/step-01.png',
       title: '면접 옵션 설정',
       lead: '직무·자기소개서 기반 맞춤 면접 세팅',
       description:
@@ -76,6 +97,7 @@ export const HOW_IT_WORKS = {
     },
     {
       step: '02',
+      image: '/landing/step-02.png',
       title: '장치 테스트',
       lead: '실전 같은 환경, 미리 점검',
       description:
@@ -83,6 +105,7 @@ export const HOW_IT_WORKS = {
     },
     {
       step: '03',
+      image: '/landing/step-03.png',
       title: 'AI 아바타와 실시간 모의면접',
       lead: '진짜 면접관처럼 묻고, 답을 파고드는 AI',
       description:
@@ -90,6 +113,7 @@ export const HOW_IT_WORKS = {
     },
     {
       step: '04',
+      image: '/landing/step-04.png',
       title: '리포트 확인',
       lead: '막연한 점수가 아니라, 설명 가능한 피드백',
       description:
@@ -97,6 +121,7 @@ export const HOW_IT_WORKS = {
     },
     {
       step: '05',
+      image: '/landing/step-05.png',
       title: '피드백 반영하여 재연습',
       lead: '한 번의 면접이 아니라, 쌓이는 성장',
       description:

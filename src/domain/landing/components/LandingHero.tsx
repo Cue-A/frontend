@@ -12,7 +12,7 @@ import { HERO, HIGHLIGHTS } from '../lib/landingContent'
  */
 export default function LandingHero() {
   return (
-    <section className="flex flex-col items-center gap-8 bg-neutral-0 px-6 py-20 text-center">
+    <section className="flex flex-col items-center gap-8 px-6 py-20 text-center">
       <p className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-body-sm font-semibold text-primary-700">
         <span aria-hidden className="h-2 w-2 rounded-full bg-primary-500" />
         {HERO.badge}

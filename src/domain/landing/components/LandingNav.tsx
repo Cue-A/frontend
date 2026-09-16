@@ -2,18 +2,18 @@ import { Link } from 'react-router-dom'
 
 import { ROUTES } from '@/app/routes'
 import Button from '@/shared/ui/Button'
+import Logo from '@/shared/ui/Logo'
 
 /**
  * 랜딩 상단 바입니다. (A-01)
  * 로그인 전 화면이라 앱 사이드바 대신 이 바만 씁니다.
  *
- * 로고는 시안에서 이미지로 들어가 있습니다. 아직 내보내지 않아서 글자로 둡니다.
  */
 export default function LandingNav() {
   return (
     <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 bg-neutral-0 px-6 py-4 md:px-12">
-      <Link to={ROUTES.LANDING} className="text-h2 text-primary-600">
-        Cue&amp;A
+      <Link to={ROUTES.LANDING} aria-label="Cue&amp;A 홈">
+        <Logo className="h-9" />
       </Link>
 
       <nav className="flex flex-wrap items-center gap-6">
