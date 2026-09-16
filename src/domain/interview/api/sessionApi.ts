@@ -1,5 +1,6 @@
 import { api } from '@/shared/api/apiClient'
 
+import type { AnswerSubmission, InterviewOptions } from '../types/interview'
 import { CUSTOM_COMPANY, type Company, type SessionSetup } from '../types/sessionSetup'
 
 import './sessionMock'
@@ -41,4 +42,31 @@ export type CreatedSession = {
  */
 export function createSession(setup: SessionSetup) {
   return api.post<CreatedSession>('/api/interviews', toCreateBody(setup))
+}
+
+/**
+ * 면접 진행 화면(B-01-2)이 필요로 하는 세션 옵션만 담는다. `InterviewOptions` 전체가
+ * 아니라 이 셋만 쓰는 이유: jobRole · resumeDocId · companyTalentProfile ·
+ * questionCountLabel · interviewerCount 는 지금까지 만들어진 B-01/B-01-2 UI 어디에서도
+ * 쓰이지 않는다.
+ *
+ * GET /api/interviews/{sessionId} 는 백엔드에 아직 없는 엔드포인트다. mock 은 실제로
+ * 제출된 SessionSetup 을 반영하지 않고 고정값을 돌려준다 — SessionSetup.interviewerStyle
+ * (대문자 3종: FRIENDLY/NEUTRAL/PRESSURE)과 이 InterviewOptions.interviewerStyle(소문자
+ * 2종: friendly/pressure, NEUTRAL 없음) 사이의 매핑이 아직 정해지지 않았기 때문이다.
+ * 계약이 정해지면 이 함수와 매핑만 고치면 된다.
+ */
+export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'>
+
+export function getInterviewOptions(sessionId: string) {
+  return api.get<InterviewSessionOptions>(`/api/interviews/${sessionId}`)
+}
+
+/**
+ * 답변 제출 REST 엔드포인트입니다. 백엔드에 아직 없습니다
+ * (domain/interview/controller 가 .gitkeep 뿐). 경로 · 응답 형태는 추정치이고 mock 만
+ * 등록되어 있다. 계약이 정해지면 이 함수만 고치면 된다.
+ */
+export function submitAnswer(sessionId: string, submission: AnswerSubmission) {
+  return api.post<void>(`/api/interviews/${sessionId}/answers`, submission)
 }

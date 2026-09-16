@@ -4,7 +4,7 @@ type Props = {
 
 /**
  * "Q{questionNumber}". REASK 로 questionNumber 가 null 로 오는 경우는 없고,
- * "직전 값 유지"는 상위(B-02 세션 상태 훅)가 해결한 뒤 이 컴포넌트에 내려준다.
+ * "직전 값 유지"는 상위(B-01-2 세션 상태 훅)가 해결한 뒤 이 컴포넌트에 내려준다.
  * 그래도 값이 없는 순간을 대비해 대시로만 안전하게 표시한다.
  */
 export default function QuestionNumberLabel({ questionNumber }: Props) {

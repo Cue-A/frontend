@@ -1,3 +1,4 @@
+import type { SubmitErrorState } from '../hooks/useInterviewSession'
 import type { Question, SessionPhase } from '../types/interview'
 
 import AnswerControlBar from './AnswerControlBar'
@@ -11,9 +12,22 @@ type Props = {
   hideQuestionText: boolean
   phase: SessionPhase
   onSubmitAnswer?: () => void
+  progressLabel?: string | null
+  needsRerecord?: boolean
+  submitError?: SubmitErrorState | null
+  remainingSec?: number | null
 }
 
-export default function QuestionCard({ question, hideQuestionText, phase, onSubmitAnswer }: Props) {
+export default function QuestionCard({
+  question,
+  hideQuestionText,
+  phase,
+  onSubmitAnswer,
+  progressLabel = null,
+  needsRerecord = false,
+  submitError = null,
+  remainingSec = null,
+}: Props) {
   return (
     // TODO(design-token): design-system.md에 없는 값. 임시로 radius-lg(20px) 사용 중.
     // 필요한 값: 질문 카드 모서리 24px (Figma 848:5, 문서엔 radius-lg(20px)까지만 정의됨)
@@ -29,7 +43,14 @@ export default function QuestionCard({ question, hideQuestionText, phase, onSubm
 
       <QuestionText questionType={question.questionType} text={question.text} hideQuestionText={hideQuestionText} />
 
-      <AnswerControlBar phase={phase} onSubmitAnswer={onSubmitAnswer} />
+      <AnswerControlBar
+        phase={phase}
+        onSubmitAnswer={onSubmitAnswer}
+        progressLabel={progressLabel}
+        needsRerecord={needsRerecord}
+        submitError={submitError}
+        remainingSec={remainingSec}
+      />
     </section>
   )
 }
