@@ -253,7 +253,6 @@ export default function DeviceCheckPage() {
               <Button to={ROUTES.SESSION_SETUP} size="lg">
                 ← 옵션
               </Button>
-
               <Button variant="primary" size="lg" disabled={!canStart} onClick={handleStart} className="flex-1">
                 면접 시작하기
               </Button>
