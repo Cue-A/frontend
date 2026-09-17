@@ -95,11 +95,6 @@ export default function DeviceCheckPage() {
               <div className="flex flex-col gap-4">
                 <p className="text-body-lg text-neutral-900">캠 미리보기</p>
 
-                {/*
-                  TODO(design-token): design-system.md에 없는 값. 임시로
-                  neutral-900 사용 중. 필요한 값: 캠 미리보기 빈 상태 배경
-                  그라디언트 rgb(53,41,107)→rgb(26,20,64) (Figma 673:13, 문서 미정의)
-                */}
                 <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-md bg-neutral-900">
                   <video
                     ref={videoRef}
