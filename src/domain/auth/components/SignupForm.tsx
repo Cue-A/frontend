@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { ROUTES } from '@/app/routes'
 import { setAccessToken } from '@/shared/api/accessToken'
+import Button from '@/shared/ui/Button'
 
 import { signup } from '../api/authApi'
 import { useAuthSubmit } from '../hooks/useAuthSubmit'
@@ -83,16 +84,13 @@ export default function SignupForm({ onSwitchToLogin }: Props) {
       {mismatch && <p className="text-body-sm text-semantic-danger">비밀번호가 서로 달라요.</p>}
       {error && <p className="text-body-sm text-semantic-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-sm bg-primary-500 py-3 text-body-lg font-semibold text-neutral-0 hover:bg-primary-600 active:bg-primary-700 disabled:opacity-50"
-      >
+      <Button type="submit" variant="primary" size="lg" disabled={isSubmitting} className="w-full">
         {isSubmitting ? '가입 중…' : '회원가입'}
-      </button>
+      </Button>
 
       <p className="text-center text-body-sm text-neutral-500">
         이미 계정이 있으신가요?{' '}
+        {/* 문장 속 전환 버튼입니다. shared/ui/Button 은 네모난 CTA 모양이라 쓰지 않습니다. */}
         <button
           type="button"
           onClick={onSwitchToLogin}

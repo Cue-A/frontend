@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { toInterview } from '@/app/routes'
+import Button from '@/shared/ui/Button'
+import Card from '@/shared/ui/Card'
 
 import { useDeviceCheck } from '../hooks/useDeviceCheck'
 import { canStartInterview } from '../lib/canStartInterview'
@@ -28,20 +30,22 @@ type DeviceStatusRowProps = {
 
 function DeviceStatusRow({ label, state, onRetry }: DeviceStatusRowProps) {
   return (
-    <li className="flex flex-col gap-2 border p-3">
-      <div className="flex items-center justify-between gap-4">
-        <span>{label}</span>
-        <span>{STATUS_LABEL[state.status]}</span>
-      </div>
-
-      {state.status === 'failed' && state.failureReason && (
+    <li>
+      <Card padding="sm" className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-4">
-          <p>{FAILURE_MESSAGE[state.failureReason](label)}</p>
-          <button type="button" onClick={onRetry} className="shrink-0 border px-4 py-2">
-            다시 시도
-          </button>
+          <span>{label}</span>
+          <span>{STATUS_LABEL[state.status]}</span>
         </div>
-      )}
+
+        {state.status === 'failed' && state.failureReason && (
+          <div className="flex items-center justify-between gap-4">
+            <p>{FAILURE_MESSAGE[state.failureReason](label)}</p>
+            <Button size="sm" onClick={onRetry} className="shrink-0">
+              다시 시도
+            </Button>
+          </div>
+        )}
+      </Card>
     </li>
   )
 }
@@ -106,9 +110,12 @@ export default function DeviceCheckPage() {
         */}
         {camera.status === 'failed' && <p>카메라 없이 진행하면 시선 점수는 나오지 않아요</p>}
 
-        <button type="button" disabled={!canStart} onClick={handleStart} className="border px-6 py-3">
+        {/* 못 누르는 이유는 툴팁이 아니라 글로 적습니다 (이슈 #32). */}
+        {!canStart && <p className="text-body-sm text-neutral-400">마이크가 있어야 시작할 수 있어요</p>}
+
+        <Button variant="primary" size="lg" disabled={!canStart} onClick={handleStart}>
           면접 시작하기
-        </button>
+        </Button>
       </div>
     </section>
   )
