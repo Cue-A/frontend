@@ -1,4 +1,4 @@
-import { formatDuration } from '../lib/formatDuration'
+import { formatDuration } from '@/shared/lib/formatDuration'
 
 type Props = {
   questionNumber: number | null

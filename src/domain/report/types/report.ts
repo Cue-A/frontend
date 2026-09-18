@@ -75,6 +75,25 @@ export type ScoreDelta = {
   diff: number
 }
 
+/**
+ * 답변 영상입니다. (C-01 "답변 영상")
+ *
+ * `playUrl` 은 서명된 임시 주소일 가능성이 높습니다. 시안에 링크 만료 상태가
+ * 따로 있고(`상태C · 영상 링크 만료`), 만료돼도 점수와 분석 내용은 그대로
+ * 보여줍니다. 만료를 서버가 알려주는지 재생 실패로만 알 수 있는지는 아직
+ * 계약이 없어서, 화면은 `isExpired` 하나만 보고 그립니다. 계약이 오면
+ * `domain/report/api/` 변환층에서 이 모양으로 맞춥니다. (이슈 #38)
+ */
+export type ReportVideo = {
+  /** 만료됐으면 null 입니다 */
+  playUrl: string | null
+  isExpired: boolean
+  /** 전체 길이(초) */
+  durationSeconds: number
+  /** '원본 화질' 처럼 그대로 보여줄 문구. 없으면 null */
+  qualityLabel: string | null
+}
+
 /** 개선 답변 예시. 한 질문에 대해서만 옵니다. */
 export type ImprovedAnswer = {
   turnTitle: string
@@ -129,4 +148,6 @@ export type Report = {
   metricsComment: string | null
 
   improvedAnswer: ImprovedAnswer | null
+  /** 영상이 아예 없는 회차도 있을 수 있어서 null 을 허용합니다 */
+  video: ReportVideo | null
 }
