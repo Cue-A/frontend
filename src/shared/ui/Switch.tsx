@@ -14,7 +14,14 @@ type Props = {
   checked: boolean
   onChange: (checked: boolean) => void
   disabled?: boolean
-  /** 글을 왼쪽에 두고 스위치를 오른쪽 끝으로 밀 때 씁니다 */
+  /**
+   * 글과 스위치의 좌우 순서입니다.
+   *
+   * - `false` (기본) — 스위치가 왼쪽, 글이 오른쪽. 리포트의 표시 옵션처럼
+   *   여러 개를 한 줄에 늘어놓을 때 시안이 이 모양입니다.
+   * - `true` — 글이 왼쪽, 스위치가 오른쪽 끝. 옵션 설정의 "기업 맞춤 질문"처럼
+   *   한 줄을 혼자 차지할 때 씁니다.
+   */
   labelFirst?: boolean
   /** 레이아웃만 넣어주세요 */
   className?: string
