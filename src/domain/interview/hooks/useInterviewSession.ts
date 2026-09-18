@@ -199,7 +199,10 @@ export function useInterviewSession(sessionId: string, answerTimeLimitSec: numbe
       // TODO(INT-8 미확정): 완전 무응답 상태로 시간이 끝난 경우 정책이 아직 없다
       // (일반적인 "답변 중 시간 끊김"과는 별개 케이스로, 지금 결정하지 않기로 함).
       // 자동 제출하지 않고 'answering' 에 머무른다 — 정책이 정해지면 이 분기를 고친다.
-      console.error('무응답 타임아웃 — 정책 미확정, 자동 제출 생략 questionId=%s', questionRef.current?.questionId)
+      //
+      // 발생 조건: 현재 질문(questionRef.current?.questionId)의 answerTimeLimitSec 이
+      // 다 될 때까지 사용자가 한마디도 답하지 않은 경우 — 질문마다 시간이 끊길 때마다
+      // 반복되는 정상 흐름이라 에러 로그는 남기지 않는다.
       return
     }
 
