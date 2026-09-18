@@ -36,7 +36,14 @@ export function connectSessionSocket(sessionId: string, handlers: SessionSocketH
   })
 
   socket.addEventListener('close', (event) => {
-    console.error('WS 연결 종료 sessionId=%s code=%s', sessionId, event.code)
+    // wasClean/code 1000 은 정상 종료다 — 화면 이탈로 우리가 socket.close() 를 부른
+    // 경우가 대표적이고, 서버가 먼저 깨끗하게 닫는 경우도 포함한다. 에러로 찍지 않는다.
+    if (event.wasClean || event.code === 1000) {
+      console.debug('WS 연결 정상 종료 sessionId=%s code=%s', sessionId, event.code)
+      return
+    }
+
+    console.error('WS 연결 비정상 종료 sessionId=%s code=%s reason=%s', sessionId, event.code, event.reason)
   })
 
   socket.addEventListener('message', (event) => {
