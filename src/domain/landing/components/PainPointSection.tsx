@@ -5,12 +5,15 @@ import { PAIN_POINTS } from '../lib/landingContent'
 /**
  * "이런 고민, 있으셨나요?" 절입니다. (A-01)
  * 고민 한 줄 아래에 해결 한 줄을 붙여 짝으로 읽히게 합니다.
+ *
+ * 배경은 단색이 아니라 모서리에 블롭이 깔린 워시입니다. `bg-wash` 한 클래스에
+ * 들어 있습니다 (src/styles/tokens.css, docs/design-system.md §2.5).
  */
 export default function PainPointSection() {
   return (
     <section
       aria-labelledby="pain-points"
-      className="flex flex-col gap-10 bg-neutral-50 px-6 py-20 md:px-12"
+      className="flex flex-col gap-10 bg-wash px-6 py-20 md:px-12"
     >
       <h2 id="pain-points" className="text-center text-h1 text-neutral-900">
         이런 고민, 있으셨나요?
