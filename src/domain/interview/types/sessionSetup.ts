@@ -54,9 +54,15 @@ export const ANSWER_SECONDS_CHOICES: Choice<string>[] = [
   { value: NO_TIME_LIMIT, label: '제한 없음' },
 ]
 
+/**
+ * 질문 수. 기능명세서 INT-2 에 **3 / 6 / 9** 로 확정되어 있습니다.
+ *
+ * 전에는 5 / 7 / 9 였습니다. 시안에 "9문항" 한 값만 보여서 프론트가 임시로
+ * 채운 값이었는데(PR #13), 명세서에 값이 적혀 있는 걸 뒤늦게 확인했습니다.
+ */
 export const QUESTION_COUNT_CHOICES: Choice<string>[] = [
-  { value: '5', label: '5문항' },
-  { value: '7', label: '7문항' },
+  { value: '3', label: '3문항' },
+  { value: '6', label: '6문항' },
   { value: '9', label: '9문항' },
 ]
 
