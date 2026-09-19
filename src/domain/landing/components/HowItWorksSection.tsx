@@ -1,4 +1,39 @@
+import { useState } from 'react'
+
 import { HOW_IT_WORKS } from '../lib/landingContent'
+
+/**
+ * 단계별 화면 스크린샷입니다.
+ *
+ * 파일은 `public/landing/` 에 들어갑니다. 아직 안 들어온 이미지가 있어도
+ * 화면이 깨지면 안 되므로, 못 불러오면 자리표시자로 되돌립니다. 이미지가
+ * 다 채워지면 이 되돌림 분기는 지워도 됩니다.
+ */
+function StepImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <div
+        aria-hidden
+        data-placeholder="Screenshot"
+        className="flex min-w-72 flex-1 items-center justify-center rounded-lg bg-neutral-200 p-16 text-body-sm text-neutral-400"
+      >
+        화면 이미지 자리
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="min-w-72 flex-1"
+    />
+  )
+}
 
 /**
  * 시안 상단의 흐름 표시입니다. 다섯 단계 설명을 읽기 전에 전체 그림을 먼저 보여줍니다.
@@ -38,8 +73,8 @@ function FlowSteps() {
 /**
  * "이용 방법" 다섯 단계입니다. (A-01)
  *
- * 시안은 단계마다 화면 스크린샷을 좌우로 번갈아 붙입니다. 이미지는 아직
- * 내보내지 않아서 자리만 잡아뒀습니다. 이미지가 준비되면 그 자리에 넣으면 됩니다.
+ * 시안대로 단계마다 화면 스크린샷을 좌우로 번갈아 붙입니다. 이미지는
+ * `public/landing/` 에 있고, Figma `A-01 - Final` 의 step-image-01~05 를 내보낸 것입니다.
  * 홀수 단계는 글이 왼쪽, 짝수 단계는 글이 오른쪽으로 갑니다.
  */
 export default function HowItWorksSection() {
@@ -76,13 +111,7 @@ export default function HowItWorksSection() {
               <p className="text-body-md text-neutral-500">{step.description}</p>
             </div>
 
-            <div
-              aria-hidden
-              data-placeholder="Screenshot"
-              className="flex min-w-72 flex-1 items-center justify-center rounded-lg bg-neutral-200 p-16 text-body-sm text-neutral-400"
-            >
-              화면 이미지 자리
-            </div>
+            <StepImage src={step.image} alt={`${step.title} 화면`} />
           </li>
         ))}
       </ol>
