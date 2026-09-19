@@ -62,7 +62,12 @@ export default function DeviceCheckPage() {
 
   const cameraReady: ReadyItemStatus = camera.status === 'available' ? 'ready' : camera.status === 'failed' ? 'not-ready' : 'pending'
   const micReady: ReadyItemStatus = mic.status === 'available' ? 'ready' : mic.status === 'failed' ? 'not-ready' : 'pending'
-  const readyCount = [cameraReady, micReady].filter((status) => status === 'ready').length
+  // TODO(network-check): 네트워크 확인 로직이 아직 없어(전용 API·훅 없음) 항상 'pending'
+  // 이다 — 실제 측정이 생기면 cameraReady/micReady 와 같은 패턴으로 교체한다.
+  const networkReady: ReadyItemStatus = 'pending'
+  const readyItems: ReadyItemStatus[] = [cameraReady, micReady, networkReady]
+  const readyCount = readyItems.filter((status) => status === 'ready').length
+  const readyTotal = readyItems.length
 
   const handleStart = () => {
     if (!sessionId || !canStart) return
@@ -111,13 +116,15 @@ export default function DeviceCheckPage() {
 
                 <div className="flex items-center justify-between gap-3">
                   <Badge tone={STATUS_TONE[camera.status]}>카메라 {STATUS_LABEL[camera.status]}</Badge>
-                  <Button size="sm" onClick={recheckCamera}>
-                    다시 시도
-                  </Button>
                 </div>
 
                 {camera.status === 'failed' && camera.failureReason && (
-                  <p className="text-body-sm text-neutral-500">{FAILURE_MESSAGE[camera.failureReason]('카메라')}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-body-sm text-neutral-500">{FAILURE_MESSAGE[camera.failureReason]('카메라')}</p>
+                    <Button size="sm" onClick={recheckCamera} className="shrink-0">
+                      다시 시도
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -131,25 +138,34 @@ export default function DeviceCheckPage() {
                   TODO(design-token): design-system.md에 없는 값. 임시로
                   neutral-50 사용 중. 필요한 값: 마이크 레벨 패널 배경 #f9f8ff
                   (Figma 1377:1462, 문서 미정의)
+
+                  임시로 border만 추가, 정식 토큰 추가는 리뷰어 확인 후 반영 예정.
                 */}
-                <div className="flex flex-col gap-3 rounded-md bg-neutral-50 p-4">
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+                <div className="flex flex-col gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-4">
+                  <div
+                    role="progressbar"
+                    aria-valuenow={Math.round(micLevel * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    className="h-2 w-full overflow-hidden rounded-full bg-neutral-200"
+                  >
                     <div
                       style={{ width: `${Math.round(micLevel * 100)}%` }}
                       className="h-full rounded-full bg-primary-500"
                     />
                   </div>
-                  <p className="text-body-sm text-neutral-500">🎤 "안녕하세요, 테스트 중입니다"라고 말해보세요</p>
-                </div>
-
-                <div className="flex items-center justify-end gap-3">
-                  <Button size="sm" onClick={recheckMic}>
-                    다시 시도
-                  </Button>
+                  <p className="text-body-sm text-neutral-500">
+                    <span aria-hidden="true">🎤</span> "안녕하세요, 테스트 중입니다"라고 말해보세요
+                  </p>
                 </div>
 
                 {mic.status === 'failed' && mic.failureReason && (
-                  <p className="text-body-sm text-neutral-500">{FAILURE_MESSAGE[mic.failureReason]('마이크')}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-body-sm text-neutral-500">{FAILURE_MESSAGE[mic.failureReason]('마이크')}</p>
+                    <Button size="sm" onClick={recheckMic} className="shrink-0">
+                      다시 시도
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -162,21 +178,22 @@ export default function DeviceCheckPage() {
             16px 없음).
           */}
           <aside className="flex min-w-72 flex-1 flex-col gap-4">
-            <Card label="준비 상태" padding="lg" className="flex flex-col gap-3.5">
+            <Card padding="lg" className="flex flex-col gap-3.5">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-body-lg font-semibold text-neutral-900">준비 상태</h2>
-                <span className={`text-body-sm ${readyCount === 2 ? 'text-badge-success-text' : 'text-neutral-500'}`}>
-                  {readyCount}/2
+                <span className={`text-body-sm ${readyCount === readyTotal ? 'text-semantic-success' : 'text-neutral-500'}`}>
+                  {readyCount}/{readyTotal}
                 </span>
               </div>
 
               <div className="flex items-center gap-1">
-                <div
-                  className={`h-1 flex-1 rounded-full ${cameraReady === 'ready' ? 'bg-semantic-success' : 'bg-neutral-200'}`}
-                />
-                <div
-                  className={`h-1 flex-1 rounded-full ${micReady === 'ready' ? 'bg-semantic-success' : 'bg-neutral-200'}`}
-                />
+                {readyItems.map((status, index) => (
+                  // 항목 순서가 고정(카메라·마이크·네트워크)이라 index 를 key 로 써도 안전하다.
+                  <div
+                    key={index}
+                    className={`h-1 flex-1 rounded-full ${status === 'ready' ? 'bg-semantic-success' : 'bg-neutral-200'}`}
+                  />
+                ))}
               </div>
 
               <ul className="flex flex-col gap-3">
@@ -188,20 +205,14 @@ export default function DeviceCheckPage() {
                   <ReadyItemIcon status={micReady} />
                   <span className="text-body-sm text-neutral-900">마이크 정상 인식</span>
                 </li>
-                {/*
-                  TODO(network-check): 네트워크 확인 로직이 아직 없음(전용
-                  API·훅 없음). 실제 측정 로직을 만들지 않고 항상 "확인 중"
-                  placeholder 로만 표시한다. 로직이 생기면 이 항목을
-                  cameraReady/micReady 와 같은 패턴으로 교체한다.
-                */}
                 <li className="flex items-center gap-2">
-                  <ReadyItemIcon status="pending" />
+                  <ReadyItemIcon status={networkReady} />
                   <span className="text-body-sm text-neutral-400">네트워크 상태 확인 중</span>
                 </li>
               </ul>
             </Card>
 
-            <Card label="면접 요약" padding="lg" className="flex flex-col gap-4">
+            <Card padding="lg" className="flex flex-col gap-4">
               <h2 className="text-body-lg font-semibold text-neutral-900">면접 요약</h2>
               <dl className="flex flex-col">
                 {SUMMARY_ROW_LABELS.map((label) => (
