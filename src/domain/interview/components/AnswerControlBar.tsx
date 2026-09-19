@@ -1,5 +1,5 @@
 import type { SubmitErrorState } from '../hooks/useInterviewSession'
-import { formatDuration } from '../lib/formatDuration'
+import { formatDuration } from '@/shared/lib/formatDuration'
 import type { SessionPhase } from '../types/interview'
 
 import ListeningIndicator from './ListeningIndicator'
