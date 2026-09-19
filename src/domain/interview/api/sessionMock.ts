@@ -2,6 +2,8 @@ import { registerMock } from '@/shared/api/mock'
 
 import type { Company } from '../types/sessionSetup'
 
+import { advanceMockSession } from './sessionSocketMock'
+
 /**
  * 기업 목록 목업입니다. 시안에 "약 30개 기업의 인재상 데이터가 등록되어 있어요"
  * 라고 되어 있는데, 실제 목록은 백엔드가 가지고 있습니다. 여기서는 드롭다운이
@@ -25,3 +27,21 @@ registerMock('GET', '/api/companies', () => COMPANIES)
  * 다음 단계로 넘어갈 수 있어서 고정 값을 돌려줍니다.
  */
 registerMock('POST', '/api/interviews', () => ({ sessionId: 's1' }))
+
+/**
+ * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다. 고정값만 돌려준다 — 이유는
+ * sessionApi.getInterviewOptions 주석 참고 (interviewerStyle 대소문자/값 범위 불일치).
+ */
+registerMock('GET', '/api/interviews/:sessionId', () => ({
+  interviewerStyle: 'friendly',
+  hideQuestionText: false,
+  answerTimeLimitSec: 90,
+}))
+
+/**
+ * 답변 제출 목업입니다. 실제 WS 시나리오(sessionSocketMock)의 다음 턴(progress →
+ * 다음 질문 또는 session_end)을 이 제출이 트리거한다.
+ */
+registerMock('POST', '/api/interviews/:sessionId/answers', ({ sessionId }) => {
+  advanceMockSession(sessionId)
+})

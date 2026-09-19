@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 
+import type { SubmitErrorState } from '../hooks/useInterviewSession'
 import type { DeviceStatus, InterviewerStyle, Question, SessionPhase } from '../types/interview'
 
 import DeviceStatusChip from './DeviceStatusChip'
@@ -28,12 +29,16 @@ type Props = {
   hideQuestionText: boolean
   phase: SessionPhase
   onSubmitAnswer?: () => void
+  progressLabel?: string | null
+  needsRerecord?: boolean
+  submitError?: SubmitErrorState | null
+  remainingSec?: number | null
 }
 
 /**
  * 면접 진행 화면의 정적 UI 조립입니다. 내부 상태·타이머·미디어 접근이 없고
- * 모든 값은 props 로만 받는다 (B-01). phase 관리(B-02), 실제 미디어/오디오 연결(B-03),
- * 종료 모달·라우팅(B-04)은 각각 다른 이슈에서 이 컴포넌트에 실데이터를 채워 넣는다.
+ * 모든 값은 props 로만 받는다 (B-01). phase 관리(B-01-2), 실제 미디어/오디오 연결(B-01-3),
+ * 종료 모달·라우팅(B-01-4)은 각각 다른 이슈에서 이 컴포넌트에 실데이터를 채워 넣는다.
  */
 export default function InterviewSessionPage({
   onExit,
@@ -51,6 +56,10 @@ export default function InterviewSessionPage({
   hideQuestionText,
   phase,
   onSubmitAnswer,
+  progressLabel = null,
+  needsRerecord = false,
+  submitError = null,
+  remainingSec = null,
 }: Props) {
   return (
     // min-w: SessionSidePanel(w-72 고정) + InterviewerAvatarStage 최소 공간을 함께 보장하는 임계값.
@@ -85,7 +94,16 @@ export default function InterviewSessionPage({
           <InterviewerAvatarStage speakingIntensity={speakingIntensity} />
         </div>
 
-        <QuestionCard question={question} hideQuestionText={hideQuestionText} phase={phase} onSubmitAnswer={onSubmitAnswer} />
+        <QuestionCard
+          question={question}
+          hideQuestionText={hideQuestionText}
+          phase={phase}
+          onSubmitAnswer={onSubmitAnswer}
+          progressLabel={progressLabel}
+          needsRerecord={needsRerecord}
+          submitError={submitError}
+          remainingSec={remainingSec}
+        />
       </div>
     </div>
   )

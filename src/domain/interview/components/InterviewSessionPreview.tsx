@@ -92,6 +92,10 @@ type PreviewState = {
   interviewerStyle: InterviewerStyle
   hasCameraStream: boolean
   speakingIntensity: number
+  showProgressLabel: boolean
+  needsRerecord: boolean
+  showSubmitError: boolean
+  remainingSec: number | null
 }
 
 const INITIAL_STATE: PreviewState = {
@@ -103,7 +107,13 @@ const INITIAL_STATE: PreviewState = {
   interviewerStyle: 'friendly',
   hasCameraStream: false,
   speakingIntensity: 0,
+  showProgressLabel: false,
+  needsRerecord: false,
+  showSubmitError: false,
+  remainingSec: null,
 }
+
+const REMAINING_SEC_OPTIONS = ['none', '5', '45', '90'] as const
 
 const MIN_WIDTH_PX = 1024
 
@@ -157,6 +167,30 @@ function LiveFullWidthPreview() {
           options={['false', 'true']}
           onChange={(v) => set('hasCameraStream')(v === 'true')}
         />
+        <ControlGroup
+          label="progressLabel (waitingNextQuestion)"
+          value={String(state.showProgressLabel) as 'true' | 'false'}
+          options={['false', 'true']}
+          onChange={(v) => set('showProgressLabel')(v === 'true')}
+        />
+        <ControlGroup
+          label="needsRerecord"
+          value={String(state.needsRerecord) as 'true' | 'false'}
+          options={['false', 'true']}
+          onChange={(v) => set('needsRerecord')(v === 'true')}
+        />
+        <ControlGroup
+          label="submitError"
+          value={String(state.showSubmitError) as 'true' | 'false'}
+          options={['false', 'true']}
+          onChange={(v) => set('showSubmitError')(v === 'true')}
+        />
+        <ControlGroup
+          label="remainingSec (answering)"
+          value={state.remainingSec === null ? 'none' : String(state.remainingSec)}
+          options={REMAINING_SEC_OPTIONS}
+          onChange={(v) => set('remainingSec')(v === 'none' ? null : Number(v))}
+        />
         <div className="flex flex-col gap-1">
           <span className="text-body-sm text-neutral-500">speakingIntensity</span>
           <div className="flex flex-wrap gap-1">
@@ -195,6 +229,14 @@ function LiveFullWidthPreview() {
           question={buildQuestion(state.questionType, state.audioAvailable)}
           hideQuestionText={state.hideQuestionText}
           phase={state.phase}
+          progressLabel={state.showProgressLabel ? '답변 정리 중' : null}
+          needsRerecord={state.needsRerecord}
+          submitError={
+            state.showSubmitError
+              ? { message: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해주세요.', retryable: true }
+              : null
+          }
+          remainingSec={state.remainingSec}
         />
       </div>
     </section>

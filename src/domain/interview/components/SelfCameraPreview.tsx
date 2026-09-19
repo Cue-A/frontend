@@ -2,7 +2,7 @@ import type { RefObject } from 'react'
 
 type Props = {
   videoRef: RefObject<HTMLVideoElement | null>
-  /** 스트림 연결 여부. getUserMedia 는 B-03 몫이라 상위에서 내려받기만 한다. */
+  /** 스트림 연결 여부. getUserMedia 는 B-01-3 몫이라 상위에서 내려받기만 한다. */
   hasStream: boolean
 }
 

@@ -3,7 +3,7 @@ type Props = {
 }
 
 /**
- * 상단바 좌측 X 버튼입니다. 클릭 시 종료 확인 모달을 띄우는 건 B-04 의 몫이라
+ * 상단바 좌측 X 버튼입니다. 클릭 시 종료 확인 모달을 띄우는 건 B-01-4 의 몫이라
  * 여기서는 onClick 을 그대로 위임만 합니다.
  */
 export default function ExitButton({ onClick }: Props) {
