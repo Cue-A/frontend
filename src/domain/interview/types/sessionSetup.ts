@@ -22,11 +22,18 @@ export const JOB_ROLES: Choice<JobRole>[] = [
   { value: 'DESIGNER', label: '디자이너' },
 ]
 
-export type InterviewerStyle = 'FRIENDLY' | 'NEUTRAL' | 'PRESSURE'
+/**
+ * 면접관 스타일. 기능명세서 INT-2 에 **친절형 · 압박형 2종**으로 정해져 있습니다.
+ *
+ * A-05 시안에는 "중립적 면접관"까지 3종이 그려져 있어서 코드도 3종이었는데,
+ * 명세서를 따르기로 했습니다. INT-2 는 "난이도는 사용자가 선택하지 않으며 면접관
+ * 스타일에 따라 시스템이 배분한다" 라서 종류 수가 AI 의 난이도 배분에 직접 걸립니다.
+ * AI 파트 전달 문서도 "친절형 면접에서는 회복력이 항상 null" 처럼 두 종만 전제합니다.
+ */
+export type InterviewerStyle = 'FRIENDLY' | 'PRESSURE'
 
 export const INTERVIEWER_STYLES: Choice<InterviewerStyle>[] = [
   { value: 'FRIENDLY', label: '친절한 면접관' },
-  { value: 'NEUTRAL', label: '중립적 면접관' },
   { value: 'PRESSURE', label: '압박 면접관' },
 ]
 
@@ -54,9 +61,15 @@ export const ANSWER_SECONDS_CHOICES: Choice<string>[] = [
   { value: NO_TIME_LIMIT, label: '제한 없음' },
 ]
 
+/**
+ * 질문 수. 기능명세서 INT-2 에 **3 / 6 / 9** 로 확정되어 있습니다.
+ *
+ * 전에는 5 / 7 / 9 였습니다. 시안에 "9문항" 한 값만 보여서 프론트가 임시로
+ * 채운 값이었는데(PR #13), 명세서에 값이 적혀 있는 걸 뒤늦게 확인했습니다.
+ */
 export const QUESTION_COUNT_CHOICES: Choice<string>[] = [
-  { value: '5', label: '5문항' },
-  { value: '7', label: '7문항' },
+  { value: '3', label: '3문항' },
+  { value: '6', label: '6문항' },
   { value: '9', label: '9문항' },
 ]
 

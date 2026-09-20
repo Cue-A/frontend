@@ -1,9 +1,10 @@
 import { IconFileText } from '@tabler/icons-react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
+import { ALLOWED_RESUME_EXTENSIONS, RESUME_ACCEPT, validateResumeFile } from '../lib/validateResume'
 import type { ResumeFile } from '../types/sessionSetup'
 
 type Props = {
@@ -30,11 +31,27 @@ function formatSize(bytes: number) {
  * 채우기를 권하는 문장과 강조 버튼, 골랐을 때는 파일 정보와 보조 버튼입니다.
  *
  * 파일 선택 버튼은 브라우저 기본 모양을 숨기고 직접 만든 버튼으로 엽니다.
+ *
+ * 고른 파일은 `validateResumeFile` 로 한 번 더 확인합니다. `accept` 는 선택창의
+ * 기본 필터일 뿐이라 "모든 파일" 로 바꾸면 그대로 통과합니다 (기능명세서 DOC-5).
  */
 export default function ResumeField({ resume, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const openPicker = () => inputRef.current?.click()
+
+  const handlePick = (file: File) => {
+    const message = validateResumeFile(file)
+
+    if (message) {
+      setError(message)
+      return
+    }
+
+    setError(null)
+    onChange({ name: file.name, size: file.size })
+  }
 
   return (
     <section className="flex flex-col gap-3">
@@ -70,7 +87,7 @@ export default function ResumeField({ resume, onChange }: Props) {
                 아직 불러온 자기소개서가 없어요
               </span>
               <span className="text-body-sm text-neutral-400">
-                자소서를 불러오면 맞춤 질문이 더 정확해져요
+                {ALLOWED_RESUME_EXTENSIONS.join(' · ')} 파일을 올리면 맞춤 질문이 더 정확해져요
               </span>
             </span>
           )}
@@ -87,14 +104,20 @@ export default function ResumeField({ resume, onChange }: Props) {
         )}
       </div>
 
+      {error && (
+        <p role="alert" className="text-body-sm text-semantic-danger">
+          {error}
+        </p>
+      )}
+
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.doc,.docx"
+        accept={RESUME_ACCEPT}
         hidden
         onChange={(event) => {
           const file = event.target.files?.[0]
-          if (file) onChange({ name: file.name, size: file.size })
+          if (file) handlePick(file)
 
           // 같은 파일을 다시 골라도 change 가 뜨도록 비워둡니다.
           event.target.value = ''
