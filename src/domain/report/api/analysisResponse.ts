@@ -2,12 +2,15 @@
  * AI 분석 결과의 응답 모양과, 그걸 화면용 타입으로 바꾸는 함수입니다.
  * (AI 파트 "프론트 전달 문서" 2장 · 이슈 #46)
  *
- * 여기 적힌 필드 이름은 **AI 가 보내는 이름**입니다. 전달 문서에 "Spring 이 자체
- * 이름으로 바꿔 내보낼 수 있다" 고 적혀 있어서, 실제 응답 필드는 백엔드와 맞춰봐야
- * 합니다. 바뀌더라도 이 파일 하나만 고치면 화면은 그대로입니다. (이슈 #32 5번)
+ * 필드 이름은 AI 저장소의 `ai/report_schemas.py`(계약서 원본:
+ * `docs/리포트생성_API계약_백엔드전달용.md`)에서 그대로 옮겼습니다.
  *
- * 리포트 전체 응답(회사명 · 회차 · 영상 · 개선 답변)은 AI 가 아니라 백엔드가 만드는
- * 부분이라 아직 계약이 없습니다. 그래서 이 파일은 **분석 결과 부분만** 다룹니다.
+ * **한 가지 어긋난 게 있습니다.** AI 는 시선 축을 `gaze` 로 부르는데 백엔드
+ * 엔티티(`Report.java`)는 `score_vision` 입니다. 백엔드가 어느 이름으로
+ * 내보낼지 정해지면 이 파일만 고치면 됩니다. (이슈 #32 5번)
+ *
+ * 리포트를 감싸는 바깥 응답(회사명 · 회차 · 영상)은 백엔드가 만드는 부분이고
+ * 조회 엔드포인트가 아직 없습니다. 그래서 이 파일은 **분석 결과 부분만** 다룹니다.
  */
 
 import type { Evidence, ScoreMetric, SubMetric } from '../types/report'
@@ -41,7 +44,21 @@ export type AxisResponse = {
   score: number | null
   /** 1~5 */
   display: number | null
-  /** 축의 하위 지표. 말하기라면 속도 · 필러 · 침묵 · 마무리 */
+  /**
+   * 축의 하위 지표입니다.
+   *
+   * **말하기 축만 확정됐습니다** — `hesitation_score`(0~100, 클수록 많이
+   * 머뭇거림) · `speech_rate_cv`(발화 속도 변동 계수) · `repetition_count`
+   * (인접 반복 횟수). 화면에 쓰는 건 `hesitation_score` 하나고 나머지 둘은
+   * 원인 파악용입니다.
+   *
+   * 내용 · 시선 축은 아직 **빈 객체**입니다. 비어 있는 게 오류가 아닙니다.
+   * 키가 나중에 추가되더라도 기존 필드는 바뀌지 않는다고 계약에 적혀 있습니다.
+   *
+   * 계약서에 **필러워드("음", "어")는 세지 않는다**고 명시돼 있습니다.
+   * Whisper 가 비유창성을 지우도록 학습돼서 안정적으로 안 잡히기 때문입니다.
+   * 대신 침묵 · 속도 변동 · 인접 반복을 묶어 "머뭇거림" 하나로 나옵니다.
+   */
   metrics: Record<string, number> | null
   evidence: EvidenceResponse[]
   /** `status` 가 `'failed'` 일 때만 있습니다 */
@@ -63,12 +80,25 @@ export type AnalysisOverall = {
   axes_failed: AxisKey[]
 }
 
+/**
+ * 회복력입니다. 숫자 하나가 아니라 객체로 옵니다.
+ *
+ * **친절형 면접에서는 항상 null 입니다.** 압박 구간이 없어 회복을 잴 대상이
+ * 없기 때문입니다.
+ */
+export type ResilienceResponse = {
+  /** 0~100 */
+  score: number
+  /** 1~5 */
+  display: number
+  comment: string
+}
+
 export type AnalysisResult = {
   report_status: 'complete' | 'partial'
   overall: AnalysisOverall
   axes: Record<AxisKey, AxisResponse>
-  /** 회복력 점수. 친절형 면접에서는 항상 null 입니다 */
-  resilience: number | null
+  resilience: ResilienceResponse | null
 }
 
 /** 화면에 쓰는 축 이름입니다. */
@@ -144,16 +174,40 @@ export function toScoreMetrics(axes: Record<AxisKey, AxisResponse>): ScoreMetric
 
 /**
  * 회복력 카드를 만듭니다. 없으면 null 이고, **목록에서 빼야 합니다.**
- * 친절형 면접은 압박 구간이 없어 잴 대상이 자체가 없습니다.
+ * 친절형 면접은 압박 구간이 없어 잴 대상 자체가 없습니다.
+ *
+ * 설명 문구는 서버가 주는 `comment` 를 그대로 씁니다. 회차마다 다른 말이 오고,
+ * 프론트가 점수만 보고 지어낸 문장보다 정확합니다.
  */
-export function toResilienceMetric(resilience: number | null): SubMetric | null {
+export function toResilienceMetric(resilience: ResilienceResponse | null): SubMetric | null {
   if (resilience === null) return null
 
   return {
     key: 'resilience',
     label: '회복력',
-    value: `${resilience}%`,
-    description: '압박 질문 이후 답변 안정도를 얼마나 빨리 되찾았는지예요.',
+    value: `${resilience.score} / 100`,
+    description: resilience.comment,
+  }
+}
+
+/**
+ * 머뭇거림 카드를 만듭니다. 말하기 축의 `hesitation_score` 가 출처입니다.
+ *
+ * 값이 클수록 많이 머뭇거린 것이라, 점수가 높을수록 좋은 다른 지표와 방향이
+ * 반대입니다. 그래서 숫자만 두지 않고 설명에 방향을 적습니다.
+ *
+ * 말하기 축이 실패했거나 아직 `metrics` 가 비어 있으면 null 입니다. 빈 값을
+ * 0으로 그리면 "전혀 안 머뭇거렸다" 로 읽혀서 사실과 반대가 됩니다.
+ */
+export function toHesitationMetric(speech: AxisResponse): SubMetric | null {
+  const score = speech.metrics?.hesitation_score
+  if (score === undefined) return null
+
+  return {
+    key: 'hesitation',
+    label: '머뭇거림',
+    value: `${score} / 100`,
+    description: '침묵 · 말 속도 변동 · 같은 말 반복을 묶은 값이에요. 낮을수록 매끄럽습니다.',
   }
 }
 

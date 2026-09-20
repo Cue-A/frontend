@@ -4,6 +4,7 @@ import type { Report, ReportVideo, SubMetric } from '../types/report'
 
 import type { AnalysisResult } from './analysisResponse'
 import {
+  toHesitationMetric,
   toPartialNotices,
   toResilienceMetric,
   toScoreGateReason,
@@ -36,7 +37,8 @@ const SAMPLE_ANALYSIS: AnalysisResult = {
       status: 'ok',
       score: 84,
       display: 4,
-      metrics: { relevance: 86, specificity: 80, logic: 85 },
+      // 내용 축 metrics 는 계약서에서 아직 빈 객체입니다. 비어 있는 게 오류가 아닙니다.
+      metrics: {},
       evidence: [
         {
           question_id: 'q3',
@@ -52,7 +54,8 @@ const SAMPLE_ANALYSIS: AnalysisResult = {
       status: 'ok',
       score: 78,
       display: 4,
-      metrics: { pace: 74, filler: 71, silence: 80, closing: 4 },
+      // 말하기 축만 키가 확정됐습니다. 내용 · 시선은 아직 빈 객체입니다.
+      metrics: { hesitation_score: 32, speech_rate_cv: 0.284, repetition_count: 3 },
       evidence: [],
     },
     gaze: {
@@ -61,10 +64,14 @@ const SAMPLE_ANALYSIS: AnalysisResult = {
       display: null,
       metrics: null,
       evidence: [],
-      error_code: 'GAZE_MODEL_TIMEOUT',
+      error_code: 'GAZE_FAILED',
     },
   },
-  resilience: 75,
+  resilience: {
+    score: 58,
+    display: 3,
+    comment: '압박 질문 이후 답변 길이가 절반으로 줄었습니다.',
+  },
 }
 
 /**
@@ -84,12 +91,12 @@ const SKIPPED_ANALYSIS: AnalysisResult = {
     axes_failed: [],
   },
   axes: {
-    content: { status: 'ok', score: 38, display: 2, metrics: null, evidence: [] },
+    content: { status: 'ok', score: 38, display: 2, metrics: {}, evidence: [] },
     speech: {
       status: 'ok',
       score: 72,
       display: 4,
-      metrics: { pace: 70, filler: 68, silence: 76, closing: 3 },
+      metrics: { hesitation_score: 54, speech_rate_cv: 0.41, repetition_count: 6 },
       evidence: [],
     },
     gaze: {
@@ -104,25 +111,12 @@ const SKIPPED_ANALYSIS: AnalysisResult = {
   resilience: null,
 }
 
-/**
- * 답변 마무리입니다.
- *
- * 말하기의 **하위 지표**라 세부 점수 줄이 아니라 보조 지표 자리에 둡니다.
- * 총점 계산에서는 말하기에 포함되어 있습니다. (AI 전달 문서 "점수 항목")
- *
- * 척도가 전달 문서에 없어서 시안대로 5점 만점으로 적었습니다. 실제 값이 오면
- * 여기와 함께 맞춥니다.
- */
-function toClosingMetric(analysis: AnalysisResult): SubMetric | null {
-  const closing = analysis.axes.speech.metrics?.closing
-  if (closing === undefined) return null
-
-  return {
-    key: 'closing',
-    label: '답변 마무리',
-    value: `${closing} / 5`,
-    description: '깔끔한 맺음 · 다음 연습에서는 결론을 먼저 말하기를 시도해보세요.',
-  }
+/** 값이 있는 보조 지표만 모읍니다. 없는 지표는 자리도 만들지 않습니다. */
+function toSubMetrics(analysis: AnalysisResult): SubMetric[] {
+  return [
+    toResilienceMetric(analysis.resilience),
+    toHesitationMetric(analysis.axes.speech),
+  ].filter((item): item is SubMetric => item !== null)
 }
 
 /**
@@ -211,10 +205,7 @@ const SAMPLE_REPORT: Report = {
   },
 
   metrics: toScoreMetrics(SAMPLE_ANALYSIS.axes),
-  subMetrics: [
-    toResilienceMetric(SAMPLE_ANALYSIS.resilience),
-    toClosingMetric(SAMPLE_ANALYSIS),
-  ].filter((item): item is SubMetric => item !== null),
+  subMetrics: toSubMetrics(SAMPLE_ANALYSIS),
   metricsComment: '2회차 대비 내용 구성이 가장 크게 좋아졌어요',
 
   improvedAnswer: {
@@ -278,10 +269,7 @@ registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
       scoreGateReason: toScoreGateReason(SKIPPED_ANALYSIS.overall),
       notices: toPartialNotices(SKIPPED_ANALYSIS),
       metrics: toScoreMetrics(SKIPPED_ANALYSIS.axes),
-      subMetrics: [
-        toResilienceMetric(SKIPPED_ANALYSIS.resilience),
-        toClosingMetric(SKIPPED_ANALYSIS),
-      ].filter((item): item is SubMetric => item !== null),
+      subMetrics: toSubMetrics(SKIPPED_ANALYSIS),
     }
   }
 

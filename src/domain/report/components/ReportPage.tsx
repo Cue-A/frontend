@@ -52,12 +52,20 @@ export default function ReportPage() {
 
   /*
     전에는 여기서 analysisStatus 가 COMPLETED 가 아닐 때 "분석 중" 문구를 띄웠습니다.
-    계약이 없을 때 지어낸 상태값이었고, 실제로는 그런 응답이 오지 않습니다 —
-    내용 분석이 실패하면 리포트가 아예 만들어지지 않아서 조회 자체가 에러로 떨어지고,
-    위의 error 분기가 받습니다. (AI 전달 문서 "리포트가 아예 안 오는 경우가 있습니다")
+    `QUEUED` · `PROCESSING` 같은 값은 계약이 없을 때 지어낸 것이라 지웠습니다.
 
-    분석이 아직 도는 중에 리포트 주소로 바로 들어온 경우는 분석 중 화면(B-02)이
-    맡습니다. 어디서 진행 상태를 받는지는 Q6b 가 정해져야 붙일 수 있습니다.
+    상황 자체는 그대로 있습니다. 다만 상태 필드가 아니라 **에러 코드**로 옵니다.
+
+      REPORT_NOT_READY   아직 만드는 중 (백엔드 ErrorCode.java, HTTP 202)
+      CONTENT_FAILED     내용 분석 실패 — 리포트가 아예 없음
+      REPORT_TOO_SHORT   답변 2문항 미만
+
+    셋 다 조회가 에러로 떨어져서 위의 error 분기가 받고, 문구는
+    `shared/api/errorMessage.ts` 가 붙입니다. 그래서 여기 따로 분기하지 않습니다.
+    점수가 빈 리포트를 그리는 길은 아예 없습니다.
+
+    분석이 도는 동안 진행률을 보여주는 건 분석 중 화면(B-02)이 맡습니다.
+    단계 값은 맞춰뒀고(ANALYSIS_STAGES), 어느 통로로 받는지만 Q6b 에 남아 있습니다.
   */
 
   const metrics = options.showVision
