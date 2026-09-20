@@ -1,4 +1,5 @@
-import { USE_MOCK } from '@/shared/api/mock'
+import { assertBaseUrl, WS_BASE_URL } from '@/shared/api/baseUrl'
+import { isRealApi, USING_PARTIAL_REAL } from '@/shared/api/mock'
 
 import type { ErrorPush, ProgressPush, Question, SessionEndPush } from '../types/interview'
 
@@ -6,7 +7,8 @@ import { connectMockSessionSocket, type SessionSocketHandlers } from './sessionS
 
 export type { SessionSocketHandlers }
 
-const WS_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/^http/, 'ws')
+/** 실제 소켓을 붙일지 목업을 돌릴지는 이 경로로 정합니다. (shared/api/mock.ts) */
+const SOCKET_PATH = (sessionId: string) => `/ws/interviews/${sessionId}`
 
 type WsEnvelope = { type: string; payload: unknown }
 
@@ -23,11 +25,20 @@ type WsEnvelope = { type: string; payload: unknown }
  * 반환값은 연결을 정리하는 함수다.
  */
 export function connectSessionSocket(sessionId: string, handlers: SessionSocketHandlers): () => void {
-  if (USE_MOCK) {
+  const path = SOCKET_PATH(sessionId)
+
+  // REST 와 같은 스위치를 씁니다. 면접 도메인이 VITE_REAL_APIS 에 없으면
+  // 소켓도 목업으로 돕니다 — 한쪽만 실제로 붙으면 질문은 오는데 답변 제출이
+  // 404 가 나는 식으로 반쪽짜리가 됩니다. (이슈 #53)
+  if (!isRealApi(path)) {
     return connectMockSessionSocket(sessionId, handlers)
   }
 
-  const socket = new WebSocket(`${WS_BASE_URL}/ws/interviews/${sessionId}`)
+  // 주소가 비어 있으면 브라우저가 현재 origin 으로 풀어버려서, 틀렸다는 신호
+  // 없이 조용히 안 붙습니다. (PR #40 리뷰 2번)
+  assertBaseUrl(USING_PARTIAL_REAL, path)
+
+  const socket = new WebSocket(`${WS_BASE_URL}${path}`)
 
   // 재연결 정책은 아직 없다 (docs/90-open-questions.md Q6a, 연결 인증도 미정).
   // 지금은 끊겨도 자동 재연결하지 않고, 최소한 조용히 삼키지 않도록 로그만 남긴다.

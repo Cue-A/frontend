@@ -5,9 +5,67 @@ import type { HttpMethod } from './types'
  * `.env.local` 에서 VITE_USE_MOCK=true 로 켭니다.
  *
  * 백엔드가 언제 준비될지 우리가 정할 수 없어서, 화면 작업이 API 를
- * 기다리지 않도록 통로를 한 겹 둡니다. 실제 API 가 오면 이 스위치만 끕니다.
+ * 기다리지 않도록 통로를 한 겹 둡니다.
  */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+
+/**
+ * 목업을 켜둔 채로 **일부 도메인만** 실제 서버에 보냅니다.
+ *
+ * ```
+ * VITE_USE_MOCK=true
+ * VITE_REAL_APIS=auth,users
+ * ```
+ *
+ * 백엔드는 엔드포인트를 한 번에 다 올리지 않습니다. 스위치가 전부 아니면
+ * 전무이면, 로그인 하나 붙이려고 목업을 끄는 순간 아직 컨트롤러가 없는
+ * 면접 · 리포트 · 기업이 전부 404 로 죽습니다. 그렇다고 켜두면 로그인도
+ * 목업이라 연동 확인 자체가 안 됩니다.
+ *
+ * 그래서 준비된 도메인만 이 목록에 넣습니다. 백엔드가 면접을 올리면
+ * `auth,users,interview-sessions` 로 한 줄 늘리면 됩니다.
+ *
+ * 비워두면 예전과 똑같이 전부 목업입니다. `VITE_USE_MOCK=false` 면 이
+ * 목록과 관계없이 전부 실제 요청입니다. (이슈 #53)
+ */
+const REAL_APIS: string[] = (import.meta.env.VITE_REAL_APIS ?? '')
+  .split(',')
+  .map((name: string) => name.trim())
+  .filter(Boolean)
+
+/** 목업을 켜둔 채 일부만 실제로 붙이는 중인지. 주소 검사에 씁니다. (baseUrl.ts) */
+export const USING_PARTIAL_REAL = USE_MOCK && REAL_APIS.length > 0
+
+/**
+ * 접두어입니다. 도메인 이름을 찾을 때 건너뜁니다.
+ *
+ * 지금 접두어가 도메인마다 다릅니다 — 인증 · 사용자는 `/api`, 나머지는
+ * `/v1` 이고, 소켓은 `/ws` 로 시작합니다. 아직 확정된 규칙이 아니라서
+ * (이슈 #32 4번) 접두어를 건너뛰고 그 다음 조각을 도메인으로 봅니다.
+ * 경로가 `/api/interviews` 에서 `/v1/interview-sessions` 로 바뀌어도
+ * 이 파일은 그대로입니다.
+ */
+const PATH_PREFIXES = ['api', 'v1', 'ws']
+
+/** 경로에서 도메인 이름 한 조각을 꺼냅니다. `/ws/v1/reports/x` → `reports` */
+function domainOf(path: string): string | undefined {
+  return toSegments(path).find((segment) => !PATH_PREFIXES.includes(segment))
+}
+
+/**
+ * 이 경로를 실제 서버로 보낼지 정합니다.
+ *
+ * **도메인 조각 하나만** 봅니다. 경로 아무 데나 이름이 들어 있는지 보면
+ * `/api/reports/auth` 처럼 **id 가 도메인 이름과 같을 때** 엉뚱하게 걸립니다.
+ * 세션 id 는 AI 서버가 만든 문자열이라 값을 우리가 고르지 않습니다.
+ */
+export function isRealApi(path: string): boolean {
+  if (!USE_MOCK) return true
+  if (REAL_APIS.length === 0) return false
+
+  const domain = domainOf(path)
+  return domain !== undefined && REAL_APIS.includes(domain)
+}
 
 /**
  * 경로 파라미터와 요청 본문을 받습니다.

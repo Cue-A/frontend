@@ -1,9 +1,8 @@
 import { getAccessToken } from './accessToken'
 import { ApiError } from './apiError'
-import { findMock, USE_MOCK } from './mock'
+import { assertBaseUrl, REST_BASE_URL } from './baseUrl'
+import { findMock, isRealApi, USING_PARTIAL_REAL } from './mock'
 import type { HttpMethod, Result } from './types'
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 /**
  * 토큰을 붙이는 유일한 자리입니다.
@@ -35,7 +34,9 @@ async function parseResult<T>(response: Response): Promise<Result<T>> {
 }
 
 async function request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
-  if (USE_MOCK) {
+  // 도메인별로 갈립니다. VITE_REAL_APIS 에 든 것만 실제 서버로 가고
+  // 나머지는 목업으로 갑니다. (mock.ts 의 isRealApi 주석 참고)
+  if (!isRealApi(path)) {
     const mock = findMock(method, path)
     if (!mock) {
       throw new ApiError('MOCK_NOT_FOUND', `등록된 목업 응답이 없습니다: ${method} ${path}`)
@@ -43,9 +44,13 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
     return mock(body) as T
   }
 
+  // 주소가 비어 있으면 요청이 개발 서버로 나가서 index.html 을 받아옵니다.
+  // 그러면 JSON 파싱이 깨지면서 HTTP_200 같은 엉뚱한 에러가 납니다.
+  assertBaseUrl(USING_PARTIAL_REAL, path)
+
   const hasBody = body !== undefined
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(`${REST_BASE_URL}${path}`, {
     method,
     headers: buildHeaders(hasBody),
     body: hasBody ? JSON.stringify(body) : undefined,
