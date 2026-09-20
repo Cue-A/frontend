@@ -1,18 +1,138 @@
 import { registerMock } from '@/shared/api/mock'
 
-import type { Report, ReportVideo } from '../types/report'
+import type { Report, ReportVideo, SubMetric } from '../types/report'
+
+import type { AnalysisResult } from './analysisResponse'
+import {
+  toPartialNotices,
+  toResilienceMetric,
+  toScoreGateReason,
+  toScoreMetrics,
+} from './analysisResponse'
+
+/**
+ * AI 분석 결과 부분입니다. **전달 문서의 응답 모양 그대로** 적었습니다.
+ *
+ * 화면용 모양으로 미리 다듬어두면 변환 함수가 한 번도 안 돌아서, 실제 응답이
+ * 왔을 때 처음 돌아가게 됩니다. 목업이라도 서버가 주는 모양으로 두는 편이
+ * 변환층을 실제로 검증합니다.
+ *
+ * 시안대로 **시선 분석이 실패한 상태**입니다. 빈 값 · 실패 값일 때 화면이
+ * 어떻게 되는지가 리포트에서 제일 자주 겪을 상황이기 때문입니다.
+ */
+const SAMPLE_ANALYSIS: AnalysisResult = {
+  report_status: 'partial',
+  overall: {
+    score: 82,
+    display: 4,
+    gated: false,
+    gate_reason: null,
+    partial: true,
+    axes_used: ['content', 'speech'],
+    axes_failed: ['gaze'],
+  },
+  axes: {
+    content: {
+      status: 'ok',
+      score: 84,
+      display: 4,
+      metrics: { relevance: 86, specificity: 80, logic: 85 },
+      evidence: [
+        {
+          question_id: 'q3',
+          t_start: 208,
+          t_end: 216.4,
+          kind: 'weakness',
+          label: '근거 부족',
+          comment: '선택 이유를 설명했으나 비교 대상이 제시되지 않았습니다.',
+        },
+      ],
+    },
+    speech: {
+      status: 'ok',
+      score: 78,
+      display: 4,
+      metrics: { pace: 74, filler: 71, silence: 80, closing: 4 },
+      evidence: [],
+    },
+    gaze: {
+      status: 'failed',
+      score: null,
+      display: null,
+      metrics: null,
+      evidence: [],
+      error_code: 'GAZE_MODEL_TIMEOUT',
+    },
+  },
+  resilience: 75,
+}
+
+/**
+ * 시선을 **안 쓴** 회차입니다. 실패(`failed`)와 미사용(`skipped`)이 화면에서
+ * 다르게 보이는지 확인하려고 둡니다. 친절형 면접이라 회복력도 없고, 총점에
+ * 상한이 걸린 경우까지 한 번에 볼 수 있습니다.
+ */
+const SKIPPED_ANALYSIS: AnalysisResult = {
+  report_status: 'partial',
+  overall: {
+    score: 40,
+    display: 2,
+    gated: true,
+    gate_reason: 'content_relevance_low',
+    partial: true,
+    axes_used: ['content', 'speech'],
+    axes_failed: [],
+  },
+  axes: {
+    content: { status: 'ok', score: 38, display: 2, metrics: null, evidence: [] },
+    speech: {
+      status: 'ok',
+      score: 72,
+      display: 4,
+      metrics: { pace: 70, filler: 68, silence: 76, closing: 3 },
+      evidence: [],
+    },
+    gaze: {
+      status: 'skipped',
+      score: null,
+      display: null,
+      metrics: null,
+      evidence: [],
+      reason: 'no_video',
+    },
+  },
+  resilience: null,
+}
+
+/**
+ * 답변 마무리입니다.
+ *
+ * 말하기의 **하위 지표**라 세부 점수 줄이 아니라 보조 지표 자리에 둡니다.
+ * 총점 계산에서는 말하기에 포함되어 있습니다. (AI 전달 문서 "점수 항목")
+ *
+ * 척도가 전달 문서에 없어서 시안대로 5점 만점으로 적었습니다. 실제 값이 오면
+ * 여기와 함께 맞춥니다.
+ */
+function toClosingMetric(analysis: AnalysisResult): SubMetric | null {
+  const closing = analysis.axes.speech.metrics?.closing
+  if (closing === undefined) return null
+
+  return {
+    key: 'closing',
+    label: '답변 마무리',
+    value: `${closing} / 5`,
+    description: '깔끔한 맺음 · 다음 연습에서는 결론을 먼저 말하기를 시도해보세요.',
+  }
+}
 
 /**
  * 백엔드가 준비되기 전까지 화면을 그리기 위한 가짜 리포트입니다.
  * 값은 C-01 시안에 적힌 것을 그대로 옮겼습니다. 계약이 확정되면 교체합니다.
- *
- * 시안대로 **시선 분석이 실패한 상태**로 두었습니다. 빈 값·실패 값일 때
- * 화면이 어떻게 되는지가 리포트에서 제일 자주 겪을 상황이기 때문입니다.
  */
 const SAMPLE_REPORT: Report = {
   reportId: 'r3',
   sessionId: 's3',
-  analysisStatus: 'COMPLETED',
+  status: 'partial',
   companyName: '네이버',
   jobRole: '기획 직무',
   interviewDate: '2026.07.18',
@@ -25,12 +145,12 @@ const SAMPLE_REPORT: Report = {
     { attempt: 3, reportId: 'r3', isLatest: true },
   ],
 
-  totalScore: 82,
+  totalScore: SAMPLE_ANALYSIS.overall.score,
+  totalScoreDisplay: SAMPLE_ANALYSIS.overall.display,
   totalScoreDelta: { fromAttempt: 2, diff: 6 },
+  scoreGateReason: toScoreGateReason(SAMPLE_ANALYSIS.overall),
 
-  notices: [
-    '시선 분석에 실패해 시선 점수는 이번 회차에서 제외되었습니다. 말하기 · 내용 · 답변 마무리는 정상 분석되었습니다.',
-  ],
+  notices: toPartialNotices(SAMPLE_ANALYSIS),
 
   summary: {
     verdict:
@@ -90,31 +210,11 @@ const SAMPLE_REPORT: Report = {
     ],
   },
 
-  metrics: [
-    { key: 'content', label: '내용', score: 84, unavailableLabel: null },
-    { key: 'speech', label: '말하기', score: 78, unavailableLabel: null },
-    {
-      key: 'vision',
-      label: '시선',
-      score: null,
-      unavailableLabel: '분석 실패',
-    },
-    { key: 'closing', label: '답변 마무리', score: 76, unavailableLabel: null },
-  ],
+  metrics: toScoreMetrics(SAMPLE_ANALYSIS.axes),
   subMetrics: [
-    {
-      key: 'resilience',
-      label: '회복력',
-      value: '75%',
-      description: '압박 질문(Q3) 이후 약 40초 만에 답변 안정도를 회복했어요.',
-    },
-    {
-      key: 'closing',
-      label: '답변 마무리',
-      value: '4 / 5',
-      description: '깔끔한 맺음 · 다음 연습에서는 결론을 먼저 말하기를 시도해보세요.',
-    },
-  ],
+    toResilienceMetric(SAMPLE_ANALYSIS.resilience),
+    toClosingMetric(SAMPLE_ANALYSIS),
+  ].filter((item): item is SubMetric => item !== null),
   metricsComment: '2회차 대비 내용 구성이 가장 크게 좋아졌어요',
 
   improvedAnswer: {
@@ -149,8 +249,41 @@ const EXPIRED_VIDEO: ReportVideo = {
 const EXPIRED_NOTICE =
   '보안을 위해 영상 재생 링크는 일정 시간이 지나면 만료됩니다. 점수와 분석 내용은 그대로 확인할 수 있습니다.'
 
+/**
+ * 회차별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
+ *
+ * - `r1` — 영상 링크 만료 (시안 `상태C`)
+ * - `r2` — 시선 **미사용**(카메라 안 켬) · 회복력 없음(친절형) · 총점 상한 걸림
+ * - `r3` — 시선 **분석 실패** (기본)
+ */
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
   const isExpired = reportId === 'r1'
+
+  if (reportId === 'r2') {
+    return {
+      ...SAMPLE_REPORT,
+      reportId,
+      attempt: 2,
+      status: 'partial',
+      // 회복력이 없는 건 친절형 면접이기 때문입니다. 개요도 같이 맞춰둡니다.
+      summary: {
+        ...SAMPLE_REPORT.summary,
+        overview: SAMPLE_REPORT.summary.overview.map((fact) =>
+          fact.key === 'style' ? { ...fact, value: '친절형' } : fact,
+        ),
+      },
+      totalScore: SKIPPED_ANALYSIS.overall.score,
+      totalScoreDisplay: SKIPPED_ANALYSIS.overall.display,
+      totalScoreDelta: null,
+      scoreGateReason: toScoreGateReason(SKIPPED_ANALYSIS.overall),
+      notices: toPartialNotices(SKIPPED_ANALYSIS),
+      metrics: toScoreMetrics(SKIPPED_ANALYSIS.axes),
+      subMetrics: [
+        toResilienceMetric(SKIPPED_ANALYSIS.resilience),
+        toClosingMetric(SKIPPED_ANALYSIS),
+      ].filter((item): item is SubMetric => item !== null),
+    }
+  }
 
   return {
     ...SAMPLE_REPORT,
