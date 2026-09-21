@@ -30,6 +30,8 @@ export type UseInterviewSessionResult = {
   /** 질문당 남은 시간(초). answerTimeLimitSec 이 null 이면 제한 없음이라 항상 null. */
   remainingSec: number | null
   submitAnswer: () => void
+  /** 질문 제시(텍스트/오디오)가 끝났을 때 컨테이너가 부른다 — presenting → answering 전환. */
+  notifyPresentationDone: (questionId: string) => void
 }
 
 /**
@@ -63,17 +65,28 @@ export function useInterviewSession(sessionId: string, answerTimeLimitSec: numbe
   // onSubmitAnswer 가 인자를 받지 않아 답변 텍스트를 캡처할 방법이 없어 항상 빈 문자열이다.
   const transcriptRef = useRef('')
 
-  const handleQuestion = useCallback(
-    (next: Question) => {
-      setQuestion(next)
-      setProgressLabel(null)
-      setNeedsRerecord(false)
-      setSubmitError(null)
+  const handleQuestion = useCallback((next: Question) => {
+    setQuestion(next)
+    setProgressLabel(null)
+    setNeedsRerecord(false)
+    setSubmitError(null)
+    transcriptRef.current = ''
+    // 'answering' 전환은 notifyPresentationDone 이 한다 — 오디오가 있으면 재생이
+    // 끝난 뒤, audioAvailable 이 false 면 기다릴 게 없어 바로 호출된다(컨테이너 쪽 책임).
+    setPhase('presenting')
+  }, [])
+
+  /**
+   * 질문 제시가 끝났다는 신호다 — 오디오가 있으면 재생 종료, 없으면(audioAvailable
+   * false) 곧바로 컨테이너가 부른다. questionId 를 받아서, 이전 질문의 오디오가
+   * 늦게 끝나 신호가 뒤늦게 와도 이미 다음 질문으로 넘어갔으면 무시한다.
+   */
+  const notifyPresentationDone = useCallback(
+    (questionId: string) => {
+      if (questionRef.current?.questionId !== questionId) return
+
       setRemainingSec(answerTimeLimitSec)
       answerStartRef.current = Date.now()
-      transcriptRef.current = ''
-      // TODO(B-01-3): presenting → answering 전환이 질문 수신과 동시에 일어난다.
-      // 실제로는 TTS 재생이 끝난 뒤여야 한다 — 오디오 재생이 붙으면 "재생 완료" 이벤트로 바꿔야 한다.
       setPhase('answering')
     },
     [answerTimeLimitSec],
@@ -219,5 +232,6 @@ export function useInterviewSession(sessionId: string, answerTimeLimitSec: numbe
     sessionEnd,
     remainingSec,
     submitAnswer,
+    notifyPresentationDone,
   }
 }

@@ -71,7 +71,10 @@ export default function DeviceCheckPage() {
 
   const handleStart = () => {
     if (!sessionId || !canStart) return
-    navigate(toInterview(sessionId))
+    // 이 화면의 점검 결과(INT-4)를 면접 진행 화면의 시작 값으로 넘긴다 — 스트림 자체는
+    // (여기서 만든 스트림은 라우트를 벗어나며 정리돼서) 재사용 못 하고 그쪽에서 새로
+    // 받지만, "이미 점검했다" 는 정보는 넘겨서 'unchecked' 로 잠깐 깜빡이지 않게 한다.
+    navigate(toInterview(sessionId), { state: { initialDeviceStatus: { camera, mic } } })
   }
 
   return (
