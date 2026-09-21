@@ -135,13 +135,12 @@ export default function DeviceCheckPage() {
                 </div>
 
                 {/*
-                  TODO(design-token): design-system.md에 없는 값. 임시로
-                  neutral-50 사용 중. 필요한 값: 마이크 레벨 패널 배경 #f9f8ff
-                  (Figma 1377:1462, 문서 미정의)
-
-                  임시로 border만 추가, 정식 토큰 추가는 리뷰어 확인 후 반영 예정.
+                  카드 안에 한 겹 더 얹는 패널이라 surface 토큰을 씁니다.
+                  neutral-50 은 흰 카드 위에서 경계가 거의 안 보여 border 를 덧대야
+                  했는데, 이 색이면 테두리 없이도 한 덩어리로 읽힙니다.
+                  (docs/design-system.md §2.6)
                 */}
-                <div className="flex flex-col gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-4">
+                <div className="flex flex-col gap-3 rounded-md bg-surface-muted p-4">
                   <div
                     role="progressbar"
                     aria-valuenow={Math.round(micLevel * 100)}
