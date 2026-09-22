@@ -68,7 +68,7 @@ export default function ReportPage() {
     단계 값은 맞춰뒀고(ANALYSIS_STAGES), 어느 통로로 받는지만 Q6b 에 남아 있습니다.
   */
 
-  const metrics = options.showVision
+  const metrics = options.showGaze
     ? data.metrics
     : data.metrics.filter((metric) => metric.key !== 'gaze')
 

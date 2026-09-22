@@ -78,15 +78,24 @@ const SAMPLE_ANALYSIS: AnalysisResult = {
  * 시선을 **안 쓴** 회차입니다. 실패(`failed`)와 미사용(`skipped`)이 화면에서
  * 다르게 보이는지 확인하려고 둡니다. 친절형 면접이라 회복력도 없고, 총점에
  * 상한이 걸린 경우까지 한 번에 볼 수 있습니다.
+ *
+ * **미사용은 `partial` 이 아닙니다.** AI 구현(`ai/report_dummy.py`)이
+ * `axes_failed` 를 `status == 'failed'` 인 축만으로 만들고, `report_status` ·
+ * `overall.partial` 을 그 목록이 비었는지로 정합니다. `skipped` 는 거기 안
+ * 들어가서, 카메라만 안 켠 회차는 `complete` · `partial: false` 로 옵니다.
+ *
+ * 전에는 여기를 `partial: true` 로 뒀는데 구현상 나올 수 없는 조합이었습니다.
+ * 그 탓에 목업에서는 "일부 항목이 빠진 결과예요" 안내가 뜨는데 실제 연동
+ * 후에는 안 떠서, 지금 확인한 화면이 나중 화면과 달랐습니다. (PR #50 리뷰)
  */
 const SKIPPED_ANALYSIS: AnalysisResult = {
-  report_status: 'partial',
+  report_status: 'complete',
   overall: {
     score: 40,
     display: 2,
     gated: true,
     gate_reason: 'content_relevance_low',
-    partial: true,
+    partial: false,
     axes_used: ['content', 'speech'],
     axes_failed: [],
   },
@@ -244,7 +253,8 @@ const EXPIRED_NOTICE =
  * 회차별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
  *
  * - `r1` — 영상 링크 만료 (시안 `상태C`)
- * - `r2` — 시선 **미사용**(카메라 안 켬) · 회복력 없음(친절형) · 총점 상한 걸림
+ * - `r2` — 시선 **미사용**(카메라 안 켬) · 회복력 없음(친절형) · 총점 상한 걸림.
+ *   미사용뿐이라 `complete` 입니다 — 위쪽 부분 실패 안내는 안 뜨고 시선 줄에만 사유가 남습니다.
  * - `r3` — 시선 **분석 실패** (기본)
  */
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
@@ -255,7 +265,8 @@ registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
       ...SAMPLE_REPORT,
       reportId,
       attempt: 2,
-      status: 'partial',
+      // 위 주석대로 미사용만으로는 partial 이 되지 않습니다.
+      status: SKIPPED_ANALYSIS.report_status,
       // 회복력이 없는 건 친절형 면접이기 때문입니다. 개요도 같이 맞춰둡니다.
       summary: {
         ...SAMPLE_REPORT.summary,

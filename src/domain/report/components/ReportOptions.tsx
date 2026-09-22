@@ -11,7 +11,7 @@ import type { AttemptRef } from '../types/report'
 const TOGGLES: { key: keyof DisplayOptions; label: string }[] = [
   { key: 'showTimeline', label: '타임라인 마커 표시' },
   { key: 'showImprovedAnswer', label: '개선 답변 예시 포함' },
-  { key: 'showVision', label: '시선 지표 포함' },
+  { key: 'showGaze', label: '시선 지표 포함' },
 ]
 
 type Props = {
