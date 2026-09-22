@@ -16,6 +16,7 @@ type Props = {
   needsRerecord?: boolean
   submitError?: SubmitErrorState | null
   remainingSec?: number | null
+  recordingFailureMessage?: string | null
 }
 
 export default function QuestionCard({
@@ -27,6 +28,7 @@ export default function QuestionCard({
   needsRerecord = false,
   submitError = null,
   remainingSec = null,
+  recordingFailureMessage = null,
 }: Props) {
   return (
     // TODO(design-token): design-system.md에 없는 값. 임시로 radius-lg(20px) 사용 중.
@@ -50,6 +52,7 @@ export default function QuestionCard({
         needsRerecord={needsRerecord}
         submitError={submitError}
         remainingSec={remainingSec}
+        recordingFailureMessage={recordingFailureMessage}
       />
     </section>
   )

@@ -37,6 +37,8 @@ type Props = {
   needsRerecord?: boolean
   submitError?: SubmitErrorState | null
   remainingSec?: number | null
+  /** 답변 녹화 업로드가 실패했을 때만 보여줄 문구. 정상/업로드 중엔 null. */
+  recordingFailureMessage?: string | null
 }
 
 /**
@@ -66,6 +68,7 @@ export default function InterviewSessionPage({
   needsRerecord = false,
   submitError = null,
   remainingSec = null,
+  recordingFailureMessage = null,
 }: Props) {
   return (
     // min-w: SessionSidePanel(w-72 고정) + InterviewerAvatarStage 최소 공간을 함께 보장하는 임계값.
@@ -117,6 +120,7 @@ export default function InterviewSessionPage({
           needsRerecord={needsRerecord}
           submitError={submitError}
           remainingSec={remainingSec}
+          recordingFailureMessage={recordingFailureMessage}
         />
       </div>
     </div>
