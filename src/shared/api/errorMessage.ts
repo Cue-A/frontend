@@ -13,6 +13,18 @@ const ERROR_MESSAGE: Record<string, string> = {
   TTS_FAILED: '음성을 만들지 못했어요. 텍스트로 계속 진행할게요.',
   RESUME_PARSE_FAILED: '파일을 읽지 못했어요. 다른 파일로 올려주세요.',
 
+  // 리포트 — 코드는 AI 계약서 9장과 백엔드 ErrorCode.java 에서 확인한 값들입니다.
+  // (이슈 #46)
+  //
+  // 내용 분석이 실패하면 리포트가 아예 만들어지지 않습니다. 점수가 빈 리포트가 오는 게
+  // 아니라 결과 자체가 없어서, 화면은 다시 연습하는 쪽으로 안내합니다.
+  CONTENT_FAILED: '내용 분석에 실패해 리포트를 만들지 못했어요. 다시 연습해 주세요.',
+  // 아직 만드는 중입니다. 실패가 아니라 기다리면 되는 상태라 말투를 구분합니다.
+  REPORT_NOT_READY: '리포트를 만들고 있어요. 잠시 후 다시 확인해 주세요.',
+  // 답변이 2문항 미만이면 리포트를 만들지 않습니다. 재시도해도 결과가 같습니다.
+  REPORT_TOO_SHORT: '답변이 너무 적어 리포트를 만들지 못했어요. 두 문항 이상 답해주세요.',
+  MEDIA_FETCH_FAILED: '녹화 파일을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+
   SESSION_NOT_FOUND: '면접 세션을 찾을 수 없어요.',
   AI_TIMEOUT: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해주세요.',
   INVALID_TOKEN: '로그인이 만료되었어요. 다시 로그인해 주세요.',
@@ -23,6 +35,10 @@ const ERROR_MESSAGE: Record<string, string> = {
 
   // AUTH-2 카카오. code 교환이 실패했을 때 백엔드가 내려주는 코드입니다 (이슈 #53).
   OAUTH_FAILED: '카카오 로그인에 실패했어요. 다시 시도해 주세요.',
+
+  // 서버가 주는 코드가 아니라 우리가 만든 설정 오류입니다 (shared/api/baseUrl.ts).
+  // 로컬 연동 중에만 나고, 콘솔에는 더 긴 안내가 같이 찍힙니다. (PR #55 리뷰)
+  CONFIG_MISSING_BASE_URL: 'VITE_API_BASE_URL 이 비어 있어요. .env.local 에 백엔드 주소를 적어주세요.',
 }
 
 const FALLBACK_MESSAGE = '잠시 후 다시 시도해 주세요.'

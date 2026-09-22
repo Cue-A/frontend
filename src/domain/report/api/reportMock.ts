@@ -1,18 +1,141 @@
 import { registerMock } from '@/shared/api/mock'
 
-import type { Report, ReportVideo } from '../types/report'
+import type { Report, ReportVideo, SubMetric } from '../types/report'
+
+import type { AnalysisResult } from './analysisResponse'
+import {
+  toHesitationMetric,
+  toPartialNotices,
+  toResilienceMetric,
+  toScoreGateReason,
+  toScoreMetrics,
+} from './analysisResponse'
+
+/**
+ * AI 분석 결과 부분입니다. **전달 문서의 응답 모양 그대로** 적었습니다.
+ *
+ * 화면용 모양으로 미리 다듬어두면 변환 함수가 한 번도 안 돌아서, 실제 응답이
+ * 왔을 때 처음 돌아가게 됩니다. 목업이라도 서버가 주는 모양으로 두는 편이
+ * 변환층을 실제로 검증합니다.
+ *
+ * 시안대로 **시선 분석이 실패한 상태**입니다. 빈 값 · 실패 값일 때 화면이
+ * 어떻게 되는지가 리포트에서 제일 자주 겪을 상황이기 때문입니다.
+ */
+const SAMPLE_ANALYSIS: AnalysisResult = {
+  report_status: 'partial',
+  overall: {
+    score: 82,
+    display: 4,
+    gated: false,
+    gate_reason: null,
+    partial: true,
+    axes_used: ['content', 'speech'],
+    axes_failed: ['gaze'],
+  },
+  axes: {
+    content: {
+      status: 'ok',
+      score: 84,
+      display: 4,
+      // 내용 축 metrics 는 계약서에서 아직 빈 객체입니다. 비어 있는 게 오류가 아닙니다.
+      metrics: {},
+      evidence: [
+        {
+          question_id: 'q3',
+          t_start: 208,
+          t_end: 216.4,
+          kind: 'weakness',
+          label: '근거 부족',
+          comment: '선택 이유를 설명했으나 비교 대상이 제시되지 않았습니다.',
+        },
+      ],
+    },
+    speech: {
+      status: 'ok',
+      score: 78,
+      display: 4,
+      // 말하기 축만 키가 확정됐습니다. 내용 · 시선은 아직 빈 객체입니다.
+      metrics: { hesitation_score: 32, speech_rate_cv: 0.284, repetition_count: 3 },
+      evidence: [],
+    },
+    gaze: {
+      status: 'failed',
+      score: null,
+      display: null,
+      metrics: null,
+      evidence: [],
+      error_code: 'GAZE_FAILED',
+    },
+  },
+  resilience: {
+    score: 58,
+    display: 3,
+    comment: '압박 질문 이후 답변 길이가 절반으로 줄었습니다.',
+  },
+}
+
+/**
+ * 시선을 **안 쓴** 회차입니다. 실패(`failed`)와 미사용(`skipped`)이 화면에서
+ * 다르게 보이는지 확인하려고 둡니다. 친절형 면접이라 회복력도 없고, 총점에
+ * 상한이 걸린 경우까지 한 번에 볼 수 있습니다.
+ *
+ * **미사용은 `partial` 이 아닙니다.** AI 구현(`ai/report_dummy.py`)이
+ * `axes_failed` 를 `status == 'failed'` 인 축만으로 만들고, `report_status` ·
+ * `overall.partial` 을 그 목록이 비었는지로 정합니다. `skipped` 는 거기 안
+ * 들어가서, 카메라만 안 켠 회차는 `complete` · `partial: false` 로 옵니다.
+ *
+ * 전에는 여기를 `partial: true` 로 뒀는데 구현상 나올 수 없는 조합이었습니다.
+ * 그 탓에 목업에서는 "일부 항목이 빠진 결과예요" 안내가 뜨는데 실제 연동
+ * 후에는 안 떠서, 지금 확인한 화면이 나중 화면과 달랐습니다. (PR #50 리뷰)
+ */
+const SKIPPED_ANALYSIS: AnalysisResult = {
+  report_status: 'complete',
+  overall: {
+    score: 40,
+    display: 2,
+    gated: true,
+    gate_reason: 'content_relevance_low',
+    partial: false,
+    axes_used: ['content', 'speech'],
+    axes_failed: [],
+  },
+  axes: {
+    content: { status: 'ok', score: 38, display: 2, metrics: {}, evidence: [] },
+    speech: {
+      status: 'ok',
+      score: 72,
+      display: 4,
+      metrics: { hesitation_score: 54, speech_rate_cv: 0.41, repetition_count: 6 },
+      evidence: [],
+    },
+    gaze: {
+      status: 'skipped',
+      score: null,
+      display: null,
+      metrics: null,
+      evidence: [],
+      reason: 'no_video',
+    },
+  },
+  resilience: null,
+}
+
+/** 값이 있는 보조 지표만 모읍니다. 없는 지표는 자리도 만들지 않습니다. */
+function toSubMetrics(analysis: AnalysisResult): SubMetric[] {
+  return [
+    toResilienceMetric(analysis.resilience),
+    toHesitationMetric(analysis.axes.speech),
+  ].filter((item): item is SubMetric => item !== null)
+}
 
 /**
  * 백엔드가 준비되기 전까지 화면을 그리기 위한 가짜 리포트입니다.
  * 값은 C-01 시안에 적힌 것을 그대로 옮겼습니다. 계약이 확정되면 교체합니다.
- *
- * 시안대로 **시선 분석이 실패한 상태**로 두었습니다. 빈 값·실패 값일 때
- * 화면이 어떻게 되는지가 리포트에서 제일 자주 겪을 상황이기 때문입니다.
  */
 const SAMPLE_REPORT: Report = {
   reportId: 'r3',
   sessionId: 's3',
-  analysisStatus: 'COMPLETED',
+  status: 'partial',
   companyName: '네이버',
   jobRole: '기획 직무',
   interviewDate: '2026.07.18',
@@ -25,12 +148,12 @@ const SAMPLE_REPORT: Report = {
     { attempt: 3, reportId: 'r3', isLatest: true },
   ],
 
-  totalScore: 82,
+  totalScore: SAMPLE_ANALYSIS.overall.score,
+  totalScoreDisplay: SAMPLE_ANALYSIS.overall.display,
   totalScoreDelta: { fromAttempt: 2, diff: 6 },
+  scoreGateReason: toScoreGateReason(SAMPLE_ANALYSIS.overall),
 
-  notices: [
-    '시선 분석에 실패해 시선 점수는 이번 회차에서 제외되었습니다. 말하기 · 내용 · 답변 마무리는 정상 분석되었습니다.',
-  ],
+  notices: toPartialNotices(SAMPLE_ANALYSIS),
 
   summary: {
     verdict:
@@ -90,31 +213,8 @@ const SAMPLE_REPORT: Report = {
     ],
   },
 
-  metrics: [
-    { key: 'content', label: '내용', score: 84, unavailableLabel: null },
-    { key: 'speech', label: '말하기', score: 78, unavailableLabel: null },
-    {
-      key: 'vision',
-      label: '시선',
-      score: null,
-      unavailableLabel: '분석 실패',
-    },
-    { key: 'closing', label: '답변 마무리', score: 76, unavailableLabel: null },
-  ],
-  subMetrics: [
-    {
-      key: 'resilience',
-      label: '회복력',
-      value: '75%',
-      description: '압박 질문(Q3) 이후 약 40초 만에 답변 안정도를 회복했어요.',
-    },
-    {
-      key: 'closing',
-      label: '답변 마무리',
-      value: '4 / 5',
-      description: '깔끔한 맺음 · 다음 연습에서는 결론을 먼저 말하기를 시도해보세요.',
-    },
-  ],
+  metrics: toScoreMetrics(SAMPLE_ANALYSIS.axes),
+  subMetrics: toSubMetrics(SAMPLE_ANALYSIS),
   metricsComment: '2회차 대비 내용 구성이 가장 크게 좋아졌어요',
 
   improvedAnswer: {
@@ -149,8 +249,40 @@ const EXPIRED_VIDEO: ReportVideo = {
 const EXPIRED_NOTICE =
   '보안을 위해 영상 재생 링크는 일정 시간이 지나면 만료됩니다. 점수와 분석 내용은 그대로 확인할 수 있습니다.'
 
+/**
+ * 회차별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
+ *
+ * - `r1` — 영상 링크 만료 (시안 `상태C`)
+ * - `r2` — 시선 **미사용**(카메라 안 켬) · 회복력 없음(친절형) · 총점 상한 걸림.
+ *   미사용뿐이라 `complete` 입니다 — 위쪽 부분 실패 안내는 안 뜨고 시선 줄에만 사유가 남습니다.
+ * - `r3` — 시선 **분석 실패** (기본)
+ */
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
   const isExpired = reportId === 'r1'
+
+  if (reportId === 'r2') {
+    return {
+      ...SAMPLE_REPORT,
+      reportId,
+      attempt: 2,
+      // 위 주석대로 미사용만으로는 partial 이 되지 않습니다.
+      status: SKIPPED_ANALYSIS.report_status,
+      // 회복력이 없는 건 친절형 면접이기 때문입니다. 개요도 같이 맞춰둡니다.
+      summary: {
+        ...SAMPLE_REPORT.summary,
+        overview: SAMPLE_REPORT.summary.overview.map((fact) =>
+          fact.key === 'style' ? { ...fact, value: '친절형' } : fact,
+        ),
+      },
+      totalScore: SKIPPED_ANALYSIS.overall.score,
+      totalScoreDisplay: SKIPPED_ANALYSIS.overall.display,
+      totalScoreDelta: null,
+      scoreGateReason: toScoreGateReason(SKIPPED_ANALYSIS.overall),
+      notices: toPartialNotices(SKIPPED_ANALYSIS),
+      metrics: toScoreMetrics(SKIPPED_ANALYSIS.axes),
+      subMetrics: toSubMetrics(SKIPPED_ANALYSIS),
+    }
+  }
 
   return {
     ...SAMPLE_REPORT,

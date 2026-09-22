@@ -119,7 +119,18 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
   #4(진행률 `stage` 값 목록)가 아직 AI 계약 대기 중입니다. 면접 중 3단계와 같은지 다른지
   정해지지 않았습니다.
 - 필요한 결정: 리포트 생성 소요 시간(같은 문서 #3) — 대기 화면 문구와 타임아웃이 여기 달림.
-- 걸리는 작업: 리포트 화면.
+- 필요한 결정: **단계 값을 백엔드가 어떤 이름으로 내보내는지.** AI 계약 3장이
+  "이 값을 프론트에 그대로 노출하지 않고 백엔드가 자체 enum 으로 매핑한다" 고
+  적고 있습니다. 면접 쪽이 이미 그렇게 돕니다(`stt` → `TRANSCRIBING`).
+  프론트 `toAnalysisStageKey` 는 AI 의 소문자 스네이크(`analyzing_gaze` 등)를
+  받는 전제라, 이름이 다르면 전부 null 로 떨어져 단계가 안 움직입니다.
+- 필요한 결정: **값이 오는 통로** — 폴링인지 WebSocket push 인지. 정해지기
+  전까지 `toAnalysisStageKey` 는 정의만 해두고 훅에 잇지 않았습니다.
+  `useAnalysisProgress` 는 목업 타이머로만 단계를 넘깁니다.
+- 진행: AI 계약은 도착했습니다. 단계 값 목록과 순서는 확정
+  (`transcribing → analyzing_speech → analyzing_gaze → analyzing_content → composing`,
+  근거 `ai/report_pipeline.py`). 남은 건 백엔드 쪽 이름과 통로입니다.
+- 걸리는 작업: 리포트 화면, 분석 중 화면.
 
 ### Q7. 🟡 `errorCode` → 사용자 문구 매핑표가 비어 있습니다
 

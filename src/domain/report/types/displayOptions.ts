@@ -6,7 +6,8 @@
 export type DisplayOptions = {
   showTimeline: boolean
   showImprovedAnswer: boolean
-  showVision: boolean
+  /** 축 키를 `vision` → `gaze` 로 맞추면서 여기도 같이 바꿨습니다 (PR #50 리뷰) */
+  showGaze: boolean
   /** 켜면 리포트 판을 회색조로 그립니다. 인쇄하면 잉크를 덜 씁니다 */
   printMono: boolean
 }
@@ -14,6 +15,6 @@ export type DisplayOptions = {
 export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
   showTimeline: true,
   showImprovedAnswer: true,
-  showVision: true,
+  showGaze: true,
   printMono: false,
 }

@@ -6,6 +6,11 @@ interface ImportMetaEnv {
   /** "true" 면 실제 API 대신 목업 응답을 씁니다. */
   readonly VITE_USE_MOCK: string
   /**
+   * 목업을 켜둔 채로 실제 서버에 보낼 도메인 목록입니다. 쉼표로 구분합니다.
+   * 예) `"auth,users"` · `"auth,users,interview-sessions"`
+   */
+  readonly VITE_REAL_APIS: string
+  /**
    * 카카오 로그인(AUTH-2) REST API Key. 인가 URL 의 client_id 로 그대로 노출되는
    * 값이라 공개되어도 됩니다. 숨겨야 하는 Client Secret 은 백엔드에만 있습니다.
    */
