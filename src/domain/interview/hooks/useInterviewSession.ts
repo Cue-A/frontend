@@ -42,8 +42,12 @@ export type UseInterviewSessionResult = {
   beginSubmit: () => void
   /** 녹화 업로드가 끝난 뒤 objectKey 를 받아 실제 REST 제출을 한다. */
   submitAnswer: (recording: AnswerRecordingKeys, isTimeout: boolean) => void
-  /** 녹화 업로드가 실패했을 때 제출을 취소하고 다시 답변할 수 있는 상태로 되돌린다. */
-  cancelSubmit: (message: string) => void
+  /**
+   * 녹화 업로드가 실패했을 때 제출을 취소하고 다시 답변할 수 있는 상태로 되돌린다.
+   * 실패 문구는 recordingFailureMessage(uploadStatus 기반) 로만 보여준다 — submitError
+   * 는 REST 제출(submitAnswer) 자체가 실패했을 때 전용이라 여기서는 건드리지 않는다.
+   */
+  cancelSubmit: () => void
   /** 질문 제시(텍스트/오디오)가 끝났을 때 컨테이너가 부른다 — presenting → answering 전환. */
   notifyPresentationDone: (questionId: string) => void
 }
@@ -204,10 +208,9 @@ export function useInterviewSession(
     setNeedsRerecord(false)
   }, [])
 
-  const cancelSubmit = useCallback((message: string) => {
+  const cancelSubmit = useCallback(() => {
     if (finishedRef.current) return
     setPhase('answering')
-    setSubmitError({ message, retryable: true })
   }, [])
 
   const submitAnswer = useCallback(

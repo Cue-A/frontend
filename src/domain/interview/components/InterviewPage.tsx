@@ -128,7 +128,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
       submitAnswer({ audioObjectKey: uploadStatus.audioObjectKey, videoObjectKey: uploadStatus.videoObjectKey }, pending.isTimeout)
     } else if (uploadStatus.status === 'failed') {
       pendingSubmitRef.current = null
-      cancelSubmit(uploadStatus.message)
+      cancelSubmit()
     }
   }, [uploadStatus, submitAnswer, cancelSubmit])
 
