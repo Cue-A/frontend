@@ -7,17 +7,63 @@
  * (docs/01-conventions.md "타입" 절)
  */
 
-/** 세부 점수 항목. 디자인의 "세부 점수" 네 줄입니다. */
+/**
+ * 축 하나가 어떻게 끝났는지입니다.
+ *
+ * `failed` 와 `skipped` 를 **반드시 구분해서** 보여줘야 합니다. 카메라를 켜지
+ * 않아서 시선 분석을 안 한 것(`skipped`)을 "분석 실패" 로 적으면 사용자는
+ * 서비스가 고장 난 줄 압니다. (AI 전달 문서 "분석 실패와 미사용을 구분하세요")
+ */
+export type MetricStatus = 'ok' | 'failed' | 'skipped'
+
+/**
+ * 점수의 근거가 된 답변 구간입니다.
+ *
+ * 재생 위치로 점프하는 기능은 아직 없지만 값은 처음부터 옵니다.
+ * 자리를 지금 열어둬야 나중에 타입부터 다시 만지지 않습니다.
+ */
+export type Evidence = {
+  questionId: string
+  /** 해당 답변 오디오 기준 초 (소수 1자리) */
+  startSeconds: number
+  endSeconds: number
+  kind: 'strength' | 'weakness'
+  /** 화면 배지용 짧은 분류명. 예) '근거 부족' */
+  label: string
+  comment: string
+}
+
+/**
+ * 세부 점수 항목. 디자인의 "세부 점수" 줄입니다.
+ *
+ * 축은 **내용 · 말하기 · 시선** 셋입니다. 전에는 '답변 마무리' 까지 네 줄이었는데,
+ * 마무리는 말하기의 하위 지표라 총점 계산에서 말하기에 포함됩니다. 별도 축으로
+ * 두면 같은 점수가 두 번 세어지는 것처럼 보입니다. (AI 전달 문서 "점수 항목")
+ */
 export type ScoreMetric = {
   key: string
   label: string
-  /** 0~100. 분석에 실패했으면 null 이고 막대 대신 사유를 보여줍니다 */
+  status: MetricStatus
+  /**
+   * 0~100. `status` 가 `'ok'` 일 때만 값이 있습니다.
+   *
+   * `display` 와 **둘 다 서버에서 옵니다.** 하나로 다른 하나를 계산하지 마세요.
+   */
   score: number | null
-  /** score 가 null 일 때만 씁니다. 예) '분석 실패' */
+  /** 1~5. 화면 표시용 등급입니다. `score` 와 함께 옵니다 */
+  display: number | null
+  /** `status` 가 `'ok'` 가 아닐 때 막대 대신 보여줄 문구. 예) '카메라를 사용하지 않았습니다' */
   unavailableLabel: string | null
+  evidence: Evidence[]
 }
 
-/** 회복력, 답변 마무리처럼 100점 척도가 아닌 보조 지표입니다. */
+/**
+ * 회복력, 답변 마무리처럼 100점 척도가 아닌 보조 지표입니다.
+ *
+ * 회복력은 **친절형 면접에서 항상 없습니다.** 압박 구간이 없어 회복을 잴 대상이
+ * 없기 때문입니다. 값이 없으면 "측정 안 됨" 으로 적지 말고 목록에서 빼세요 —
+ * 없는 게 정상인 상황이라 자리만 남으면 뭔가 빠진 것처럼 보입니다.
+ */
 export type SubMetric = {
   key: string
   label: string
@@ -111,19 +157,26 @@ export type ReportSummary = {
 }
 
 /**
- * 분석 진행 상태입니다.
+ * 리포트가 온전한지 여부입니다.
  *
- * 리포트 주소로 바로 들어오거나 새로고침하면 아직 분석이 안 끝났을 수 있습니다.
- * 그때 빈 리포트를 그리면 "점수가 0점"처럼 보여서 상태를 따로 받습니다.
- * 진행 중 화면 자체는 분석 중 페이지가 담당합니다. (PR #8 리뷰)
+ * - `'complete'` — 세 축이 모두 정상입니다.
+ * - `'partial'` — 일부 축이 실패했거나 쓰이지 않았습니다. **리포트 자체는 정상적으로
+ *   옵니다.** 총점도 남은 축으로 계산되어 오니 그대로 보여주고, "일부 항목이 빠진
+ *   결과" 라는 안내만 덧붙입니다.
+ *
+ * 전에는 `'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'` 였습니다. 계약이 없을 때
+ * 지어낸 값이었고, 실제로는 이런 상태가 오지 않습니다. 내용 분석이 실패하면 리포트가
+ * 아예 만들어지지 않아서 **점수가 빈 리포트라는 것 자체가 없습니다.** 그 경우는
+ * 조회가 에러로 떨어지고 `useReport` 의 error 로 들어옵니다.
+ * (AI 전달 문서 "리포트가 아예 안 오는 경우가 있습니다")
  */
-export type AnalysisStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+export type ReportStatus = 'complete' | 'partial'
 
 export type Report = {
   reportId: string
   /** 면접 세션과 1:1 입니다. 면접이 끝나면 sessionId 로 리포트를 찾아옵니다 */
   sessionId: string
-  analysisStatus: AnalysisStatus
+  status: ReportStatus
   companyName: string | null
   jobRole: string
   /** 'YYYY.MM.DD' 로 이미 다듬어서 넘깁니다 */
@@ -136,7 +189,18 @@ export type Report = {
 
   /** 0~100 */
   totalScore: number
+  /** 1~5. 총점의 표시용 등급입니다. `totalScore` 와 함께 옵니다 */
+  totalScoreDisplay: number
   totalScoreDelta: ScoreDelta | null
+
+  /**
+   * 총점에 상한이 걸린 이유입니다. 안 걸렸으면 null 입니다.
+   *
+   * 질문과 관계없는 답변은 말하기 · 시선 점수가 좋아도 총점이 제한됩니다.
+   * 이유를 안 적으면 사용자는 점수가 왜 낮은지 알 방법이 없습니다.
+   * 화면에 그대로 보여줄 문구입니다. (AI 전달 문서 "총점 상한이 걸린 경우")
+   */
+  scoreGateReason: string | null
 
   /** 시선 분석 실패처럼 화면 위에 띄울 안내. 없으면 빈 배열 */
   notices: string[]

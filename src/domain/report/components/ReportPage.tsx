@@ -14,13 +14,6 @@ import ScoreSection from './ScoreSection'
 import SummarySection from './SummarySection'
 import TimelineSection from './TimelineSection'
 
-/** 분석이 안 끝났을 때 보여줄 문구입니다. COMPLETED 는 여기 오지 않습니다. */
-const ANALYSIS_MESSAGE: Record<string, string> = {
-  QUEUED: '분석을 기다리는 중이에요. 잠시 후 다시 확인해 주세요.',
-  PROCESSING: '아직 분석 중이에요. 끝나면 리포트가 채워집니다.',
-  FAILED: '분석에 실패했어요. 다시 연습해 주세요.',
-}
-
 /**
  * 면접 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
  *
@@ -57,19 +50,27 @@ export default function ReportPage() {
     )
   }
 
-  // 분석이 끝나기 전에는 점수가 비어 있습니다. 그대로 그리면 0점처럼 보입니다.
-  if (data.analysisStatus !== 'COMPLETED') {
-    return (
-      <div className="flex min-h-screen flex-col items-start gap-4 bg-neutral-50 p-6">
-        <p className="text-body-md text-neutral-700">{ANALYSIS_MESSAGE[data.analysisStatus]}</p>
-        <ReportActions />
-      </div>
-    )
-  }
+  /*
+    전에는 여기서 analysisStatus 가 COMPLETED 가 아닐 때 "분석 중" 문구를 띄웠습니다.
+    `QUEUED` · `PROCESSING` 같은 값은 계약이 없을 때 지어낸 것이라 지웠습니다.
 
-  const metrics = options.showVision
+    상황 자체는 그대로 있습니다. 다만 상태 필드가 아니라 **에러 코드**로 옵니다.
+
+      REPORT_NOT_READY   아직 만드는 중 (백엔드 ErrorCode.java, HTTP 202)
+      CONTENT_FAILED     내용 분석 실패 — 리포트가 아예 없음
+      REPORT_TOO_SHORT   답변 2문항 미만
+
+    셋 다 조회가 에러로 떨어져서 위의 error 분기가 받고, 문구는
+    `shared/api/errorMessage.ts` 가 붙입니다. 그래서 여기 따로 분기하지 않습니다.
+    점수가 빈 리포트를 그리는 길은 아예 없습니다.
+
+    분석이 도는 동안 진행률을 보여주는 건 분석 중 화면(B-02)이 맡습니다.
+    단계 값은 맞춰뒀고(ANALYSIS_STAGES), 어느 통로로 받는지만 Q6b 에 남아 있습니다.
+  */
+
+  const metrics = options.showGaze
     ? data.metrics
-    : data.metrics.filter((metric) => metric.key !== 'vision')
+    : data.metrics.filter((metric) => metric.key !== 'gaze')
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -98,6 +99,19 @@ export default function ReportPage() {
           options={options}
           onChange={setOptions}
         />
+
+        {/*
+          총점 상한은 일반 안내보다 먼저 보여줍니다. "왜 점수가 낮지" 는 리포트를
+          열자마자 드는 질문이라, 아래쪽에 있으면 못 보고 지나갑니다.
+        */}
+        {data.scoreGateReason && (
+          <p
+            role="status"
+            className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
+          >
+            총점에 상한이 걸렸어요 — {data.scoreGateReason}
+          </p>
+        )}
 
         {data.notices.map((notice) => (
           <p
