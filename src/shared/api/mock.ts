@@ -30,7 +30,9 @@ export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
  */
 const REAL_APIS: string[] = (import.meta.env.VITE_REAL_APIS ?? '')
   .split(',')
-  .map((name: string) => name.trim())
+  // 소문자로 눕힙니다. `VITE_REAL_APIS=Auth` 가 조용히 안 걸리면 .env 오타는
+  // 찾기 어려운 축입니다 — 목업이 계속 도니까 화면은 멀쩡해 보입니다. (PR #55 리뷰)
+  .map((name: string) => name.trim().toLowerCase())
   .filter(Boolean)
 
 /** 목업을 켜둔 채 일부만 실제로 붙이는 중인지. 주소 검사에 씁니다. (baseUrl.ts) */
@@ -58,6 +60,13 @@ function domainOf(path: string): string | undefined {
  * **도메인 조각 하나만** 봅니다. 경로 아무 데나 이름이 들어 있는지 보면
  * `/api/reports/auth` 처럼 **id 가 도메인 이름과 같을 때** 엉뚱하게 걸립니다.
  * 세션 id 는 AI 서버가 만든 문자열이라 값을 우리가 고르지 않습니다.
+ *
+ * ⚠️ **경로를 바꿀 때는 REST 와 소켓이 같은 조각을 갖는지 다시 확인하세요.**
+ * 지금은 `/api/interviews` 와 `/ws/interviews/s1` 이 둘 다 `interviews` 라
+ * 한 줄로 같이 켜지고 같이 꺼집니다. 그런데 REST 만 `/v1/interview-sessions`
+ * 로 바뀌면(이슈 #32 4번) 도메인이 갈려서, 이 스위치가 막으려던 반쪽 상태가
+ * 그대로 돌아옵니다 — 질문은 목업에서 오는데 답변 제출은 실제 서버로 갑니다.
+ * (PR #55 리뷰)
  */
 export function isRealApi(path: string): boolean {
   if (!USE_MOCK) return true

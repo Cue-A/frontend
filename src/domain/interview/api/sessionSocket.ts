@@ -1,4 +1,4 @@
-import { assertBaseUrl, WS_BASE_URL } from '@/shared/api/baseUrl'
+import { isBaseUrlMissing, WS_BASE_URL } from '@/shared/api/baseUrl'
 import { isRealApi, USING_PARTIAL_REAL } from '@/shared/api/mock'
 
 import type { ErrorPush, ProgressPush, Question, SessionEndPush } from '../types/interview'
@@ -36,7 +36,15 @@ export function connectSessionSocket(sessionId: string, handlers: SessionSocketH
 
   // 주소가 비어 있으면 브라우저가 현재 origin 으로 풀어버려서, 틀렸다는 신호
   // 없이 조용히 안 붙습니다. (PR #40 리뷰 2번)
-  assertBaseUrl(USING_PARTIAL_REAL, path)
+  //
+  // 여기서 던지면 안 됩니다. REST 와 달리 이 함수는 동기라, 훅의 useEffect 안에서
+  // 그대로 터져 면접 화면이 통째로 언마운트됩니다. 레포에 ErrorBoundary 가 없어서
+  // 하얀 화면만 남고, 콘솔을 안 보면 단서가 없습니다 — 이 스위치가 없애려던
+  // "원인을 못 찾는 상황" 이 더 나쁜 모양으로 돌아옵니다. 그래서 연결을 포기하고
+  // 정리 함수만 돌려줍니다. (PR #55 리뷰)
+  if (isBaseUrlMissing(USING_PARTIAL_REAL, path)) {
+    return () => {}
+  }
 
   const socket = new WebSocket(`${WS_BASE_URL}${path}`)
 
