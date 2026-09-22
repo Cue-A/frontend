@@ -32,11 +32,16 @@ export type UseMediaStreamResult = {
   /** SelfCameraPreview 의 <video> 에 그대로 물릴 스트림. camera 가 available 이 아니면 null. */
   videoStream: MediaStream | null
   /**
-   * MediaRecorder 용으로 카메라·마이크 트랙을 합쳐 하나의 스트림으로 낸다.
-   * 부분 실패를 허용하므로 둘 중 하나만 있어도(비디오만/오디오만) 값이 있고,
-   * 둘 다 없으면 null — 그때는 녹화할 게 없다.
+   * 답변 오디오 녹화용 마이크 전용 스트림(이슈 #54: 오디오는 필수, 영상과 별개
+   * 파일로 올린다). 마이크가 없으면 null.
    */
-  recordingStream: MediaStream | null
+  audioRecordingStream: MediaStream | null
+  /**
+   * 답변 영상 녹화용 스트림 — 카메라 트랙 + (있으면) 마이크 트랙을 합친다. 영상
+   * 파일도 자체 음성 채널을 갖는 게 자연스러워서 마이크를 같이 넣지만, 업로드 대상
+   * 파일은 어디까지나 "영상"이다. 카메라가 없으면 애초에 영상이 아니므로 null.
+   */
+  videoRecordingStream: MediaStream | null
 }
 
 /**
@@ -155,15 +160,17 @@ export function useMediaStream(initialDeviceStatus?: { camera: MediaTrackState; 
 
   // videoStream/audioStream 이 실제로 바뀔 때만 새로 만든다 — 매 렌더 새 MediaStream
   // 인스턴스를 주면 이걸 구독하는 쪽(useAnswerRecording)이 매번 재구독하게 된다.
-  const recordingStream = useMemo(() => {
-    const tracks = [...(videoStream?.getVideoTracks() ?? []), ...(audioStream?.getAudioTracks() ?? [])]
-    return tracks.length > 0 ? new MediaStream(tracks) : null
+  const videoRecordingStream = useMemo(() => {
+    if (!videoStream) return null
+    const tracks = [...videoStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]
+    return new MediaStream(tracks)
   }, [videoStream, audioStream])
 
   return {
     camera,
     mic,
     videoStream,
-    recordingStream,
+    audioRecordingStream: audioStream,
+    videoRecordingStream,
   }
 }
