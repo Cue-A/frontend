@@ -47,7 +47,7 @@ export default function DeviceCheckPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
 
-  const { camera, mic, videoStream, micLevel, recheckCamera, recheckMic } = useDeviceCheck()
+  const { camera, mic, network, videoStream, micLevel, recheckCamera, recheckMic } = useDeviceCheck()
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
@@ -62,9 +62,7 @@ export default function DeviceCheckPage() {
 
   const cameraReady: ReadyItemStatus = camera.status === 'available' ? 'ready' : camera.status === 'failed' ? 'not-ready' : 'pending'
   const micReady: ReadyItemStatus = mic.status === 'available' ? 'ready' : mic.status === 'failed' ? 'not-ready' : 'pending'
-  // TODO(network-check): 네트워크 확인 로직이 아직 없어(전용 API·훅 없음) 항상 'pending'
-  // 이다 — 실제 측정이 생기면 cameraReady/micReady 와 같은 패턴으로 교체한다.
-  const networkReady: ReadyItemStatus = 'pending'
+  const networkReady: ReadyItemStatus = network === 'available' ? 'ready' : 'not-ready'
   const readyItems: ReadyItemStatus[] = [cameraReady, micReady, networkReady]
   const readyCount = readyItems.filter((status) => status === 'ready').length
   const readyTotal = readyItems.length
@@ -186,11 +184,13 @@ export default function DeviceCheckPage() {
               </div>
 
               <div className="flex items-center gap-1">
-                {readyItems.map((status, index) => (
-                  // 항목 순서가 고정(카메라·마이크·네트워크)이라 index 를 key 로 써도 안전하다.
+                {readyItems.map((_, index) => (
+                  // 어떤 항목이 됐는지가 아니라 몇 개 됐는지만 보여준다 — 카메라·마이크·
+                  // 네트워크는 병렬로 체크되어 순서 의미가 없어서, 완료된 항목의 위치와
+                  // 상관없이 readyCount 만큼 왼쪽부터 채운다.
                   <div
                     key={index}
-                    className={`h-1 flex-1 rounded-full ${status === 'ready' ? 'bg-semantic-success' : 'bg-neutral-200'}`}
+                    className={`h-1 flex-1 rounded-full ${index < readyCount ? 'bg-semantic-success' : 'bg-neutral-200'}`}
                   />
                 ))}
               </div>
@@ -206,7 +206,7 @@ export default function DeviceCheckPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <ReadyItemIcon status={networkReady} />
-                  <span className="text-body-sm text-neutral-400">네트워크 상태 확인 중</span>
+                  <span className="text-body-sm text-neutral-900">네트워크 정상 연결</span>
                 </li>
               </ul>
             </Card>
