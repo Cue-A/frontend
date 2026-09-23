@@ -7,6 +7,7 @@ import Button from '@/shared/ui/Button'
 
 import { login } from '../api/authApi'
 import { useAuthSubmit } from '../hooks/useAuthSubmit'
+import { buildKakaoAuthorizeUrl } from '../lib/kakaoAuth'
 
 const FIELD_CLASS =
   'rounded-sm border border-neutral-300 px-4 py-3 text-body-md text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-500'
@@ -77,17 +78,25 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
         <span className="h-px flex-1 bg-neutral-200" />
       </div>
 
-      {/* Google 은 기능명세서에 없는 항목입니다 (Q12). 카카오(AUTH-2)는 OAuth 계약 확정 후 별도 이슈. */}
+      {/* Google 은 기능명세서에 없는 항목입니다 (Q12). */}
       <Button disabled className="w-full">
         Google로 계속하기
       </Button>
 
-      <Button disabled className="w-full">
+      {/*
+        카카오 인가 페이지로 나가는 외부 링크라 shared/ui/Button 의 `to` 를 못
+        씁니다. `to` 는 react-router Link 라 클라이언트 라우팅만 하고 카카오
+        도메인으로는 못 나갑니다. 그래서 여기만 순수 <a> 를 씁니다. (이슈 #53)
+      */}
+      <a
+        href={buildKakaoAuthorizeUrl()}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-sm border border-neutral-300 px-4 py-3 text-center text-body-md font-semibold text-neutral-900 transition-colors hover:bg-neutral-50"
+      >
         카카오로 계속하기
-      </Button>
+      </a>
 
       <p className="text-center text-body-sm text-neutral-400">
-        소셜 로그인은 아직 연동 전이에요
+        구글 로그인은 아직 연동 전이에요
       </p>
 
       <p className="text-center text-body-sm text-neutral-500">

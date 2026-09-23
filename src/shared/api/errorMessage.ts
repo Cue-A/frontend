@@ -33,6 +33,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   INVALID_CREDENTIALS: '이메일 또는 비밀번호가 올바르지 않아요.',
   EMAIL_ALREADY_EXISTS: '이미 가입된 이메일이에요.',
 
+  // AUTH-2 카카오. code 교환이 실패했을 때 백엔드가 내려주는 코드입니다 (이슈 #53).
+  OAUTH_FAILED: '카카오 로그인에 실패했어요. 다시 시도해 주세요.',
+
   // 서버가 주는 코드가 아니라 우리가 만든 설정 오류입니다 (shared/api/baseUrl.ts).
   // 로컬 연동 중에만 나고, 콘솔에는 더 긴 안내가 같이 찍힙니다. (PR #55 리뷰)
   CONFIG_MISSING_BASE_URL: 'VITE_API_BASE_URL 이 비어 있어요. .env.local 에 백엔드 주소를 적어주세요.',

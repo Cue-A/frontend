@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 
+import KakaoCallbackPage from '@/domain/auth/components/KakaoCallbackPage'
 import LoginPage from '@/domain/auth/components/LoginPage'
 import DeviceCheckPage from '@/domain/interview/components/DeviceCheckPage'
 import InterviewPage from '@/domain/interview/components/InterviewPage'
@@ -24,6 +25,7 @@ import { ROUTES } from './routes'
 export const router = createBrowserRouter([
   { path: ROUTES.LANDING, element: <LandingPage /> },
   { path: ROUTES.LOGIN, element: <LoginPage /> },
+  { path: ROUTES.KAKAO_CALLBACK, element: <KakaoCallbackPage /> },
   { path: ROUTES.DEVICE_CHECK, element: <DeviceCheckPage /> },
   { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
   // B-01 확인용 프리뷰. 프로덕션 번들에는 포함하지 않는다 (PR #31 리뷰).

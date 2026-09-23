@@ -10,3 +10,4 @@ const FAKE_RESULT: AuthResult = { accessToken: 'mock-access-token' }
 
 registerMock('POST', '/api/auth/login', () => FAKE_RESULT)
 registerMock('POST', '/api/auth/signup', () => FAKE_RESULT)
+registerMock('POST', '/api/auth/oauth/kakao', () => FAKE_RESULT)

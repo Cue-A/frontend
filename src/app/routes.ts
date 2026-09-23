@@ -6,6 +6,8 @@
 export const ROUTES = {
   LANDING: '/',
   LOGIN: '/login',
+  /** AUTH-2. 카카오가 인가 코드를 돌려보내는 콜백입니다. 화면 없는 라우트입니다. */
+  KAKAO_CALLBACK: '/auth/kakao/callback',
   SESSION_SETUP: '/interviews/new',
   DEVICE_CHECK: '/interviews/:sessionId/device-check',
   INTERVIEW: '/interviews/:sessionId',

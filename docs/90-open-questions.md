@@ -156,6 +156,23 @@ Figma `A-02 로그인,회원가입` 시안에는 카카오 로그인과 나란�
 - 남은 결정: Google 로그인을 실제로 만들지, 시안에서 뺄지 — 기획 쪽 확인 필요.
 - 걸리는 작업: `domain/auth/components/LoginForm.tsx` 의 Google 버튼.
 
+### Q13. 🔴 카카오 인가 요청에 `state` 파라미터가 없습니다
+
+OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입니다. 지금 인가 URL
+(`domain/auth/lib/kakaoAuth.ts`)에 `state` 가 빠져 있어서, 공격자가 자기 `code` 를 담은
+콜백 URL 을 피해자에게 열게 만들면 피해자 계정이 공격자 카카오 계정에 묶일 수 있습니다
+(PR #56 리뷰).
+
+프론트만 붙여서는 소용이 없습니다 — 콜백에서 돌아온 `state` 를 요청 시 만든 값과
+대조해야 하는데, 그 대조를 프론트가 들고 있는 값(예: `sessionStorage`)과 하든 백엔드가
+하든 가인님과 먼저 정해야 합니다.
+
+- 남은 결정: `state` 를 누가 발급하고 어디서 검증할지 (프론트 `sessionStorage` 대조 /
+  백엔드가 발급해 대조).
+- 걸리는 작업: `domain/auth/lib/kakaoAuth.ts` (인가 URL), `POST /api/auth/oauth/kakao`
+  계약(`Cue-A/backend` `docs/03-auth.md`).
+- `POST /api/auth/oauth/kakao` 가 실제로 붙는 3단계 전에는 정해져야 합니다.
+
 ---
 
 ## 그 외
