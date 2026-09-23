@@ -27,7 +27,18 @@ const ERROR_MESSAGE: Record<string, string> = {
 
   SESSION_NOT_FOUND: '면접 세션을 찾을 수 없어요.',
   AI_TIMEOUT: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해주세요.',
+
+  // 인증 — 401 다섯 가지 (이슈 #53 4번, Cue-A/backend docs/03-auth.md "프론트가 401 을 나누는 법")
+  //
+  // TOKEN_EXPIRED 는 apiClient 가 재발급 → 재시도로 조용히 처리합니다. 사용자가 이
+  // 문구를 보는 건 재발급까지 실패해서 로그인 화면으로 튕긴 다음입니다.
+  TOKEN_EXPIRED: '로그인이 만료되었어요. 다시 로그인해 주세요.',
   INVALID_TOKEN: '로그인이 만료되었어요. 다시 로그인해 주세요.',
+  INVALID_REFRESH_TOKEN: '로그인이 만료되었어요. 다시 로그인해 주세요.',
+  UNAUTHORIZED: '로그인이 필요해요.',
+  // 재사용 탐지로 전 기기가 끊긴 상황이라, 만료와 같은 문구를 쓰면 사용자가 자기
+  // 실수인 줄 압니다. (이슈 #53 4번)
+  REFRESH_TOKEN_REUSED: '보안을 위해 로그아웃되었어요. 다시 로그인해 주세요.',
 
   // AUTH-1 · AUTH-3 (docs/design-system.md 대상 아님, 기능명세서 규칙·제약 기준)
   INVALID_CREDENTIALS: '이메일 또는 비밀번호가 올바르지 않아요.',

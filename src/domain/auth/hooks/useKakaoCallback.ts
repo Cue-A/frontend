@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { ROUTES } from '@/app/routes'
 import { ApiError } from '@/shared/api/apiError'
-import { setAccessToken } from '@/shared/api/accessToken'
 import { toUserMessage } from '@/shared/api/errorMessage'
+import { storeTokens } from '@/shared/api/tokenStorage'
 
 import { loginWithKakao } from '../api/authApi'
 
@@ -57,7 +57,7 @@ export function useKakaoCallback(): UseKakaoCallbackResult {
 
     loginWithKakao(code)
       .then((result) => {
-        setAccessToken(result.accessToken)
+        storeTokens(result.accessToken, result.refreshToken)
         navigate(ROUTES.LANDING, { replace: true })
       })
       .catch((cause: unknown) => {
