@@ -8,7 +8,9 @@ import Switch from '@/shared/ui/Switch'
 import type { DisplayOptions } from '../types/displayOptions'
 import type { AttemptRef } from '../types/report'
 
-const TOGGLES: { key: keyof DisplayOptions; label: string }[] = [
+type ToggleKey = Exclude<keyof DisplayOptions, 'printMono'>
+
+const TOGGLES: { key: ToggleKey; label: string }[] = [
   { key: 'showTimeline', label: '타임라인 마커 표시' },
   { key: 'showImprovedAnswer', label: '개선 답변 예시 포함' },
   { key: 'showGaze', label: '시선 지표 포함' },
@@ -19,6 +21,14 @@ type Props = {
   currentAttempt: number
   options: DisplayOptions
   onChange: (next: DisplayOptions) => void
+  /**
+   * 토글이 가리키는 절이 이 리포트에 있는지입니다. 없으면 토글을 그리지 않습니다.
+   *
+   * 타임라인 · 개선 답변 예시는 명세서 v0.2 에서 P1 이라 백엔드 MVP 에 안 들어올 수 있습니다.
+   * 절은 이미 값이 없으면 안 그리는데, 토글만 남으면 눌러도 아무 일이 없어 고장으로 읽힙니다.
+   * (이슈 #54 3-1)
+   */
+  available: Record<ToggleKey, boolean>
 }
 
 /**
@@ -32,7 +42,13 @@ type Props = {
  * 화면인데 아직 없습니다. 갈 곳 없는 링크를 걸면 눌렀을 때 404 가 떠서,
  * 자리만 두고 왜 못 누르는지 옆에 적었습니다. (이슈 #38)
  */
-export default function ReportOptions({ attempts, currentAttempt, options, onChange }: Props) {
+export default function ReportOptions({
+  attempts,
+  currentAttempt,
+  options,
+  onChange,
+  available,
+}: Props) {
   const set = (key: keyof DisplayOptions) => (checked: boolean) =>
     onChange({ ...options, [key]: checked })
 
@@ -52,25 +68,31 @@ export default function ReportOptions({ attempts, currentAttempt, options, onCha
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-            <span className="text-body-sm text-neutral-500">회차</span>
+          {/*
+            회차 목록은 리포트가 아니라 세션 도메인에서 옵니다. 안 오면 "회차" 글자만
+            덩그러니 남지 않게 줄째 뺍니다. (이슈 #54 3-1 · #32 5번 (1))
+          */}
+          {attempts.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+              <span className="text-body-sm text-neutral-500">회차</span>
 
-            {attempts.map((item) => (
-              <Link
-                key={item.attempt}
-                to={toReport(item.reportId)}
-                aria-current={item.attempt === currentAttempt ? 'page' : undefined}
-              >
-                <Chip selected={item.attempt === currentAttempt} fill="solid">
-                  {item.attempt}회차{item.isLatest ? ' (최신)' : ''}
-                </Chip>
-              </Link>
-            ))}
-          </div>
+              {attempts.map((item) => (
+                <Link
+                  key={item.attempt}
+                  to={toReport(item.reportId)}
+                  aria-current={item.attempt === currentAttempt ? 'page' : undefined}
+                >
+                  <Chip selected={item.attempt === currentAttempt} fill="solid">
+                    {item.attempt}회차{item.isLatest ? ' (최신)' : ''}
+                  </Chip>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          {TOGGLES.map(({ key, label }) => (
+          {TOGGLES.filter(({ key }) => available[key]).map(({ key, label }) => (
             <Switch key={key} checked={options[key]} onChange={set(key)}>
               <span className="text-body-md text-neutral-700">{label}</span>
             </Switch>

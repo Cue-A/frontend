@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { toReport } from '@/app/routes'
+import { ROUTES, toReport } from '@/app/routes'
+import Button from '@/shared/ui/Button'
 
 import { useAnalysisProgress } from '../hooks/useAnalysisProgress'
 import { ANALYSIS_STAGES } from '../types/analysis'
@@ -47,7 +48,7 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
 export default function AnalyzingPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
-  const { stageIndex, isDone, tip } = useAnalysisProgress()
+  const { stageIndex, isDone, isTimedOut, tip } = useAnalysisProgress()
 
   useEffect(() => {
     if (!isDone || !sessionId) return
@@ -56,6 +57,10 @@ export default function AnalyzingPage() {
     // 정해지지 않아서, 목업에서는 세션 id 를 그대로 씁니다.
     navigate(toReport(sessionId), { replace: true })
   }, [isDone, sessionId, navigate])
+
+  if (isTimedOut) {
+    return <AnalysisTimedOut />
+  }
 
   const current = ANALYSIS_STAGES[stageIndex]
   const percent = Math.round(((stageIndex + 1) / ANALYSIS_STAGES.length) * 100)
@@ -114,6 +119,40 @@ export default function AnalyzingPage() {
       </ol>
 
       <p className="text-body-sm text-neutral-400">면접 Tip · {tip}</p>
+    </main>
+  )
+}
+
+/**
+ * 기다림 상한(`ANALYSIS_TIMEOUT_MS`)을 넘겼을 때입니다.
+ *
+ * 스피너를 계속 돌리지 않고 멈춰서 상황을 말합니다. 실패라고 단정하지 않습니다 — 분석이 뒤에서
+ * 아직 돌고 있을 수 있고, 우리는 그걸 확인할 통로가 아직 없습니다(Q6b). 그래서 "실패했어요" 가
+ * 아니라 "오래 걸리고 있어요" 로 적고, 다시 기다리거나 빠져나갈 길을 둘 다 둡니다.
+ *
+ * 이 창에 머무는 동안 만들어진 리포트로 옮겨 갈 방법(리포트 목록 · 알림)이 아직 없다는 것도
+ * 숨기지 않습니다. 없는 길을 있는 것처럼 적으면 사용자가 찾으러 헤맵니다.
+ */
+function AnalysisTimedOut() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-neutral-50 p-6 text-center">
+      <div role="status" className="flex max-w-md flex-col items-center gap-3">
+        <h1 className="text-h1 text-neutral-900">분석이 오래 걸리고 있어요</h1>
+        <p className="break-keep text-body-md text-neutral-500">
+          10분이 넘도록 분석이 끝나지 않았어요. 서버가 바쁘거나 문제가 생겼을 수 있어요.
+        </p>
+        <p className="break-keep text-body-sm text-neutral-400">
+          지난 리포트를 모아 보는 화면은 아직 준비 중이라, 이 창을 벗어나면 이번 리포트로 돌아올 길이
+          없어요.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-3">
+        <Button to={ROUTES.LANDING}>처음 화면으로</Button>
+        <Button variant="primary" onClick={() => window.location.reload()}>
+          다시 기다리기
+        </Button>
+      </div>
     </main>
   )
 }

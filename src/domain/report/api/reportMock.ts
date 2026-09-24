@@ -129,12 +129,25 @@ function toSubMetrics(analysis: AnalysisResult): SubMetric[] {
 }
 
 /**
+ * 목업 회차의 리포트 id 입니다.
+ *
+ * 실제 `reportId` 는 **UUID 문자열**입니다. `Report` 엔티티가 정수 PK 와 별도로 `public_id` 를
+ * 들고 있고, 문서와 같은 이유로 바깥에는 그것만 나갑니다 (이슈 #54 3-2). 목업도 같은 모양으로
+ * 둬야 `r1` 같은 짧은 id 에 기대는 코드가 연동 날 깨지지 않습니다.
+ */
+const MOCK_REPORT_IDS = {
+  expired: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c01',
+  noCamera: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c02',
+  latest: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c03',
+} as const
+
+/**
  * 백엔드가 준비되기 전까지 화면을 그리기 위한 가짜 리포트입니다.
  * 값은 C-01 시안에 적힌 것을 그대로 옮겼습니다. 계약이 확정되면 교체합니다.
  */
 const SAMPLE_REPORT: Report = {
-  reportId: 'r3',
-  sessionId: 's3',
+  reportId: MOCK_REPORT_IDS.latest,
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e03',
   status: 'partial',
   companyName: '네이버',
   jobRole: '기획 직무',
@@ -143,9 +156,9 @@ const SAMPLE_REPORT: Report = {
 
   attempt: 3,
   attempts: [
-    { attempt: 1, reportId: 'r1', isLatest: false },
-    { attempt: 2, reportId: 'r2', isLatest: false },
-    { attempt: 3, reportId: 'r3', isLatest: true },
+    { attempt: 1, reportId: MOCK_REPORT_IDS.expired, isLatest: false },
+    { attempt: 2, reportId: MOCK_REPORT_IDS.noCamera, isLatest: false },
+    { attempt: 3, reportId: MOCK_REPORT_IDS.latest, isLatest: true },
   ],
 
   totalScore: SAMPLE_ANALYSIS.overall.score,
@@ -252,15 +265,20 @@ const EXPIRED_NOTICE =
 /**
  * 회차별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
  *
- * - `r1` — 영상 링크 만료 (시안 `상태C`)
- * - `r2` — 시선 **미사용**(카메라 안 켬) · 회복력 없음(친절형) · 총점 상한 걸림.
+ * - 1회차(`expired`) — 영상 링크 만료 (시안 `상태C`) · **개선 답변 예시 없음**.
+ *   개선 답변 예시는 명세서 v0.2 에서 P1 이라 백엔드 MVP 에 안 올 수 있습니다. 절과 토글이 둘 다
+ *   사라지는지 이 회차로 봅니다 (이슈 #54 3-1)
+ * - 2회차(`noCamera`) — 시선 **미사용**(카메라 안 켬) · 회복력 없음(친절형) · 총점 상한 걸림.
  *   미사용뿐이라 `complete` 입니다 — 위쪽 부분 실패 안내는 안 뜨고 시선 줄에만 사유가 남습니다.
- * - `r3` — 시선 **분석 실패** (기본)
+ *   카메라를 안 켰으니 **답변 영상도 없습니다**(`video: null`). "만료" 와 "애초에 없음" 은 다른
+ *   상태입니다 (이슈 #54 3-4)
+ * - 3회차(`latest`) — 시선 **분석 실패** (기본). 목록에 없는 id 도 이 모양으로 돌려줍니다.
+ *   분석 중 화면(B-02)이 목업에서 세션 id 로 리포트를 여는 길이 이걸로 이어집니다
  */
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
-  const isExpired = reportId === 'r1'
+  const isExpired = reportId === MOCK_REPORT_IDS.expired
 
-  if (reportId === 'r2') {
+  if (reportId === MOCK_REPORT_IDS.noCamera) {
     return {
       ...SAMPLE_REPORT,
       reportId,
@@ -277,17 +295,29 @@ registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
       totalScore: SKIPPED_ANALYSIS.overall.score,
       totalScoreDisplay: SKIPPED_ANALYSIS.overall.display,
       totalScoreDelta: null,
+      // 기본 소제목이 "2회차 대비" 라 2회차 자기 자신과 비교하는 말이 됐습니다.
+      metricsComment: '1회차 대비 말하기 속도가 안정됐어요',
       scoreGateReason: toScoreGateReason(SKIPPED_ANALYSIS.overall),
       notices: toPartialNotices(SKIPPED_ANALYSIS),
       metrics: toScoreMetrics(SKIPPED_ANALYSIS.axes),
       subMetrics: toSubMetrics(SKIPPED_ANALYSIS),
+      video: null,
     }
   }
 
-  return {
-    ...SAMPLE_REPORT,
-    reportId,
-    video: isExpired ? EXPIRED_VIDEO : SAMPLE_REPORT.video,
-    notices: isExpired ? [...SAMPLE_REPORT.notices, EXPIRED_NOTICE] : SAMPLE_REPORT.notices,
+  if (isExpired) {
+    return {
+      ...SAMPLE_REPORT,
+      reportId,
+      // 전에는 1회차를 열어도 3회차 칩이 골라지고 "2회차 대비" 가 떴습니다. 첫 회차라 비교 대상이 없습니다.
+      attempt: 1,
+      totalScoreDelta: null,
+      metricsComment: null,
+      video: EXPIRED_VIDEO,
+      improvedAnswer: null,
+      notices: [...SAMPLE_REPORT.notices, EXPIRED_NOTICE],
+    }
   }
+
+  return { ...SAMPLE_REPORT, reportId }
 })

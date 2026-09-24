@@ -10,11 +10,23 @@ const MOCK_STAGE_MS = 2000
 /** 팁이 바뀌는 간격(ms) */
 const TIP_ROTATE_MS = 5000
 
+/**
+ * 이만큼 기다려도 끝나지 않으면 기다림을 멈추고 안내로 바꿉니다.
+ *
+ * AI 가 리포트 생성 폴링 상한으로 **10분**을 권장합니다 (답변 영상 다운로드 + 시선 처리 포함,
+ * `Cue-A/AI` `docs/리포트생성_API계약_백엔드전달용.md`). 면접의 90초 · 60초와 다릅니다.
+ * 이보다 짧으면 정상적으로 도는 분석을 실패처럼 보여주고, 상한이 없으면 무한 스피너가 됩니다.
+ * (이슈 #54 3-3, Q6a "하지 말 것")
+ */
+export const ANALYSIS_TIMEOUT_MS = 10 * 60 * 1000
+
 export type AnalysisProgress = {
   /** 0부터 셉니다. ANALYSIS_STAGES 의 몇 번째인지 */
   stageIndex: number
   /** 전부 끝났으면 true */
   isDone: boolean
+  /** 끝나지 않은 채로 `ANALYSIS_TIMEOUT_MS` 가 지났으면 true */
+  isTimedOut: boolean
   tip: string
 }
 
@@ -32,6 +44,7 @@ export type AnalysisProgress = {
 export function useAnalysisProgress(): AnalysisProgress {
   const [stageIndex, setStageIndex] = useState(0)
   const [tipIndex, setTipIndex] = useState(0)
+  const [isTimedOut, setIsTimedOut] = useState(false)
 
   useEffect(() => {
     if (!USE_MOCK) return
@@ -51,9 +64,18 @@ export function useAnalysisProgress(): AnalysisProgress {
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsTimedOut(true), ANALYSIS_TIMEOUT_MS)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  const isDone = stageIndex >= ANALYSIS_STAGES.length
+
   return {
     stageIndex: Math.min(stageIndex, ANALYSIS_STAGES.length - 1),
-    isDone: stageIndex >= ANALYSIS_STAGES.length,
+    isDone,
+    // 끝난 뒤에 상한이 지나도 늦었다고 하지 않습니다. 끝났으면 리포트로 넘어갑니다.
+    isTimedOut: isTimedOut && !isDone,
     tip: WAITING_TIPS[tipIndex],
   }
 }
