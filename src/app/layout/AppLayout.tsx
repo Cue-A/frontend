@@ -7,7 +7,7 @@ import {
   IconUser,
   IconUsers,
 } from '@tabler/icons-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useMatches } from 'react-router-dom'
 
 import { ROUTES } from '../routes'
 
@@ -21,7 +21,7 @@ import { ROUTES } from '../routes'
 const NAV_ITEMS: { label: string; Icon: typeof IconHome; to?: string }[] = [
   { label: '홈', Icon: IconHome, to: ROUTES.LANDING },
   { label: '면접 연습', Icon: IconMicrophone, to: ROUTES.SESSION_SETUP },
-  { label: '내 보관함', Icon: IconFolder },
+  { label: '내 보관함', Icon: IconFolder, to: ROUTES.LIBRARY_DOCUMENTS },
   { label: '성장 관리', Icon: IconChartLine },
   { label: '마이페이지', Icon: IconUser },
   { label: '커뮤니티', Icon: IconUsers },
@@ -41,7 +41,22 @@ const ICON_STROKE = 2
  * 시안에는 상단 헤더바가 없고, 사이드바는 아이콘만 있는 좁은 레일입니다.
  * 글자가 없으므로 각 칸에 `title` 과 스크린리더용 이름을 따로 답니다.
  */
+/**
+ * 라우트의 `handle` 로 이 레이아웃에 알려줄 수 있는 것입니다.
+ *
+ * `fullBleed` — 본문 여백을 레이아웃이 아니라 화면이 직접 정합니다. 보관함(C-02)처럼
+ * 두 번째 패널이 아이콘 레일에 바로 붙는 화면에 씁니다. 여백을 레이아웃이 주면 패널이
+ * 레일에서 떨어져 보입니다. 옵션 설정(A-05)처럼 안 쓰는 화면은 지금과 같습니다.
+ */
+export type AppLayoutHandle = { fullBleed?: boolean }
+
+function isFullBleed(handle: unknown): boolean {
+  return typeof handle === 'object' && handle !== null && (handle as AppLayoutHandle).fullBleed === true
+}
+
 export default function AppLayout() {
+  const fullBleed = useMatches().some((match) => isFullBleed(match.handle))
+
   return (
     <div className="flex min-h-screen bg-neutral-50">
       <aside
@@ -93,7 +108,7 @@ export default function AppLayout() {
         </span>
       </aside>
 
-      <main className="min-w-0 flex-1 p-6 md:p-10">
+      <main className={`min-w-0 flex-1 ${fullBleed ? '' : 'p-6 md:p-10'}`}>
         <Outlet />
       </main>
     </div>

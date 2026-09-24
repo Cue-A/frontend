@@ -13,6 +13,8 @@ export const ROUTES = {
   INTERVIEW: '/interviews/:sessionId',
   ANALYZING: '/interviews/:sessionId/analyzing',
   REPORT: '/reports/:reportId',
+  /** C-02 내 보관함 > 자소서 · 포트폴리오 (이슈 #59) */
+  LIBRARY_DOCUMENTS: '/library/documents',
   /** B-01 확인용 정적 프리뷰. 리뷰 끝나면 지워도 되는 임시 라우트입니다. */
   DEV_INTERVIEW_PREVIEW: '/dev/interview-preview',
 } as const
