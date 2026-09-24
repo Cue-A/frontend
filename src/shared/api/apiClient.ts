@@ -115,10 +115,21 @@ function refreshTokens(): Promise<{ accessToken: string; refreshToken: string }>
  * `shared/` 는 `domain/` 을 모르고 `app/` 의 라우터도 몰라야 해서(도메인 간 참조
  * 규칙), 여기서만 예외적으로 경로를 문자열로 직접 씁니다. 전체 새로고침이라 남아
  * 있을 수 있는 화면 상태(진행 중인 폴링, 열린 소켓)도 같이 정리됩니다.
+ *
+ * `reason` 은 쿼리로 실어 보냅니다. 전체 새로고침이라 지금 메모리에 있는 에러
+ * 상태가 다 같이 사라지는데, `REFRESH_TOKEN_REUSED` 처럼 로그인 화면이 따로
+ * 안내해야 하는 코드가 있어 로그인 화면이 다시 읽을 수 있게 남겨둡니다.
+ * (PR #60 리뷰)
  */
-function forceLogout() {
+function forceLogout(reason: string) {
   clearTokens()
-  window.location.href = '/login'
+
+  // 이미 로그인 화면이면 보낼 필요가 없습니다. 지금은 로그인 화면이 보호된
+  // API 를 안 불러서 당장 걸리지 않지만, 나중에 생기면 새로고침이 반복되는
+  // 걸 막아둡니다. (PR #60 리뷰)
+  if (window.location.pathname === '/login') return
+
+  window.location.href = `/login?reason=${encodeURIComponent(reason)}`
 }
 
 async function request<T>(method: HttpMethod, path: string, body?: unknown, isRetry = false): Promise<T> {
@@ -131,12 +142,21 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown, isRe
   } catch (cause) {
     if (!(cause instanceof ApiError)) throw cause
 
-    if (cause.code === 'TOKEN_EXPIRED') {
+    // 새로고침 직후: access 는 메모리라 사라졌고 refresh 만 localStorage 에 남아
+    // 있습니다. 토큰 없이 나간 요청에 백엔드가 UNAUTHORIZED 를 주는데(JwtAuthFilter
+    // 는 토큰이 없으면 통과시키고 @CurrentUser 가 UNAUTHORIZED 를 냅니다), 이건
+    // "로그인 안 함" 이 아니라 "access 복구 전" 입니다. TOKEN_EXPIRED 와 같은 길로
+    // 보내 재발급을 시도합니다 — 아니면 새로고침할 때마다 로그아웃됩니다.
+    // (PR #60 리뷰)
+    const recoverableAfterReload =
+      cause.code === 'UNAUTHORIZED' && tokenAtRequestTime === null && getRefreshToken() !== null
+
+    if (cause.code === 'TOKEN_EXPIRED' || recoverableAfterReload) {
       if (isRetry) {
         // 재발급한 토큰으로 보낸 요청이 또 TOKEN_EXPIRED 면 다시 재발급하지
         // 않습니다. 상한 없이 돌면 토큰이 실제로 망가진 상황(서명 키 교체,
         // refresh 폐기)에서 재발급 요청이 폭주합니다. (이슈 #53 3번)
-        forceLogout()
+        forceLogout(cause.code)
         throw cause
       }
 
@@ -153,9 +173,10 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown, isRe
       try {
         await refreshTokens()
       } catch (refreshCause) {
-        forceLogout()
         // 재발급이 실패한 진짜 이유(INVALID_REFRESH_TOKEN 등)를 그대로 올려서
         // 화면 문구가 원인에 맞게 뜨게 합니다.
+        const reason = refreshCause instanceof ApiError ? refreshCause.code : cause.code
+        forceLogout(reason)
         throw refreshCause instanceof ApiError ? refreshCause : cause
       }
 
@@ -163,7 +184,7 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown, isRe
     }
 
     if (AUTH_FAILURE_CODES.has(cause.code)) {
-      forceLogout()
+      forceLogout(cause.code)
     }
 
     throw cause
