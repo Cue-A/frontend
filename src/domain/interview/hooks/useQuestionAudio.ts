@@ -49,8 +49,15 @@ export function useQuestionAudio(
     const handleEnded = () => onPresentationDone(question.questionId)
     audioElement.addEventListener('ended', handleEnded)
 
+    // play() 가 resolve 된 뒤에도(재생이 일단 시작된 뒤에도) 네트워크 문제 등으로
+    // 로딩이 중간에 끊길 수 있다 — 'ended' 가 오지 않으면 세션이 'presenting' 에
+    // 영원히 멈추니, 자동재생 실패와 같은 원칙으로 텍스트 진행으로 넘어간다.
+    const handleError = () => onPresentationDone(question.questionId)
+    audioElement.addEventListener('error', handleError)
+
     return () => {
       audioElement.removeEventListener('ended', handleEnded)
+      audioElement.removeEventListener('error', handleError)
     }
   }, [question, audioElement, onPresentationDone])
 

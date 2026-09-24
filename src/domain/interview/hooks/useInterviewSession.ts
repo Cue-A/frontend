@@ -44,10 +44,11 @@ export type UseInterviewSessionResult = {
   submitAnswer: (recording: AnswerRecordingKeys, isTimeout: boolean) => void
   /**
    * 녹화 업로드가 실패했을 때 제출을 취소하고 다시 답변할 수 있는 상태로 되돌린다.
-   * 실패 문구는 recordingFailureMessage(uploadStatus 기반) 로만 보여준다 — submitError
-   * 는 REST 제출(submitAnswer) 자체가 실패했을 때 전용이라 여기서는 건드리지 않는다.
+   * 실패 문구는 submitError 에 실어 보여준다 — submitError 는 beginSubmit·새 질문에서만
+   * 지워지므로, 되돌아온 뒤 녹화가 다시 시작돼도(uploadStatus 가 'recording' 으로 바뀌어도)
+   * 문구가 지워지지 않는다.
    */
-  cancelSubmit: () => void
+  cancelSubmit: (message: string) => void
   /** 질문 제시(텍스트/오디오)가 끝났을 때 컨테이너가 부른다 — presenting → answering 전환. */
   notifyPresentationDone: (questionId: string) => void
 }
@@ -208,9 +209,13 @@ export function useInterviewSession(
     setNeedsRerecord(false)
   }, [])
 
-  const cancelSubmit = useCallback(() => {
+  const cancelSubmit = useCallback((message: string) => {
     if (finishedRef.current) return
+    // returnToAnswering 과 마찬가지로 재답변이 실제로 시작되는 시점을 다시 잡는다 —
+    // 안 그러면 durationSec 이 업로드 실패·재시도에 걸린 시간까지 포함해 부풀어 버린다.
+    answerStartRef.current = Date.now()
     setPhase('answering')
+    setSubmitError({ message, retryable: true })
   }, [])
 
   const submitAnswer = useCallback(

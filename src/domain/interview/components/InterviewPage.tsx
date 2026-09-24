@@ -128,7 +128,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
       submitAnswer({ audioObjectKey: uploadStatus.audioObjectKey, videoObjectKey: uploadStatus.videoObjectKey }, pending.isTimeout)
     } else if (uploadStatus.status === 'failed') {
       pendingSubmitRef.current = null
-      cancelSubmit()
+      cancelSubmit(uploadStatus.message)
     }
   }, [uploadStatus, submitAnswer, cancelSubmit])
 
@@ -174,7 +174,6 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
       needsRerecord={session.needsRerecord}
       submitError={session.submitError}
       remainingSec={session.remainingSec}
-      recordingFailureMessage={uploadStatus.status === 'failed' ? uploadStatus.message : null}
     />
   )
 }

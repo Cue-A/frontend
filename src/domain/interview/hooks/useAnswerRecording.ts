@@ -81,17 +81,17 @@ export function useAnswerRecording(
 
   const startRecording = useCallback(() => {
     if (audioRef.current || videoRef.current) return // 이미 녹화 중이다.
+    // 오디오가 필수라 마이크 스트림이 없으면 영상만 따로 녹화하지 않는다 — 카메라가
+    // 마이크보다 먼저 붙어도 여기서 걸러지고, 마이크가 뒤늦게 붙어 스트림이 생기면
+    // startRecording 의 참조가 바뀌어 effect 가 다시 돌면서 오디오 · 영상이 같이 시작된다.
+    if (!audioRecordingStream) return
 
-    if (audioRecordingStream) {
-      audioRef.current = startRecorder(audioRecordingStream, pickMimeType(PREFERRED_AUDIO_MIME_TYPES, 'audio/webm'))
-    }
+    audioRef.current = startRecorder(audioRecordingStream, pickMimeType(PREFERRED_AUDIO_MIME_TYPES, 'audio/webm'))
     if (videoRecordingStream) {
       videoRef.current = startRecorder(videoRecordingStream, pickMimeType(PREFERRED_VIDEO_MIME_TYPES, 'video/webm'))
     }
 
-    if (audioRef.current || videoRef.current) {
-      setUploadStatus({ status: 'recording' })
-    }
+    setUploadStatus({ status: 'recording' })
   }, [audioRecordingStream, videoRecordingStream])
 
   const stopAndUpload = useCallback(
@@ -103,7 +103,9 @@ export function useAnswerRecording(
 
       if (!audio) {
         // 오디오는 필수다(백엔드 요청 타입에 audioFileName 등이 optional 이 아니다) —
-        // 마이크가 없어 오디오 자체가 없으면 애초에 업로드를 시도할 수 없다.
+        // 마이크가 없어 오디오 자체가 없으면 애초에 업로드를 시도할 수 없다. video 는 참조만
+        // 지우면 멈추지 않고 계속 녹화되니(다음 답변용 MediaRecorder 가 쌓인다) 같이 멈춘다.
+        video?.recorder.stop()
         setUploadStatus({ status: 'failed', message: '녹음된 음성이 없어 업로드하지 못했어요.' })
         return
       }
@@ -113,7 +115,7 @@ export function useAnswerRecording(
       void (async () => {
         try {
           const audioBlob = await stopRecorder(audio)
-          const videoBlob = video ? await stopRecorder(video) : null
+          let videoBlob = video ? await stopRecorder(video) : null
 
           const audioValidationMessage = validateAnswerRecording('audio', audioBlob)
           if (audioValidationMessage) {
@@ -124,8 +126,16 @@ export function useAnswerRecording(
           if (videoBlob) {
             const videoValidationMessage = validateAnswerRecording('video', videoBlob)
             if (videoValidationMessage) {
-              setUploadStatus({ status: 'failed', message: videoValidationMessage })
-              return
+              // 영상은 선택 사항이다 — 영상만 문제(용량 초과, 빈 파일 등)면 오디오는
+              // 그대로 올리고 영상만 생략한다. 오디오까지 버리면 멀쩡한 답변을 다시
+              // 녹음하게 만든다.
+              console.error(
+                '답변 영상 검증 실패, 오디오만 업로드 sessionId=%s questionId=%s reason=%s',
+                sessionId,
+                questionId,
+                videoValidationMessage,
+              )
+              videoBlob = null
             }
           }
 
