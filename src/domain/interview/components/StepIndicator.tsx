@@ -44,7 +44,14 @@ export default function StepIndicator({ current }: Props) {
                       : 'bg-neutral-200 text-neutral-400')
                   }
                 >
-                  {isDone ? <IconCheck size={16} stroke={2} aria-hidden /> : stepNumber}
+                  {isDone ? (
+                    <>
+                      <IconCheck size={16} stroke={2} aria-hidden />
+                      <span className="sr-only">{stepNumber}단계 완료</span>
+                    </>
+                  ) : (
+                    stepNumber
+                  )}
                 </span>
 
                 <span className="flex flex-col">

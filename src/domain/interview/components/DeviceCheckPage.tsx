@@ -198,15 +198,15 @@ export default function DeviceCheckPage() {
               <ul className="flex flex-col gap-3">
                 <li className="flex items-center gap-2">
                   <ReadyItemIcon status={cameraReady} />
-                  <span className="text-body-sm text-neutral-900">카메라 정상 인식</span>
+                  <span className="text-body-sm text-neutral-900">카메라 인식</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <ReadyItemIcon status={micReady} />
-                  <span className="text-body-sm text-neutral-900">마이크 정상 인식</span>
+                  <span className="text-body-sm text-neutral-900">마이크 인식</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <ReadyItemIcon status={networkReady} />
-                  <span className="text-body-sm text-neutral-900">네트워크 정상 연결</span>
+                  <span className="text-body-sm text-neutral-900">네트워크 연결</span>
                 </li>
               </ul>
             </Card>
