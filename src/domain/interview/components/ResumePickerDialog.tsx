@@ -11,7 +11,9 @@ import type { SelectedResume } from '../types/sessionSetup'
 type Props = {
   /** 지금 골라둔 문서. 목록에서 표시해줍니다 */
   selectedId: string | null
+  /** 문서를 골랐을 때. 창은 이 컴포넌트가 스스로 닫고 `onClose` 로 알립니다 */
   onSelect: (resume: SelectedResume) => void
+  /** 창이 닫힌 뒤. 어떤 경로로 닫혀도(X · 선택 · Esc) 여기로 한 번 옵니다 */
   onClose: () => void
 }
 
@@ -22,6 +24,11 @@ type Props = {
  * 면접에 쓸 수 없는 문서는 목록에 두되 이유를 적고 못 고르게 합니다.
  *
  * 브라우저 기본 `<dialog>` 를 씁니다. 포커스 가두기 · Esc 닫기를 브라우저가 해줍니다.
+ *
+ * **닫을 때는 항상 `dialog.close()` 를 거칩니다.** 그래야 브라우저가 창을 열었던 버튼으로
+ * 포커스를 돌려줍니다. 부모가 바로 언마운트해버리면 포커스가 `<body>` 로 떨어져서, 키보드 ·
+ * 스크린리더 사용자는 자기가 어디 있는지 잃습니다. X · 선택 · Esc 세 경로가 모두 네이티브
+ * `close` 이벤트 하나로 모이고, 거기서 `onClose` 를 부릅니다. (PR #64 리뷰)
  */
 export default function ResumePickerDialog({ selectedId, onSelect, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
@@ -31,6 +38,8 @@ export default function ResumePickerDialog({ selectedId, onSelect, onClose }: Pr
     const dialog = dialogRef.current
     if (dialog && !dialog.open) dialog.showModal()
   }, [])
+
+  const close = () => dialogRef.current?.close()
 
   return (
     <dialog
@@ -49,7 +58,7 @@ export default function ResumePickerDialog({ selectedId, onSelect, onClose }: Pr
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
           >
             <IconX size={20} stroke={2} aria-hidden />
@@ -93,7 +102,10 @@ export default function ResumePickerDialog({ selectedId, onSelect, onClose }: Pr
                       type="button"
                       disabled={blockReason !== null}
                       aria-pressed={selected}
-                      onClick={() => onSelect(selection)}
+                      onClick={() => {
+                        onSelect(selection)
+                        close()
+                      }}
                       className={`flex w-full items-center gap-3 rounded-sm border p-3 text-left transition-colors disabled:cursor-not-allowed ${
                         selected
                           ? 'border-primary-500 bg-primary-100'

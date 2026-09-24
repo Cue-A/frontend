@@ -1,6 +1,7 @@
 import { IconFileText } from '@tabler/icons-react'
 import { useState } from 'react'
 
+import { formatFileSize } from '@/shared/lib/formatFileSize'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
@@ -13,19 +14,12 @@ type Props = {
   onChange: (resume: SelectedResume) => void
 }
 
-function formatSize(bytes: number) {
-  const mb = bytes / (1024 * 1024)
-  if (mb >= 1) return `${mb.toFixed(1)}MB`
-
-  const kb = Math.max(1, Math.round(bytes / 1024))
-  return `${kb}KB`
-}
-
 /** 고른 문서의 둘째 줄. 제목과 파일명이 같으면 파일명은 다시 쓰지 않습니다. */
 function describe(resume: SelectedResume) {
   if (resume.fileSize === null) return '직접 작성한 문서'
 
-  const size = formatSize(resume.fileSize)
+  // 보관함 목록과 같은 기준으로 씁니다. 따로 두면 같은 문서가 화면마다 다르게 보입니다. (PR #64 리뷰)
+  const size = formatFileSize(resume.fileSize)
   return resume.fileName && resume.fileName !== resume.title ? `${resume.fileName} · ${size}` : size
 }
 
@@ -93,10 +87,7 @@ export default function ResumeField({ resume, onChange }: Props) {
       {picking && (
         <ResumePickerDialog
           selectedId={resume?.documentId ?? null}
-          onSelect={(selected) => {
-            onChange(selected)
-            setPicking(false)
-          }}
+          onSelect={onChange}
           onClose={() => setPicking(false)}
         />
       )}
