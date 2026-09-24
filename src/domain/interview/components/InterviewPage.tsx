@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom'
 
+import { ROUTES, toAnalyzing } from '@/app/routes'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
 import { useAnswerRecording } from '../hooks/useAnswerRecording'
@@ -12,6 +13,7 @@ import type { InterviewSessionOptions } from '../api/sessionApi'
 import type { DeviceStatus } from '../types/interview'
 import type { MediaTrackFailureReason, MediaTrackState } from '../types/media'
 
+import ExitConfirmModal from './ExitConfirmModal'
 import InterviewSessionPage from './InterviewSessionPage'
 
 function InterviewStatusScreen({ message }: { message: string }) {
@@ -65,7 +67,9 @@ type ConnectedProps = {
  */
 function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const initialDeviceStatus = readInitialDeviceStatus(location.state)
+  const [isExitRequested, setIsExitRequested] = useState(false)
 
   const { camera, mic, videoStream, audioRecordingStream, videoRecordingStream } = useMediaStream(initialDeviceStatus)
   const { uploadStatus, startRecording, stopAndUpload } = useAnswerRecording(sessionId, audioRecordingStream, videoRecordingStream)
@@ -86,6 +90,14 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const session = useInterviewSession(sessionId, options.answerTimeLimitSec, handleAnswerTimeout)
   const { beginSubmit, submitAnswer, cancelSubmit } = session
   const { setAudioElement, amplitude } = useQuestionAudio(session.question, session.notifyPresentationDone)
+
+  // 뒤로가기 등 인앱 이동으로 세션을 잃지 않도록 막는다(#26 — X 버튼·beforeunload 만으로는
+  // 브라우저 뒤로가기가 안 잡혔다). "확인" 누른 직후의 navigate(ROUTES.LANDING) 호출도
+  // 이 블로커 대상이라, ref 로 "방금 확인했다"를 동기적으로 알려서 그 navigate 까지
+  // 다시 막히지 않게 한다 — state 로 하면 리렌더가 한 박자 늦어 navigate 호출 시점에는
+  // 아직 이전 값을 본다.
+  const hasConfirmedExitRef = useRef(false)
+  const blocker = useBlocker(() => !session.isFinished && !hasConfirmedExitRef.current)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
@@ -108,6 +120,27 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
       startRecording()
     }
   }, [session.phase, session.question?.questionId, startRecording])
+
+  // 진행 중에 새로고침·탭 닫기로 세션을 잃지 않도록 경고한다 (#26). 'finished' 이후에는
+  // 더 잃을 진행 상황이 없어서 해제한다.
+  useEffect(() => {
+    if (session.isFinished) return
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [session.isFinished])
+
+  // 정상 종료(session_end 수신)면 분석중 화면으로 보낸다 (#26). replace 를 쓰는 이유는
+  // AnalyzingPage 의 같은 패턴과 동일 — 뒤로가기로 끝난 면접 화면에 돌아오지 않게 한다.
+  useEffect(() => {
+    if (!session.isFinished) return
+    navigate(toAnalyzing(sessionId), { replace: true })
+  }, [session.isFinished, sessionId, navigate])
 
   /**
    * // DECISION NEEDED (이슈 #54 "확정 안 된 것" 3번): 텍스트 답변 제출(session.phase)과
@@ -146,35 +179,64 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
 
   const deviceStatus = buildDeviceStatus(camera, mic)
 
+  // X 버튼(isExitRequested)과 뒤로가기 등 인앱 이동 시도(blocker.state==='blocked')
+  // 둘 다 같은 모달로 확인받는다.
+  const isExitModalOpen = isExitRequested || blocker.state === 'blocked'
+
+  const handleCancelExit = () => {
+    setIsExitRequested(false)
+    if (blocker.state === 'blocked') blocker.reset()
+  }
+
+  // #54 2-5: 프론트→백엔드 이탈(abort) 경로가 아직 없다(백엔드 이슈 대기). 그래서 지금은
+  // 서버에 알리지 않고 화면만 벗어난다 — 세션은 서버에 IN_PROGRESS로 남는다. 경로가
+  // 나오면 실제 이동 전에 abort 호출을 끼워 넣는 자리다.
+  const handleConfirmExit = () => {
+    setIsExitRequested(false)
+
+    // 뒤로가기 등으로 막혔던 이동이면 원래 가려던 곳으로 그대로 보낸다 — 무조건
+    // 랜딩으로 보내면 "뒤로가기" 의미가 사라진다.
+    if (blocker.state === 'blocked') {
+      blocker.proceed()
+      return
+    }
+
+    hasConfirmedExitRef.current = true
+    navigate(ROUTES.LANDING)
+  }
+
   return (
-    <InterviewSessionPage
-      videoRef={videoRef}
-      // TODO(B-01-4): 종료 확인 모달·라우팅은 이 이슈 범위가 아니다.
-      onExit={undefined}
-      // TODO(B-01-4): REC 표시(경과 시간)는 녹화 시작 시점을 노출하는 후속 작업 몫이다.
-      recordingElapsedSec={0}
-      interviewerStyle={options.interviewerStyle}
-      // TODO(B-01-4): 세션 전체 경과·제한 시간은 아직 이 이슈 범위가 아니다.
-      sessionElapsedSec={0}
-      sessionLimitSec={null}
-      deviceStatus={deviceStatus.status}
-      deviceStatusMessage={deviceStatus.message}
-      speakingIntensity={amplitude}
-      hasCameraStream={camera.status === 'available'}
-      cameraFailureMessage={camera.status === 'failed' && camera.failureReason ? CAMERA_FAILURE_MESSAGE[camera.failureReason] : null}
-      onAudioElement={setAudioElement}
-      // 실시간 자막은 범위 제외가 확정 사항이다(백엔드 WS 메시지에 발화 전사 채널이 없음) —
-      // LiveCaptionPanel 은 B-01-1 의 빈 상태 UI를 그대로 쓴다.
-      caption={null}
-      question={session.question}
-      hideQuestionText={options.hideQuestionText}
-      phase={session.phase}
-      onSubmitAnswer={handleSubmitAnswer}
-      progressLabel={session.progressLabel}
-      needsRerecord={session.needsRerecord}
-      submitError={session.submitError}
-      remainingSec={session.remainingSec}
-    />
+    <>
+      <InterviewSessionPage
+        videoRef={videoRef}
+        onExit={() => setIsExitRequested(true)}
+        // TODO(B-01-4): REC 표시(경과 시간)는 녹화 시작 시점을 노출하는 후속 작업 몫이다.
+        recordingElapsedSec={0}
+        interviewerStyle={options.interviewerStyle}
+        // TODO(B-01-4): 세션 전체 경과·제한 시간은 아직 이 이슈 범위가 아니다.
+        sessionElapsedSec={0}
+        sessionLimitSec={null}
+        deviceStatus={deviceStatus.status}
+        deviceStatusMessage={deviceStatus.message}
+        speakingIntensity={amplitude}
+        hasCameraStream={camera.status === 'available'}
+        cameraFailureMessage={camera.status === 'failed' && camera.failureReason ? CAMERA_FAILURE_MESSAGE[camera.failureReason] : null}
+        onAudioElement={setAudioElement}
+        // 실시간 자막은 범위 제외가 확정 사항이다(백엔드 WS 메시지에 발화 전사 채널이 없음) —
+        // LiveCaptionPanel 은 B-01-1 의 빈 상태 UI를 그대로 쓴다.
+        caption={null}
+        question={session.question}
+        hideQuestionText={options.hideQuestionText}
+        phase={session.phase}
+        onSubmitAnswer={handleSubmitAnswer}
+        progressLabel={session.progressLabel}
+        needsRerecord={session.needsRerecord}
+        submitError={session.submitError}
+        remainingSec={session.remainingSec}
+      />
+
+      <ExitConfirmModal open={isExitModalOpen} onCancel={handleCancelExit} onConfirm={handleConfirmExit} />
+    </>
   )
 }
 
