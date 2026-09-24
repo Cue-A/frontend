@@ -23,7 +23,11 @@ type Props = {
 
   videoRef: RefObject<HTMLVideoElement | null>
   hasCameraStream: boolean
+  cameraFailureMessage?: string | null
   caption: string | null
+
+  /** 질문 음성 <audio> 에 물릴 콜백 ref. useQuestionAudio 가 준다. */
+  onAudioElement?: (element: HTMLAudioElement | null) => void
 
   question: Question
   hideQuestionText: boolean
@@ -51,7 +55,9 @@ export default function InterviewSessionPage({
   speakingIntensity,
   videoRef,
   hasCameraStream,
+  cameraFailureMessage = null,
   caption,
+  onAudioElement,
   question,
   hideQuestionText,
   phase,
@@ -87,12 +93,20 @@ export default function InterviewSessionPage({
         </div>
 
         <div className="absolute right-16 top-12">
-          <SessionSidePanel videoRef={videoRef} hasStream={hasCameraStream} caption={caption} />
+          <SessionSidePanel
+            videoRef={videoRef}
+            hasStream={hasCameraStream}
+            cameraFailureMessage={cameraFailureMessage}
+            caption={caption}
+          />
         </div>
 
         <div className="flex flex-1 items-center justify-center">
           <InterviewerAvatarStage speakingIntensity={speakingIntensity} />
         </div>
+
+        {/* 질문 음성 재생 전용. 컨트롤은 안 보여주고 useQuestionAudio/useAudioAmplitude 가 소스·재생을 관리한다. */}
+        <audio ref={onAudioElement} hidden />
 
         <QuestionCard
           question={question}

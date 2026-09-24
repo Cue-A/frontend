@@ -63,10 +63,13 @@ export function getInterviewOptions(sessionId: string) {
 }
 
 /**
- * 답변 제출 REST 엔드포인트입니다. 백엔드에 아직 없습니다
- * (domain/interview/controller 가 .gitkeep 뿐). 경로 · 응답 형태는 추정치이고 mock 만
- * 등록되어 있다. 계약이 정해지면 이 함수만 고치면 된다.
+ * 답변 제출 REST 엔드포인트입니다. 경로와 `questionId`/`audioObjectKey`/
+ * `videoObjectKey`/`isTimeout` 필드는 이슈 #54(`feat/24-interview-answer-flow`)로
+ * 확인됐다. `durationSec`/`transcript` 는 `AnswerSubmission` 타입엔 남아있지만
+ * 백엔드 요청 타입에 자리가 없어(#54 "확인이 필요한 것" 3번, 아직 미확정) 실제
+ * 요청 바디에는 넣지 않는다 — TODO 는 `types/interview.ts` 의 `AnswerSubmission` 참고.
  */
 export function submitAnswer(sessionId: string, submission: AnswerSubmission) {
-  return api.post<void>(`/api/interviews/${sessionId}/answers`, submission)
+  const { questionId, audioObjectKey, videoObjectKey, isTimeout } = submission
+  return api.post<void>(`/api/interviews/${sessionId}/answers`, { questionId, audioObjectKey, videoObjectKey, isTimeout })
 }

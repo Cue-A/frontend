@@ -61,14 +61,24 @@ export type SessionEndPush = {
   totalQuestions: number
 }
 
+/**
+ * 답변 제출 요청 바디입니다. (이슈 #54, `feat/24-interview-answer-flow` 확인 기준으로
+ * `audioObjectKey`/`videoObjectKey`/`isTimeout` 로 확정됨 — 녹화 업로드(useAnswerRecording)가
+ * 끝난 뒤 받은 objectKey 를 그대로 담는다. `submissionReason`(manual/timeout)은
+ * `isTimeout` 으로 대체됐다.
+ */
 export type AnswerSubmission = {
   questionId: string
+  audioObjectKey: string
+  videoObjectKey: string | null
+  isTimeout: boolean
+  /**
+   * TODO(#54 확인 필요): 백엔드 요청 타입에 이 두 필드를 받을 자리가 없다. AI가 STT를
+   * 다시 돌리기 때문에 안 보내도 되는 것인지 이슈 #54 "확인이 필요한 것" 3번으로 아직
+   * 열려 있다 — 결정 전까지 `sessionApi.submitAnswer` 는 실제 요청 바디에 이 필드들을
+   * 넣지 않는다. 화면 쪽(재답변 판단 등)에서 계속 들고 있어야 해서 타입에서는 지우지
+   * 않는다.
+   */
   durationSec: number
   transcript: string
-  /**
-   * 프론트가 판단해 추가한 필드로, 백엔드 계약엔 아직 없다 (INT-8 관련 결정, 2026-09-16).
-   * 타임아웃으로 끊긴 답변이 되묻기(REASK) 오작동으로 이어지지 않게 구분하고, 자동
-   * 제출된 답변을 최종 평가에서 제외하기 위해 필요하다 — 백엔드와 계약 협의가 필요하다.
-   */
-  submissionReason: 'manual' | 'timeout'
 }
