@@ -40,21 +40,28 @@ export const STATUS_VIEW: Record<DocumentIndexStatus, StatusView> = {
   FAILED: { label: '실패', tone: 'danger', description: '문서를 읽지 못했어요. 다시 올려주세요' },
 }
 
+const MARKDOWN_NOT_USABLE = '직접 작성한 문서는 아직 면접에 쓸 수 없어요'
+
 /**
- * 행의 보조 문구입니다.
+ * 이 문서로 면접을 시작할 수 없는 이유. 시작할 수 있으면 null 입니다.
  *
- * 직접 작성한 문서는 준비가 끝나도 **아직 면접에 쓸 수 없습니다.** 백엔드가 면접 시작을
- * 파일 문서로만 받습니다 (Cue-A/backend#36). "면접에 쓸 수 있어요" 라고 해두면 A-05 에서
- * 고르려다 막힙니다.
+ * 백엔드 세션 시작(`POST /api/interviews`)은 **준비가 끝난(`COMPLETED`) 파일 문서**만 받습니다.
+ * 직접 작성한 문서는 준비가 끝나도 거절됩니다 (Cue-A/backend#36). A-05 는 이 이유를 보여주고
+ * 그 문서를 못 고르게 막습니다 — 고르게 두면 "면접 시작" 을 누른 뒤에야 막힙니다.
+ */
+export function interviewBlockReason(document: DocumentSummary): string | null {
+  if (document.indexStatus !== 'COMPLETED') return STATUS_VIEW[document.indexStatus].description
+  if (document.sourceType === 'MARKDOWN') return MARKDOWN_NOT_USABLE
+  return null
+}
+
+/**
+ * 행의 보조 문구입니다. 면접에 쓸 수 없는 문서면 그 이유를, 쓸 수 있으면 그렇다고 말합니다.
+ * "면접에 쓸 수 있어요" 라고 해두고 A-05 에서 막히면 사용자는 이유를 모릅니다.
  */
 export function describeDocument(document: DocumentSummary): string {
   const typeLabel = DOCUMENT_TYPE_LABEL[document.documentType]
-
-  if (document.sourceType === 'MARKDOWN' && document.indexStatus === 'COMPLETED') {
-    return `${typeLabel} · 직접 작성한 문서는 아직 면접에 쓸 수 없어요`
-  }
-
-  return `${typeLabel} · ${STATUS_VIEW[document.indexStatus].description}`
+  return `${typeLabel} · ${interviewBlockReason(document) ?? STATUS_VIEW.COMPLETED.description}`
 }
 
 /** 행 왼쪽의 형식 뱃지. 확장자가 없거나 낯설면 `FILE` 로 둡니다. */
