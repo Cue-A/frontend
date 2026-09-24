@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
@@ -28,10 +28,14 @@ export function useOpenDocument(): UseOpenDocumentResult {
   const [openingId, setOpeningId] = useState<string | null>(null)
   const [viewing, setViewing] = useState<DocumentDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // "조회" 를 누른 버튼. 본문 창을 닫은 뒤 포커스를 여기로 돌려줍니다 — 여는 동안 버튼이 잠겨서
+  // (disabled) 포커스가 <body> 로 빠지므로, 브라우저의 기본 포커스 복원에 맡길 수 없습니다. (PR #64 리뷰)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
 
   const open = useCallback((document: DocumentSummary) => {
     setError(null)
     setOpeningId(document.documentId)
+    returnFocusRef.current = window.document.activeElement instanceof HTMLElement ? window.document.activeElement : null
 
     // 빈 탭을 **먼저** 엽니다. 상세를 받은 뒤에 window.open 하면 브라우저가 사용자
     // 클릭으로 쳐주지 않아 팝업 차단에 걸립니다(요청을 기다린 사이 클릭의 효력이 끝납니다).
@@ -65,7 +69,11 @@ export function useOpenDocument(): UseOpenDocumentResult {
     })()
   }, [])
 
-  const closeViewing = useCallback(() => setViewing(null), [])
+  const closeViewing = useCallback(() => {
+    setViewing(null)
+    // 창이 닫히고 버튼이 다시 풀린 다음 프레임에 돌려줍니다.
+    requestAnimationFrame(() => returnFocusRef.current?.focus())
+  }, [])
 
   return { open, openingId, viewing, closeViewing, error }
 }
