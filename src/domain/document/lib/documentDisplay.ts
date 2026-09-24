@@ -1,3 +1,5 @@
+import { formatFileSize } from '@/shared/lib/formatFileSize'
+
 import type { DocumentIndexStatus, DocumentSummary, DocumentType } from '../types/document'
 
 /**
@@ -82,17 +84,6 @@ export function formatDate(iso: string): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${date.getFullYear()}.${month}.${day}`
-}
-
-/**
- * 시안은 `1.2MB` · `0.8MB` 처럼 MB 한 자리입니다. 0.1MB 보다 작으면 `0.0MB` 가 되어
- * 빈 파일처럼 보이므로 그때만 KB 로 씁니다.
- */
-export function formatFileSize(bytes: number): string {
-  const mb = bytes / (1024 * 1024)
-  if (mb >= 0.1) return `${mb.toFixed(1)}MB`
-
-  return `${Math.max(1, Math.round(bytes / 1024))}KB`
 }
 
 /** 등록일 · 용량 칸. 직접 작성한 문서는 파일 크기가 없습니다. */
