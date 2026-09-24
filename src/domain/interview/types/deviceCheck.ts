@@ -16,3 +16,9 @@ export type DeviceCheckState = {
   status: DeviceCheckStatus
   failureReason: DeviceFailureReason | null
 }
+
+/**
+ * 네트워크 연결 상태입니다. `navigator.onLine` 은 동기 값이라(카메라·마이크처럼
+ * 권한 응답을 기다릴 필요가 없어) 'unchecked' 없이 바로 available/failed 로 시작합니다.
+ */
+export type NetworkCheckStatus = 'available' | 'failed'

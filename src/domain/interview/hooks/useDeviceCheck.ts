@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { DeviceCheckState, DeviceFailureReason } from '../types/deviceCheck'
+import type { DeviceCheckState, DeviceFailureReason, NetworkCheckStatus } from '../types/deviceCheck'
 
 const UNCHECKED: DeviceCheckState = { status: 'unchecked', failureReason: null }
 
@@ -58,6 +58,7 @@ function classifyFailure(error: unknown): DeviceFailureReason {
 export type UseDeviceCheckResult = {
   camera: DeviceCheckState
   mic: DeviceCheckState
+  network: NetworkCheckStatus
   videoStream: MediaStream | null
   /** 0(무음) ~ 1(최대) 범위로 정규화된 마이크 입력 레벨 */
   micLevel: number
@@ -72,6 +73,7 @@ export type UseDeviceCheckResult = {
 export function useDeviceCheck(): UseDeviceCheckResult {
   const [camera, setCamera] = useState<DeviceCheckState>(UNCHECKED)
   const [mic, setMic] = useState<DeviceCheckState>(UNCHECKED)
+  const [network, setNetwork] = useState<NetworkCheckStatus>(() => (navigator.onLine ? 'available' : 'failed'))
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
   const [micLevel, setMicLevel] = useState(0)
 
@@ -213,6 +215,18 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   }, [stopMic, acquireMic])
 
   useEffect(() => {
+    const handleOnline = () => setNetwork('available')
+    const handleOffline = () => setNetwork('failed')
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  useEffect(() => {
     void (async () => {
       await Promise.all([acquireCamera(), acquireMic()])
     })()
@@ -230,6 +244,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   return {
     camera,
     mic,
+    network,
     videoStream,
     micLevel,
     recheckCamera,

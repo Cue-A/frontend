@@ -1,3 +1,5 @@
+import { IconCheck } from '@tabler/icons-react'
+
 const STEPS = [
   { title: '옵션설정', subtitle: '직무 · 조건' },
   { title: '장치 테스트', subtitle: '마이크 · 카메라' },
@@ -24,6 +26,7 @@ export default function StepIndicator({ current }: Props) {
         {STEPS.map((step, index) => {
           const stepNumber = index + 1
           const isCurrent = stepNumber === current
+          const isDone = stepNumber < current
           const isLast = index === STEPS.length - 1
 
           return (
@@ -36,19 +39,26 @@ export default function StepIndicator({ current }: Props) {
                 <span
                   className={
                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-body-md font-semibold tabular-nums ' +
-                    (isCurrent
+                    (isCurrent || isDone
                       ? 'bg-primary-500 text-neutral-0'
                       : 'bg-neutral-200 text-neutral-400')
                   }
                 >
-                  {stepNumber}
+                  {isDone ? (
+                    <>
+                      <IconCheck size={16} stroke={2} aria-hidden />
+                      <span className="sr-only">{stepNumber}단계 완료</span>
+                    </>
+                  ) : (
+                    stepNumber
+                  )}
                 </span>
 
                 <span className="flex flex-col">
                   <span
                     className={
                       'text-body-md font-semibold ' +
-                      (isCurrent ? 'text-neutral-900' : 'text-neutral-400')
+                      (isCurrent || isDone ? 'text-neutral-900' : 'text-neutral-400')
                     }
                   >
                     {step.title}
@@ -57,7 +67,9 @@ export default function StepIndicator({ current }: Props) {
                 </span>
               </span>
 
-              {!isLast && <span aria-hidden className="mt-4 h-px flex-1 bg-neutral-200" />}
+              {!isLast && (
+                <span aria-hidden className={`mt-4 h-px flex-1 ${isDone ? 'bg-primary-500' : 'bg-neutral-200'}`} />
+              )}
             </li>
           )
         })}
