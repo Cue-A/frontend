@@ -190,7 +190,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
 
   // #54 2-5: 프론트→백엔드 이탈(abort) 경로가 아직 없다(백엔드 이슈 대기). 그래서 지금은
   // 서버에 알리지 않고 화면만 벗어난다 — 세션은 서버에 IN_PROGRESS로 남는다. 경로가
-  // 나오면 실제 이동 전에 abort 호출을 끼워 넣는 자리다.
+  // 나오면 실제 이동 전에 abort 호출을 끼워 넣는 자리다. (Cue-A/backend#25)
   const handleConfirmExit = () => {
     setIsExitRequested(false)
 

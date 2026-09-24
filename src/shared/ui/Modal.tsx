@@ -31,6 +31,14 @@ const FOCUSABLE_SELECTOR =
 export default function Modal({ open, onClose, children, labelledBy, className = '' }: Props) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
+  // 부모가 렌더마다 새 onClose 를 넘겨도(예: 콜백을 useCallback 없이 넘기는 경우) 아래
+  // effect 가 매번 정리→재실행되며 포커스를 판으로 되돌리는 일이 없도록, 최신 값만
+  // ref 로 들고 effect 의존성에서는 뺀다.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   useEffect(() => {
     if (!open) return
 
@@ -46,7 +54,7 @@ export default function Modal({ open, onClose, children, labelledBy, className =
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
 
@@ -78,7 +86,7 @@ export default function Modal({ open, onClose, children, labelledBy, className =
       window.removeEventListener('keydown', handleKeyDown)
       previouslyFocused?.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
