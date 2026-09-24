@@ -1,3 +1,5 @@
+import { formatFileSize } from '@/shared/lib/formatFileSize'
+
 import type { DocumentIndexStatus, DocumentSummary, DocumentType } from '../types/document'
 
 /**
@@ -40,21 +42,28 @@ export const STATUS_VIEW: Record<DocumentIndexStatus, StatusView> = {
   FAILED: { label: '실패', tone: 'danger', description: '문서를 읽지 못했어요. 다시 올려주세요' },
 }
 
+const MARKDOWN_NOT_USABLE = '직접 작성한 문서는 아직 면접에 쓸 수 없어요'
+
 /**
- * 행의 보조 문구입니다.
+ * 이 문서로 면접을 시작할 수 없는 이유. 시작할 수 있으면 null 입니다.
  *
- * 직접 작성한 문서는 준비가 끝나도 **아직 면접에 쓸 수 없습니다.** 백엔드가 면접 시작을
- * 파일 문서로만 받습니다 (Cue-A/backend#36). "면접에 쓸 수 있어요" 라고 해두면 A-05 에서
- * 고르려다 막힙니다.
+ * 백엔드 세션 시작(`POST /api/interviews`)은 **준비가 끝난(`COMPLETED`) 파일 문서**만 받습니다.
+ * 직접 작성한 문서는 준비가 끝나도 거절됩니다 (Cue-A/backend#36). A-05 는 이 이유를 보여주고
+ * 그 문서를 못 고르게 막습니다 — 고르게 두면 "면접 시작" 을 누른 뒤에야 막힙니다.
+ */
+export function interviewBlockReason(document: DocumentSummary): string | null {
+  if (document.indexStatus !== 'COMPLETED') return STATUS_VIEW[document.indexStatus].description
+  if (document.sourceType === 'MARKDOWN') return MARKDOWN_NOT_USABLE
+  return null
+}
+
+/**
+ * 행의 보조 문구입니다. 면접에 쓸 수 없는 문서면 그 이유를, 쓸 수 있으면 그렇다고 말합니다.
+ * "면접에 쓸 수 있어요" 라고 해두고 A-05 에서 막히면 사용자는 이유를 모릅니다.
  */
 export function describeDocument(document: DocumentSummary): string {
   const typeLabel = DOCUMENT_TYPE_LABEL[document.documentType]
-
-  if (document.sourceType === 'MARKDOWN' && document.indexStatus === 'COMPLETED') {
-    return `${typeLabel} · 직접 작성한 문서는 아직 면접에 쓸 수 없어요`
-  }
-
-  return `${typeLabel} · ${STATUS_VIEW[document.indexStatus].description}`
+  return `${typeLabel} · ${interviewBlockReason(document) ?? STATUS_VIEW.COMPLETED.description}`
 }
 
 /** 행 왼쪽의 형식 뱃지. 확장자가 없거나 낯설면 `FILE` 로 둡니다. */
@@ -75,17 +84,6 @@ export function formatDate(iso: string): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${date.getFullYear()}.${month}.${day}`
-}
-
-/**
- * 시안은 `1.2MB` · `0.8MB` 처럼 MB 한 자리입니다. 0.1MB 보다 작으면 `0.0MB` 가 되어
- * 빈 파일처럼 보이므로 그때만 KB 로 씁니다.
- */
-export function formatFileSize(bytes: number): string {
-  const mb = bytes / (1024 * 1024)
-  if (mb >= 0.1) return `${mb.toFixed(1)}MB`
-
-  return `${Math.max(1, Math.round(bytes / 1024))}KB`
 }
 
 /** 등록일 · 용량 칸. 직접 작성한 문서는 파일 크기가 없습니다. */

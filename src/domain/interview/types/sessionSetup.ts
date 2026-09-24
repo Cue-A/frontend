@@ -81,16 +81,27 @@ export type Company = {
   name: string
 }
 
-/** 사용자가 고른 자기소개서. 업로드 계약이 없어서 아직 파일만 들고 있습니다. */
-export type ResumeFile = {
-  name: string
-  /** 바이트 */
-  size: number
+/**
+ * 보관함에서 고른 자기소개서. (이슈 #54 1-5)
+ *
+ * 파일이 아니라 **등록해둔 문서를 가리키는 값**입니다. 올리기는 보관함(C-02)이 하고,
+ * 여기서는 고르기만 합니다. 이름은 `document` 가 더 맞지만 화면 문구가 "자기소개서" 라
+ * `resume` 으로 둡니다.
+ */
+export type SelectedResume = {
+  /** 문서 UUID. 세션 생성에 `documentPublicId` 로 그대로 싣습니다 */
+  documentId: string
+  title: string
+  /** 원본 파일명. 직접 작성한 문서면 null */
+  fileName: string | null
+  /** 바이트. 직접 작성한 문서면 null */
+  fileSize: number | null
 }
 
 export type SessionSetup = {
   jobRole: JobRole | null
-  resume: ResumeFile | null
+  /** 면접에 쓸 수 있는 문서만 고를 수 있어서, 값이 있으면 곧 시작 가능한 문서입니다 */
+  resume: SelectedResume | null
 
   useCompanyQuestion: boolean
   /** 기업 id. 목록에 없는 기업이면 CUSTOM */

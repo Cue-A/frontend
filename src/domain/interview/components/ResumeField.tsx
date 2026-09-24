@@ -1,57 +1,40 @@
 import { IconFileText } from '@tabler/icons-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
+import { formatFileSize } from '@/shared/lib/formatFileSize'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
-import { ALLOWED_RESUME_EXTENSIONS, RESUME_ACCEPT, validateResumeFile } from '../lib/validateResume'
-import type { ResumeFile } from '../types/sessionSetup'
+import type { SelectedResume } from '../types/sessionSetup'
+
+import ResumePickerDialog from './ResumePickerDialog'
 
 type Props = {
-  resume: ResumeFile | null
-  onChange: (resume: ResumeFile) => void
+  resume: SelectedResume | null
+  onChange: (resume: SelectedResume) => void
 }
 
-function formatSize(bytes: number) {
-  const mb = bytes / (1024 * 1024)
-  if (mb >= 1) return `${mb.toFixed(1)}MB`
+/** 고른 문서의 둘째 줄. 제목과 파일명이 같으면 파일명은 다시 쓰지 않습니다. */
+function describe(resume: SelectedResume) {
+  if (resume.fileSize === null) return '직접 작성한 문서'
 
-  const kb = Math.max(1, Math.round(bytes / 1024))
-  return `${kb}KB`
+  // 보관함 목록과 같은 기준으로 씁니다. 따로 두면 같은 문서가 화면마다 다르게 보입니다. (PR #64 리뷰)
+  const size = formatFileSize(resume.fileSize)
+  return resume.fileName && resume.fileName !== resume.title ? `${resume.fileName} · ${size}` : size
 }
 
 /**
- * 자기소개서를 고릅니다. (A-05)
+ * 자기소개서를 고릅니다. (A-05, 이슈 #54 1-1)
  *
- * 아직 서버로 올리지는 않습니다. 업로드 방식(따로 올리고 id 를 넘기는지,
- * 세션 생성에 함께 보내는지)이 정해지지 않았습니다. 지금은 고른 파일을
- * 화면에 보여주는 데까지만 합니다.
+ * **올리지 않고 보관함에서 고릅니다.** 올리기는 내 보관함(C-02)이 합니다. 전에는 여기서
+ * 파일 선택창을 열었는데, 세션 시작이 등록된 문서의 id(`documentPublicId`)를 요구해서
+ * 파일을 들고 있어도 쓸 데가 없었습니다.
  *
  * 시안은 비었을 때와 골랐을 때의 모양이 다릅니다. 비었을 때는 점선 상자에
- * 채우기를 권하는 문장과 강조 버튼, 골랐을 때는 파일 정보와 보조 버튼입니다.
- *
- * 파일 선택 버튼은 브라우저 기본 모양을 숨기고 직접 만든 버튼으로 엽니다.
- *
- * 고른 파일은 `validateResumeFile` 로 한 번 더 확인합니다. `accept` 는 선택창의
- * 기본 필터일 뿐이라 "모든 파일" 로 바꾸면 그대로 통과합니다 (기능명세서 DOC-5).
+ * 채우기를 권하는 문장과 강조 버튼, 골랐을 때는 문서 정보와 보조 버튼입니다.
  */
 export default function ResumeField({ resume, onChange }: Props) {
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const openPicker = () => inputRef.current?.click()
-
-  const handlePick = (file: File) => {
-    const message = validateResumeFile(file)
-
-    if (message) {
-      setError(message)
-      return
-    }
-
-    setError(null)
-    onChange({ name: file.name, size: file.size })
-  }
+  const [picking, setPicking] = useState(false)
 
   return (
     <section className="flex flex-col gap-3">
@@ -76,53 +59,38 @@ export default function ResumeField({ resume, onChange }: Props) {
 
           {resume ? (
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-body-md font-semibold text-neutral-900">
-                {resume.name}
-              </span>
-              <span className="text-body-sm text-neutral-400">{formatSize(resume.size)}</span>
+              <span className="truncate text-body-md font-semibold text-neutral-900">{resume.title}</span>
+              <span className="truncate text-body-sm text-neutral-400">{describe(resume)}</span>
             </span>
           ) : (
             <span className="flex min-w-0 flex-col">
-              <span className="text-body-md font-semibold text-neutral-900">
-                아직 불러온 자기소개서가 없어요
-              </span>
-              <span className="text-body-sm text-neutral-400">
-                {ALLOWED_RESUME_EXTENSIONS.join(' · ')} 파일을 올리면 맞춤 질문이 더 정확해져요
+              <span className="text-body-md font-semibold text-neutral-900">아직 불러온 자기소개서가 없어요</span>
+              <span className="break-keep text-body-sm text-neutral-400">
+                보관함에 등록한 자기소개서를 고르면 맞춤 질문이 더 정확해져요
               </span>
             </span>
           )}
         </span>
 
         {resume ? (
-          <Button size="sm" onClick={openPicker} className="shrink-0">
+          <Button size="sm" onClick={() => setPicking(true)} className="shrink-0">
             불러오기/변경
           </Button>
         ) : (
-          <Button variant="primary" size="sm" onClick={openPicker} className="shrink-0">
+          <Button variant="primary" size="sm" onClick={() => setPicking(true)} className="shrink-0">
             자기소개서 불러오기
           </Button>
         )}
       </div>
 
-      {error && (
-        <p role="alert" className="text-body-sm text-semantic-danger">
-          {error}
-        </p>
+      {/* 열 때마다 새로 그려서 보관함 목록도 새로 받습니다. */}
+      {picking && (
+        <ResumePickerDialog
+          selectedId={resume?.documentId ?? null}
+          onSelect={onChange}
+          onClose={() => setPicking(false)}
+        />
       )}
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept={RESUME_ACCEPT}
-        hidden
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) handlePick(file)
-
-          // 같은 파일을 다시 골라도 change 가 뜨도록 비워둡니다.
-          event.target.value = ''
-        }}
-      />
     </section>
   )
 }

@@ -194,7 +194,7 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 남은 결정: 팀 확정 — 카메라도 필수로 갈지, 선택으로 남길지.
 - 걸리는 작업: `domain/interview/lib/canStartInterview.ts` 만 고치면 됩니다.
 
-### Q10. 🟡 답변 시간 선택지 · 자소서 크기 상한이 확정되지 않았습니다
+### Q10. 🟡 답변 시간 선택지가 확정되지 않았습니다
 
 A-05 시안에는 "9문항", "질문당 90초" 한 값씩만 보입니다. 드롭다운인데 나머지
 선택지가 시안에 없어서 프론트가 임시로 채웠습니다. (PR #13)
@@ -202,15 +202,16 @@ A-05 시안에는 "9문항", "질문당 90초" 한 값씩만 보입니다. 드�
 **질문 수는 해결됐습니다.** 기능명세서 INT-2 에 **3 / 6 / 9** 로 적혀 있는 걸
 뒤늦게 확인해 그대로 맞췄습니다. 임시로 넣었던 5 / 7 / 9 는 지웠습니다.
 
+**자소서 크기 · 포맷도 해결됐습니다.** 백엔드 `FileValidator` 와 대조해 10MB ·
+pdf / docx / txt 로 같은 값임을 확인했습니다. 검증은 올리는 화면(C-02) 몫이라
+`domain/document/lib/validateDocumentFile.ts` 로 옮겼습니다. (이슈 #54)
+
 - **임시 값**: 답변 시간 60 / 90 / 120초 + 제한 없음
-- **임시 값**: 자소서 크기 상한 10MB — DOC-1 은 "크기 제한" 이라고만 적혀 있고
-  숫자가 없습니다. 차단하지 않으면 DOC-5 가 반쪽이라 일단 넣었습니다
 - 남은 결정: 답변 시간의 실제 허용 범위. 서버가
   `GET /api/v1/interviews/options/defaults` (INT-2) 로 선택지를 내려주므로,
   연동하면 이 목록은 지워야 합니다
 - 걸리는 작업: `domain/interview/types/sessionSetup.ts` 의
-  `ANSWER_SECONDS_CHOICES`, `domain/interview/lib/validateResume.ts` 의
-  `MAX_RESUME_BYTES`
+  `ANSWER_SECONDS_CHOICES`
 - 함께 확인: "제한 없음"일 때 세션 생성 요청에 `answerSeconds` 를 어떻게 보낼지
   (지금은 `null`)
 
