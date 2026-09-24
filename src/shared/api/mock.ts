@@ -77,13 +77,16 @@ export function isRealApi(path: string): boolean {
 }
 
 /**
- * 경로 파라미터와 요청 본문을 받습니다.
+ * 경로 파라미터와 요청 본문, 쿼리를 받습니다.
  *   '/api/reports/:reportId' → params { reportId: 'r1' }
  *
  * body 는 POST · PATCH 처럼 보낸 값에 따라 응답이 달라져야 할 때 씁니다.
- * 안 쓰는 핸들러는 첫 번째 인자만 받으면 됩니다. (PR #8 리뷰)
+ * multipart 요청이면 `FormData` 그대로 옵니다.
+ * query 는 `?documentType=RESUME` 처럼 목록을 거를 때 씁니다. 쿼리가 없어도
+ * 빈 `URLSearchParams` 가 옵니다.
+ * 안 쓰는 핸들러는 앞쪽 인자만 받으면 됩니다. (PR #8 리뷰)
  */
-type MockHandler = (params: Record<string, string>, body?: unknown) => unknown
+type MockHandler = (params: Record<string, string>, body: unknown, query: URLSearchParams) => unknown
 
 type MockRoute = {
   method: HttpMethod
@@ -102,6 +105,9 @@ const routes: MockRoute[] = []
  * 보낸 값에 따라 응답이 달라져야 하면 두 번째 인자로 본문을 받습니다.
  *   registerMock('POST', '/api/interviews', (_params, body) => ...)
  *
+ * 쿼리는 경로에 쓰지 않습니다. 경로는 `?` 앞까지만 맞춰보고, 쿼리는 세 번째 인자로 옵니다.
+ *   registerMock('GET', '/api/documents', (_params, _body, query) => query.get('page'))
+ *
  * 계약 타입과 AI 더미 JSON 이전은 별도 이슈로 진행합니다.
  * 옛 레포의 fixtures 가 snake_case 라 그대로 옮기면 컨벤션(camelCase)과
  * 어긋나서, 백엔드 응답과 대조한 뒤에 옮기는 게 맞습니다.
@@ -112,19 +118,35 @@ export function registerMock(method: HttpMethod, path: string, handler: MockHand
 
 export function findMock(method: HttpMethod, path: string) {
   const actual = toSegments(path)
+  const query = new URLSearchParams(queryOf(path))
 
   for (const route of routes) {
     if (route.method !== method) continue
 
     const params = match(route.segments, actual)
-    if (params) return (body?: unknown) => route.handler(params, body)
+    if (params) return (body?: unknown) => route.handler(params, body, query)
   }
 
   return undefined
 }
 
+/**
+ * 쿼리를 떼고 나눕니다. 떼지 않으면 `/api/documents?page=0` 의 마지막 조각이
+ * `documents?page=0` 이 되어 목업 경로와도, `VITE_REAL_APIS` 의 도메인 이름과도
+ * 맞지 않습니다. 목업은 MOCK_NOT_FOUND 로 죽고, 실제 연동은 켜도 안 켜집니다.
+ */
 function toSegments(path: string) {
-  return path.split('/').filter(Boolean)
+  return pathnameOf(path).split('/').filter(Boolean)
+}
+
+function pathnameOf(path: string) {
+  const question = path.indexOf('?')
+  return question < 0 ? path : path.slice(0, question)
+}
+
+function queryOf(path: string) {
+  const question = path.indexOf('?')
+  return question < 0 ? '' : path.slice(question + 1)
 }
 
 /** 맞으면 파라미터를, 안 맞으면 null 을 돌려줍니다. */

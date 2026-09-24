@@ -9,10 +9,13 @@ import type { HttpMethod, Result } from './types'
  * 백엔드는 쿠키가 아니라 `Authorization: Bearer` 헤더를 읽습니다 (Q5 결정).
  * 토큰이 깨지면 INVALID_TOKEN 으로 401 이 옵니다.
  */
-function buildHeaders(hasBody: boolean): HeadersInit {
+function buildHeaders(body: unknown): HeadersInit {
   const headers: Record<string, string> = {}
 
-  if (hasBody) {
+  // FormData 에는 Content-Type 을 달지 않습니다. 브라우저가
+  // `multipart/form-data; boundary=...` 를 직접 만들어 붙이는데, 우리가 먼저 달면
+  // boundary 가 빠져서 서버가 본문을 한 조각도 못 읽습니다.
+  if (body !== undefined && !(body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -22,6 +25,12 @@ function buildHeaders(hasBody: boolean): HeadersInit {
   }
 
   return headers
+}
+
+function toRequestBody(body: unknown): BodyInit | undefined {
+  if (body === undefined) return undefined
+  if (body instanceof FormData) return body
+  return JSON.stringify(body)
 }
 
 async function parseResult<T>(response: Response): Promise<Result<T>> {
@@ -48,12 +57,10 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
   // 그러면 JSON 파싱이 깨지면서 HTTP_200 같은 엉뚱한 에러가 납니다.
   assertBaseUrl(USING_PARTIAL_REAL, path)
 
-  const hasBody = body !== undefined
-
   const response = await fetch(`${REST_BASE_URL}${path}`, {
     method,
-    headers: buildHeaders(hasBody),
-    body: hasBody ? JSON.stringify(body) : undefined,
+    headers: buildHeaders(body),
+    body: toRequestBody(body),
   })
 
   const result = await parseResult<T>(response)
@@ -73,6 +80,11 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  /**
+   * `multipart/form-data` 로 보냅니다. 파일을 올릴 때만 씁니다 (문서 등록).
+   * 목업 핸들러에는 이 `FormData` 가 본문으로 그대로 갑니다.
+   */
+  postForm: <T>(path: string, form: FormData) => request<T>('POST', path, form),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
 }
