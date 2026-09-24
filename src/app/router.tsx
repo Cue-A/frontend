@@ -5,12 +5,13 @@ import LoginPage from '@/domain/auth/components/LoginPage'
 import DeviceCheckPage from '@/domain/interview/components/DeviceCheckPage'
 import InterviewPage from '@/domain/interview/components/InterviewPage'
 import InterviewSessionPreview from '@/domain/interview/components/InterviewSessionPreview'
+import LibraryDocumentsPage from '@/domain/document/components/LibraryDocumentsPage'
 import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
 import ReportPage from '@/domain/report/components/ReportPage'
 
-import AppLayout from './layout/AppLayout'
+import AppLayout, { type AppLayoutHandle } from './layout/AppLayout'
 import NotFoundPage from './NotFoundPage'
 import { ROUTES } from './routes'
 
@@ -34,7 +35,15 @@ export const router = createBrowserRouter([
   { path: ROUTES.REPORT, element: <ReportPage /> },
   {
     element: <AppLayout />,
-    children: [{ path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> }],
+    children: [
+      { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
+      {
+        path: ROUTES.LIBRARY_DOCUMENTS,
+        element: <LibraryDocumentsPage />,
+        // 보관함 패널이 아이콘 레일에 바로 붙어야 해서 본문 여백을 화면이 직접 정합니다.
+        handle: { fullBleed: true } satisfies AppLayoutHandle,
+      },
+    ],
   },
   { path: '*', element: <NotFoundPage /> },
 ])

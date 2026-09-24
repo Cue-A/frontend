@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-type Padding = 'sm' | 'md' | 'lg'
+type Padding = 'none' | 'sm' | 'md' | 'lg'
 type Surface = 'white' | 'brand'
 
 /**
@@ -23,6 +23,11 @@ const SURFACE_CLASS: Record<Surface, string> = {
 const BASE_CLASS = 'rounded-lg'
 
 const PADDING_CLASS: Record<Padding, string> = {
+  /**
+   * 안쪽 내용이 판 끝까지 닿아야 할 때 씁니다. 표처럼 행 구분선이 좌우 끝까지
+   * 이어지는 모양이 그렇습니다 (보관함 목록). 여백은 안쪽 칸이 각자 가집니다.
+   */
+  none: '',
   sm: 'p-4',
   md: 'p-5',
   lg: 'p-6',
