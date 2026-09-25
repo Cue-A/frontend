@@ -13,6 +13,17 @@ const ERROR_MESSAGE: Record<string, string> = {
   TTS_FAILED: '음성을 만들지 못했어요. 텍스트로 계속 진행할게요.',
   RESUME_PARSE_FAILED: '파일을 읽지 못했어요. 다른 파일로 올려주세요.',
 
+  // 문서 — 백엔드 FileValidator · DocumentRegisterService · InterviewStartService 기준 (이슈 #54 1-4)
+  UNSUPPORTED_FILE_FORMAT: 'pdf · docx · txt 파일만 올릴 수 있어요.',
+  FILE_SIZE_EXCEEDED: '파일이 너무 커요. 10MB 이하로 올려주세요.',
+  // 백엔드는 빈 파일을 "파일이 없다" 로 받아서 이 코드를 줍니다. 사용자에겐 빈 파일 문제입니다.
+  INVALID_SOURCE_TYPE: '파일 내용이 비어 있어요. 다른 파일을 골라주세요.',
+  // 다시 시도해도 풀리지 않습니다. 삭제 API 가 아직 없어서(Cue-A/backend#38) 그 사실까지 말합니다.
+  DOCUMENT_LIMIT_EXCEEDED: '문서는 20개까지 등록할 수 있어요. 아직 지우는 기능이 없어서 더 올릴 수 없어요.',
+  DOCUMENT_NOT_FOUND: '문서를 찾을 수 없어요.',
+  UPLOAD_NOT_COMPLETED: '문서가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.',
+  RATE_LIMIT_EXCEEDED: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.',
+
   // 리포트 — 코드는 AI 계약서 9장과 백엔드 ErrorCode.java 에서 확인한 값들입니다.
   // (이슈 #46)
   //

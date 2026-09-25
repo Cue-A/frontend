@@ -10,6 +10,12 @@ import type { DocumentIndexStatus, DocumentSummary, DocumentType } from '../type
  * (이슈 #59)
  */
 
+/**
+ * 사용자당 문서 상한. 백엔드 `DocumentRegisterService.MAX_DOCUMENTS_PER_USER` 와 같습니다.
+ * 넘으면 `DOCUMENT_LIMIT_EXCEEDED` 이고, 지우는 API 가 아직 없어 다시 시도로 풀리지 않습니다.
+ */
+export const MAX_DOCUMENTS = 20
+
 export type DocumentTab = 'ALL' | 'RESUME' | 'PORTFOLIO' | 'FAILED'
 
 export const DOCUMENT_TABS: { value: DocumentTab; label: string }[] = [
