@@ -9,6 +9,8 @@ import {
 } from '@tabler/icons-react'
 import { NavLink, Outlet, useMatches } from 'react-router-dom'
 
+import { useLogout } from '@/domain/auth/hooks/useLogout'
+
 import { ROUTES } from '../routes'
 
 /**
@@ -56,6 +58,7 @@ function isFullBleed(handle: unknown): boolean {
 
 export default function AppLayout() {
   const fullBleed = useMatches().some((match) => isFullBleed(match.handle))
+  const logout = useLogout()
 
   return (
     <div className="flex min-h-screen bg-neutral-50">
@@ -98,14 +101,15 @@ export default function AppLayout() {
           </ul>
         </nav>
 
-        <span
-          aria-disabled
-          title="로그아웃 (준비 중이에요)"
-          className={`${SLOT_CLASS} text-neutral-300`}
+        <button
+          type="button"
+          onClick={() => void logout()}
+          title="로그아웃"
+          className={`${SLOT_CLASS} ${INACTIVE_CLASS}`}
         >
           <IconLogout size={ICON_SIZE} stroke={ICON_STROKE} aria-hidden />
-          <span className="sr-only">로그아웃 (준비 중)</span>
-        </span>
+          <span className="sr-only">로그아웃</span>
+        </button>
       </aside>
 
       <main className={`min-w-0 flex-1 ${fullBleed ? '' : 'p-6 md:p-10'}`}>

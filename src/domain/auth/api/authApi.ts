@@ -20,3 +20,13 @@ export function signup(body: SignupRequest) {
 export function loginWithKakao(code: string) {
   return api.post<TokenResponse>('/api/auth/oauth/kakao', { code })
 }
+
+/**
+ * 이 기기의 로그인을 끊습니다. (AUTH-5)
+ * refresh token 하나만 끊습니다 — access token 은 무상태라 남은 수명(30분)까지는
+ * 유효하지만, 로그아웃 직후 프론트가 토큰을 지우므로 다음 요청부터는 안 실립니다.
+ * (Cue-A/backend docs/03-auth.md)
+ */
+export function logout(refreshToken: string) {
+  return api.post<void>('/api/auth/logout', { refreshToken })
+}

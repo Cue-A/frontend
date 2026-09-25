@@ -13,6 +13,7 @@ import ReportPage from '@/domain/report/components/ReportPage'
 
 import AppLayout, { type AppLayoutHandle } from './layout/AppLayout'
 import NotFoundPage from './NotFoundPage'
+import RequireAuth from './RequireAuth'
 import { ROUTES } from './routes'
 
 /**
@@ -27,21 +28,31 @@ export const router = createBrowserRouter([
   { path: ROUTES.LANDING, element: <LandingPage /> },
   { path: ROUTES.LOGIN, element: <LoginPage /> },
   { path: ROUTES.KAKAO_CALLBACK, element: <KakaoCallbackPage /> },
-  { path: ROUTES.DEVICE_CHECK, element: <DeviceCheckPage /> },
-  { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
-  // B-01 확인용 프리뷰. 프로덕션 번들에는 포함하지 않는다 (PR #31 리뷰).
-  ...(import.meta.env.DEV ? [{ path: ROUTES.DEV_INTERVIEW_PREVIEW, element: <InterviewSessionPreview /> }] : []),
-  { path: ROUTES.ANALYZING, element: <AnalyzingPage /> },
-  { path: ROUTES.REPORT, element: <ReportPage /> },
   {
-    element: <AppLayout />,
+    // AUTH-4 보호 라우트 가드. refresh token 이 없으면 로그인 화면으로 보냅니다
+    // (RequireAuth 주석 참고). 로그인 전 화면(랜딩 · 로그인 · 카카오 콜백)과
+    // 404 는 이 가드 밖에 둡니다.
+    element: <RequireAuth />,
     children: [
-      { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
+      { path: ROUTES.DEVICE_CHECK, element: <DeviceCheckPage /> },
+      { path: ROUTES.INTERVIEW, element: <InterviewPage /> },
+      // B-01 확인용 프리뷰. 프로덕션 번들에는 포함하지 않는다 (PR #31 리뷰).
+      ...(import.meta.env.DEV
+        ? [{ path: ROUTES.DEV_INTERVIEW_PREVIEW, element: <InterviewSessionPreview /> }]
+        : []),
+      { path: ROUTES.ANALYZING, element: <AnalyzingPage /> },
+      { path: ROUTES.REPORT, element: <ReportPage /> },
       {
-        path: ROUTES.LIBRARY_DOCUMENTS,
-        element: <LibraryDocumentsPage />,
-        // 보관함 패널이 아이콘 레일에 바로 붙어야 해서 본문 여백을 화면이 직접 정합니다.
-        handle: { fullBleed: true } satisfies AppLayoutHandle,
+        element: <AppLayout />,
+        children: [
+          { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
+          {
+            path: ROUTES.LIBRARY_DOCUMENTS,
+            element: <LibraryDocumentsPage />,
+            // 보관함 패널이 아이콘 레일에 바로 붙어야 해서 본문 여백을 화면이 직접 정합니다.
+            handle: { fullBleed: true } satisfies AppLayoutHandle,
+          },
+        ],
       },
     ],
   },
