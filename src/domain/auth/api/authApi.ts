@@ -1,15 +1,15 @@
 import { api } from '@/shared/api/apiClient'
 
-import type { AuthResult, LoginRequest, SignupRequest } from '../types/auth'
+import type { LoginRequest, SignupRequest, TokenResponse } from '../types/auth'
 
 import './authMock'
 
 export function login(body: LoginRequest) {
-  return api.post<AuthResult>('/api/auth/login', body)
+  return api.post<TokenResponse>('/api/auth/login', body)
 }
 
 export function signup(body: SignupRequest) {
-  return api.post<AuthResult>('/api/auth/signup', body)
+  return api.post<TokenResponse>('/api/auth/signup', body)
 }
 
 /**
@@ -18,5 +18,5 @@ export function signup(body: SignupRequest) {
  * 카카오와 직접 토큰을 교환합니다.
  */
 export function loginWithKakao(code: string) {
-  return api.post<AuthResult>('/api/auth/oauth/kakao', { code })
+  return api.post<TokenResponse>('/api/auth/oauth/kakao', { code })
 }

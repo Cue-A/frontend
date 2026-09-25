@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
+import { toUserMessage } from '@/shared/api/errorMessage'
 import Card from '@/shared/ui/Card'
 
 import LoginForm from './LoginForm'
@@ -22,10 +24,22 @@ const TAB_OFF = 'text-neutral-500'
  */
 export default function AuthCard() {
   const [tab, setTab] = useState<Tab>('login')
+  const [searchParams] = useSearchParams()
+
+  // 세션이 강제로 끊겨 로그인 화면으로 돌아온 경우입니다 (apiClient 의
+  // forceLogout). 전체 새로고침이라 그때의 에러 상태를 못 들고 오니, 이유를
+  // 쿼리로 실어 받아 다시 보여줍니다. (PR #60 리뷰)
+  const reason = searchParams.get('reason')
 
   return (
     <Card padding="lg" className="w-full max-w-md">
       <p className="text-center text-h1 font-bold text-primary-600">Cue&amp;A</p>
+
+      {reason && (
+        <p className="mt-4 rounded-sm bg-badge-warning-bg p-3 text-center text-body-sm text-badge-warning-text">
+          {toUserMessage(reason)}
+        </p>
+      )}
 
       <div className="mt-8 flex gap-1 rounded-full bg-neutral-50 p-1">
         <button

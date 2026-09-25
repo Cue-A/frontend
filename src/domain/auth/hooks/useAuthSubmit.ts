@@ -3,14 +3,14 @@ import { useState } from 'react'
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
-import type { AuthResult } from '../types/auth'
+import type { TokenResponse } from '../types/auth'
 
 type UseAuthSubmitResult = {
   isSubmitting: boolean
   /** 사용자에게 보여줄 문구. 없으면 null */
   error: string | null
   /** 성공하면 결과를, 실패하면 null 을 돌려줍니다. 에러는 이미 error 상태에 담겨 있습니다. */
-  submit: (run: () => Promise<AuthResult>) => Promise<AuthResult | null>
+  submit: (run: () => Promise<TokenResponse>) => Promise<TokenResponse | null>
 }
 
 /**
@@ -21,7 +21,7 @@ export function useAuthSubmit(): UseAuthSubmitResult {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function submit(run: () => Promise<AuthResult>) {
+  async function submit(run: () => Promise<TokenResponse>) {
     setIsSubmitting(true)
     setError(null)
 
