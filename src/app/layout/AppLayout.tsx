@@ -103,7 +103,7 @@ export default function AppLayout() {
 
         <button
           type="button"
-          onClick={() => void logout()}
+          onClick={() => logout()}
           title="로그아웃"
           className={`${SLOT_CLASS} ${INACTIVE_CLASS}`}
         >

@@ -1,12 +1,11 @@
 import { type FormEvent, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
-import { ROUTES } from '@/app/routes'
 import { storeTokens } from '@/shared/api/tokenStorage'
 import Button from '@/shared/ui/Button'
 
 import { login } from '../api/authApi'
 import { useAuthSubmit } from '../hooks/useAuthSubmit'
+import { useLoginRedirect } from '../hooks/useLoginRedirect'
 import { buildKakaoAuthorizeUrl } from '../lib/kakaoAuth'
 
 const FIELD_CLASS =
@@ -16,9 +15,12 @@ type Props = {
   onSwitchToSignup: () => void
 }
 
-/** AUTH-3 로그인. 성공하면 토큰을 저장하고 랜딩으로 돌아갑니다. */
+/**
+ * AUTH-3 로그인. 성공하면 토큰을 저장하고, 보호 라우트에서 튕겨 왔으면 그
+ * 경로로, 아니면 랜딩으로 돌아갑니다 (`useLoginRedirect`).
+ */
 export default function LoginForm({ onSwitchToSignup }: Props) {
-  const navigate = useNavigate()
+  const redirectAfterLogin = useLoginRedirect()
   const { isSubmitting, error, submit } = useAuthSubmit()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,7 +32,7 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
     if (!result) return
 
     storeTokens(result.accessToken, result.refreshToken)
-    navigate(ROUTES.LANDING)
+    redirectAfterLogin()
   }
 
   return (
