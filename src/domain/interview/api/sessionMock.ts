@@ -1,3 +1,4 @@
+import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
 import type { Company } from '../types/sessionSetup'
@@ -22,11 +23,38 @@ const COMPANIES: Company[] = [
 registerMock('GET', '/api/companies', () => COMPANIES)
 
 /**
- * 면접 세션 생성 목업입니다.
- * 실제로는 보낸 옵션에 따라 세션이 만들어지지만, 화면은 sessionId 만 있으면
- * 다음 단계로 넘어갈 수 있어서 고정 값을 돌려줍니다.
+ * 면접 세션 생성 목업입니다. 검사 순서와 에러 코드는 백엔드 `InterviewStartService` 를 따랐습니다.
+ *
+ * 문서가 실제로 준비된 파일 문서인지는 **보지 않습니다.** 그건 문서 목업(domain/document)이 들고
+ * 있는데, 다른 도메인의 api 를 가져다 쓰지 않는 규칙이라서입니다. A-05 가 못 쓰는 문서를 고르지
+ * 못하게 막고 있어서 화면에서는 이 경로로 올 일이 없습니다.
+ *
+ * sessionId 는 면접 진행 목업(sessionSocketMock)이 `s1` 시나리오를 돌려서 고정 값입니다.
  */
-registerMock('POST', '/api/interviews', () => ({ sessionId: 's1' }))
+registerMock('POST', '/api/interviews', (_params, body) => {
+  const request = (body ?? {}) as Partial<Record<string, unknown>>
+
+  if (typeof request.documentPublicId !== 'string' || !request.documentPublicId.trim()) {
+    throw new ApiError('INVALID_REQUEST', 'documentPublicId 가 필요합니다')
+  }
+  if (typeof request.jobRole !== 'string' || !request.jobRole.trim() || request.jobRole.length > 100) {
+    throw new ApiError('INVALID_REQUEST', 'jobRole 은 1~100자여야 합니다')
+  }
+  if (request.persona !== 'FRIENDLY' && request.persona !== 'PRESSURE') {
+    throw new ApiError('INVALID_REQUEST', `persona 가 올바르지 않습니다 (${String(request.persona)})`)
+  }
+  if (request.companyId !== null && request.companyId !== undefined && typeof request.companyId !== 'number') {
+    // 서버는 Long 이라 문자열 id 는 요청 해석 단계에서 거절됩니다.
+    throw new ApiError('INVALID_REQUEST', `companyId 는 숫자여야 합니다 (${String(request.companyId)})`)
+  }
+
+  const questionCount = request.questionCount ?? 6
+  if (questionCount !== 3 && questionCount !== 6 && questionCount !== 9) {
+    throw new ApiError('INVALID_QUESTION_COUNT', '질문 수는 3, 6, 9 중 하나여야 합니다')
+  }
+
+  return { sessionId: 's1', questionTotal: questionCount }
+})
 
 /**
  * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다. 고정값만 돌려준다 — 이유는
