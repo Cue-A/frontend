@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { ROUTES, toReport } from '@/app/routes'
+import { toReport } from '@/app/routes'
 import Button from '@/shared/ui/Button'
 
 import { useAnalysisProgress } from '../hooks/useAnalysisProgress'
@@ -128,7 +128,10 @@ export default function AnalyzingPage() {
  *
  * 화면을 통째로 바꾸지 않고 시안의 분석 중 화면은 그대로 둔 채 팁 자리에 안내와 버튼을 넣습니다.
  * 분석이 뒤에서 아직 돌고 있을 수 있고 우리는 그걸 확인할 통로가 아직 없어서(Q6b), "실패했어요" 가
- * 아니라 "오래 걸리고 있어요" 로 적고 다시 기다리거나 빠져나갈 길을 둘 다 둡니다.
+ * 아니라 "오래 걸리고 있어요" 로 적습니다.
+ *
+ * 버튼은 "다시 기다리기" 하나입니다. 빠져나갈 길은 화면 왼쪽 위의 "처음 화면으로"(PR #65)가
+ * 타임아웃과 관계없이 늘 보여주므로, 여기에 같은 버튼을 또 두면 한 화면에 두 개가 됩니다. (PR #68 리뷰)
  *
  * 이 창을 벗어나면 이번 리포트로 돌아올 방법(리포트 목록 · 알림)이 아직 없다는 것도 숨기지 않습니다.
  * 없는 길을 있는 것처럼 적으면 사용자가 찾으러 헤맵니다.
@@ -149,14 +152,9 @@ function AnalysisTimedOutNotice() {
         </p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3">
-        <Button size="sm" to={ROUTES.LANDING}>
-          처음 화면으로
-        </Button>
-        <Button size="sm" variant="primary" onClick={() => window.location.reload()}>
-          다시 기다리기
-        </Button>
-      </div>
+      <Button size="sm" variant="primary" onClick={() => window.location.reload()}>
+        다시 기다리기
+      </Button>
     </div>
   )
 }
