@@ -63,6 +63,20 @@ export default function DocumentUploadDialog({ defaultType, onUploaded, onClose 
     if (dialog && !dialog.open) dialog.showModal()
   }, [])
 
+  // cancel 을 막는 것만으로는 부족합니다. 크롬은 다른 조작 없이 Esc 를 연달아 누르면 두 번째부터
+  // cancel 을 건너뛰고 창을 닫습니다(페이지가 창을 못 닫게 가두는 걸 막는 장치). 올리는 동안에는
+  // Esc 키 입력 자체를 먼저 막습니다. 올리기를 누르면 버튼이 잠겨 포커스가 창 밖(body)으로 빠지므로
+  // 창이 아니라 window 에서 받습니다.
+  useEffect(() => {
+    if (!uploading) return
+
+    const blockEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') event.preventDefault()
+    }
+    window.addEventListener('keydown', blockEscape, true)
+    return () => window.removeEventListener('keydown', blockEscape, true)
+  }, [uploading])
+
   const close = () => {
     if (!uploading) dialogRef.current?.close()
   }
@@ -108,7 +122,7 @@ export default function DocumentUploadDialog({ defaultType, onUploaded, onClose 
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      // 올리는 중에는 Esc 로도 닫히지 않게 막습니다.
+      // 올리는 중에는 Esc 로도 닫히지 않게 막습니다. (연달아 누르는 경우는 위 effect 가 막습니다)
       onCancel={(event) => {
         if (uploading) event.preventDefault()
       }}
