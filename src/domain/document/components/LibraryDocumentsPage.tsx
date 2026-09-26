@@ -6,18 +6,20 @@ import Button from '@/shared/ui/Button'
 
 import { useDocuments } from '../hooks/useDocuments'
 import { useOpenDocument } from '../hooks/useOpenDocument'
-import { DOCUMENT_TABS, filterDocuments, type DocumentTab } from '../lib/documentDisplay'
+import { DOCUMENT_TABS, filterDocuments, MAX_DOCUMENTS, type DocumentTab } from '../lib/documentDisplay'
+import type { DocumentSummary } from '../types/document'
 
 import DocumentContentDialog from './DocumentContentDialog'
 import DocumentTable, { type DocumentTableBody } from './DocumentTable'
+import DocumentUploadDialog from './DocumentUploadDialog'
 import LibraryPanel from './LibraryPanel'
 import LibraryTopBar from './LibraryTopBar'
 
 /**
  * C-02 내 보관함 > 자소서 · 포트폴리오. (이슈 #59)
  *
- * 등록한 문서를 보고, 종류별로 거르고, 원본을 다시 열어봅니다. 올리기는 다음 이슈입니다 —
- * 업로드를 눌렀을 때의 시안을 받은 뒤 붙입니다.
+ * 등록한 문서를 보고, 종류별로 거르고, 원본을 다시 열어보고, 새로 올립니다.
+ * 올리기 창은 임시 시안입니다 (DocumentUploadDialog 주석 참고, 이슈 #54 1-4).
  *
  * 시안의 "직접 작성" 버튼은 뺐습니다. 직접 작성한 문서는 아직 면접에 쓸 수 없어서
  * (Cue-A/backend#36) 지금 만들게 하면 A-05 에서 고르려다 막힙니다.
@@ -27,6 +29,26 @@ export default function LibraryDocumentsPage() {
   const opener = useOpenDocument()
   const [tab, setTab] = useState<DocumentTab>('ALL')
   const [query, setQuery] = useState('')
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadedTitle, setUploadedTitle] = useState<string | null>(null)
+
+  // 사용자당 20개가 상한입니다. 채우면 올려봐야 서버가 거절하고, 지우는 기능도 아직 없어서
+  // 버튼을 잠그고 이유를 글로 적습니다 (Cue-A/backend#38).
+  const atLimit = documents.status === 'ready' && documents.page.totalElements >= MAX_DOCUMENTS
+  const canUpload = documents.status === 'ready' && !atLimit
+
+  const openUpload = () => {
+    setUploadedTitle(null)
+    setUploadOpen(true)
+  }
+
+  const handleUploaded = (document: DocumentSummary) => {
+    setUploadedTitle(document.title)
+    // 방금 올린 문서가 보이도록 거르는 조건을 풉니다. 다른 탭에 있으면 올렸는데 안 보입니다.
+    setTab('ALL')
+    setQuery('')
+    documents.refresh()
+  }
 
   let body: DocumentTableBody
   if (documents.status === 'loading') {
@@ -34,7 +56,7 @@ export default function LibraryDocumentsPage() {
   } else if (documents.status === 'error') {
     body = { kind: 'error', message: toUserMessage(documents.error.code), onRetry: documents.reload }
   } else if (documents.page.documents.length === 0) {
-    body = { kind: 'empty' }
+    body = { kind: 'empty', onUpload: openUpload }
   } else {
     const visible = filterDocuments(documents.page.documents, tab, query)
     body = visible.length === 0 ? { kind: 'no-match' } : { kind: 'rows', documents: visible }
@@ -74,13 +96,17 @@ export default function LibraryDocumentsPage() {
                   className="w-56 rounded-sm border border-neutral-200 bg-neutral-0 py-2 pl-9 pr-3 text-body-md text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none"
                 />
               </label>
-              <Button variant="primary" size="sm" disabled className="whitespace-nowrap">
+              <Button variant="primary" size="sm" disabled={!canUpload} onClick={openUpload} className="whitespace-nowrap">
                 <IconPlus size={16} stroke={2} aria-hidden />
                 파일 업로드
               </Button>
             </div>
-            {/* 비활성 버튼의 이유는 글로 적습니다 (docs/01-conventions.md). 업로드 이슈에서 연결합니다. */}
-            <p className="text-body-sm text-neutral-500">파일 업로드는 곧 열려요.</p>
+            {/* 비활성 버튼의 이유는 글로 적습니다 (docs/01-conventions.md). */}
+            {atLimit && (
+              <p className="break-keep text-body-sm text-neutral-500">
+                문서는 {MAX_DOCUMENTS}개까지 등록할 수 있어요. 지우는 기능은 준비 중이에요.
+              </p>
+            )}
           </div>
         </div>
 
@@ -100,6 +126,12 @@ export default function LibraryDocumentsPage() {
           ))}
         </div>
 
+        {uploadedTitle && (
+          <p role="status" className="text-body-sm text-badge-success-text">
+            ‘{uploadedTitle}’ 문서를 올렸어요.
+          </p>
+        )}
+
         {opener.error && (
           <p role="alert" className="text-body-sm text-semantic-danger">
             {opener.error}
@@ -110,6 +142,14 @@ export default function LibraryDocumentsPage() {
       </div>
 
       <DocumentContentDialog document={opener.viewing} onClose={opener.closeViewing} />
+
+      {uploadOpen && (
+        <DocumentUploadDialog
+          defaultType={tab === 'PORTFOLIO' ? 'PORTFOLIO' : 'RESUME'}
+          onUploaded={handleUploaded}
+          onClose={() => setUploadOpen(false)}
+        />
+      )}
     </div>
   )
 }

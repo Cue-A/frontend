@@ -2,7 +2,7 @@ import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ROUTES } from '@/app/routes'
-import { setAccessToken } from '@/shared/api/accessToken'
+import { storeTokens } from '@/shared/api/tokenStorage'
 import Button from '@/shared/ui/Button'
 
 import { signup } from '../api/authApi'
@@ -39,7 +39,7 @@ export default function SignupForm({ onSwitchToLogin }: Props) {
     const result = await submit(() => signup({ email, password }))
     if (!result) return
 
-    setAccessToken(result.accessToken)
+    storeTokens(result.accessToken, result.refreshToken)
     navigate(ROUTES.LANDING)
   }
 

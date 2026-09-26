@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { toReport } from '@/app/routes'
+import { ROUTES, toReport } from '@/app/routes'
 import Button from '@/shared/ui/Button'
 
 import { useAnalysisProgress } from '../hooks/useAnalysisProgress'
@@ -44,6 +44,15 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
  * 시안대로 가운데 정렬 한 덩어리입니다. 사이드바 없이 혼자 그립니다. (router.tsx)
  * 몇 단계 중 몇 번째인지, 지금 무슨 작업을 하는지 보여줍니다. 그냥 도는
  * 스피너만 두면 얼마나 더 기다려야 하는지 알 수 없어서 사람들이 새로고침합니다.
+ *
+ * 사이드바가 없어서 분석 중에 다른 화면으로 나갈 길도 같이 없었다 — 왼쪽 위
+ * "처음 화면으로"가 그 자리다(#26). PR #65 리뷰에서 아이콘 레일 이름("홈")에 맞춰
+ * "홈으로"로 바꾸자는 제안이 있었지만, ReportActions.tsx(이슈 #20)가 같은 랜딩
+ * 이동에 "홈 대시보드가 생기기 전까진 '홈'이라 부르지 않는다"로 이미 정해둔 것과
+ * 충돌해 반영하지 않았다. 실제 분석은 백엔드에서 도는 작업이라 이 화면을
+ * 나가도 계속돼야 맞지만, 지금은 진행률 자체가 이 컴포넌트 안의 목업 타이머라
+ * (useAnalysisProgress) 나갔다 돌아오면 처음부터 다시 돈다. 실제 연결이 붙어야
+ * 고쳐지는 부분이라 지금 범위에서 손대지 않는다.
  */
 export default function AnalyzingPage() {
   const { sessionId } = useParams()
@@ -62,7 +71,13 @@ export default function AnalyzingPage() {
   const percent = Math.round(((stageIndex + 1) / ANALYSIS_STAGES.length) * 100)
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-neutral-50 p-6 text-center">
+    <main className="relative flex min-h-screen flex-col items-center justify-center gap-6 bg-neutral-50 p-6 text-center">
+      <div className="absolute left-6 top-6">
+        <Button variant="ghost" size="sm" to={ROUTES.LANDING}>
+          처음 화면으로
+        </Button>
+      </div>
+
       <AnalyzingMark />
 
       <h1 className="text-h1 text-neutral-900">분석중입니다…</h1>

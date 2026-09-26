@@ -12,8 +12,8 @@ import type { DocumentSummary } from '../types/document'
 export type DocumentTableBody =
   | { kind: 'loading' }
   | { kind: 'error'; message: string; onRetry: () => void }
-  /** 보관함 자체가 비었을 때 */
-  | { kind: 'empty' }
+  /** 보관함 자체가 비었을 때. 올리기를 열 수 있으면 버튼을 둡니다 */
+  | { kind: 'empty'; onUpload?: () => void }
   /** 문서는 있는데 탭 · 검색에 걸리는 게 없을 때 */
   | { kind: 'no-match' }
   | { kind: 'rows'; documents: DocumentSummary[] }
@@ -75,6 +75,11 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
           <p className="mt-1 text-body-sm text-neutral-500">
             자기소개서를 올리면 그 내용을 바탕으로 면접 질문을 만들어 드려요.
           </p>
+          {body.onUpload && (
+            <Button variant="primary" size="sm" onClick={body.onUpload} className="mt-4">
+              파일 올리기
+            </Button>
+          )}
         </Notice>
       )
     case 'no-match':

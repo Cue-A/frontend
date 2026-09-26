@@ -17,8 +17,13 @@ export type UseDocumentsResult = (
   | { status: 'error'; error: ApiError }
   | { status: 'ready'; page: DocumentPage }
 ) & {
-  /** 에러 화면의 "다시 시도" 에 씁니다. */
+  /** 에러 화면의 "다시 시도" 에 씁니다. 불러오는 중 화면으로 바꾼 뒤 다시 받습니다. */
   reload: () => void
+  /**
+   * 목록을 그대로 둔 채 뒤에서 다시 받습니다. 문서를 올린 직후에 씁니다 — reload 를 쓰면
+   * 표가 "불러오는 중" 으로 잠깐 비었다가 다시 채워져서 깜빡입니다.
+   */
+  refresh: () => void
 }
 
 type State =
@@ -54,5 +59,7 @@ export function useDocuments(): UseDocumentsResult {
     setAttempt((value) => value + 1)
   }, [])
 
-  return { ...state, reload }
+  const refresh = useCallback(() => setAttempt((value) => value + 1), [])
+
+  return { ...state, reload, refresh }
 }

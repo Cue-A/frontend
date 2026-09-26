@@ -13,6 +13,17 @@ const ERROR_MESSAGE: Record<string, string> = {
   TTS_FAILED: '음성을 만들지 못했어요. 텍스트로 계속 진행할게요.',
   RESUME_PARSE_FAILED: '파일을 읽지 못했어요. 다른 파일로 올려주세요.',
 
+  // 문서 — 백엔드 FileValidator · DocumentRegisterService · InterviewStartService 기준 (이슈 #54 1-4)
+  UNSUPPORTED_FILE_FORMAT: 'pdf · docx · txt 파일만 올릴 수 있어요.',
+  FILE_SIZE_EXCEEDED: '파일이 너무 커요. 10MB 이하로 올려주세요.',
+  // 백엔드는 빈 파일을 "파일이 없다" 로 받아서 이 코드를 줍니다. 사용자에겐 빈 파일 문제입니다.
+  INVALID_SOURCE_TYPE: '파일 내용이 비어 있어요. 다른 파일을 골라주세요.',
+  // 다시 시도해도 풀리지 않습니다. 삭제 API 가 아직 없어서(Cue-A/backend#38) 그 사실까지 말합니다.
+  DOCUMENT_LIMIT_EXCEEDED: '문서는 20개까지 등록할 수 있어요. 아직 지우는 기능이 없어서 더 올릴 수 없어요.',
+  DOCUMENT_NOT_FOUND: '문서를 찾을 수 없어요.',
+  UPLOAD_NOT_COMPLETED: '문서가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.',
+  RATE_LIMIT_EXCEEDED: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.',
+
   // 리포트 — 코드는 AI 계약서 9장과 백엔드 ErrorCode.java 에서 확인한 값들입니다.
   // (이슈 #46)
   //
@@ -27,7 +38,18 @@ const ERROR_MESSAGE: Record<string, string> = {
 
   SESSION_NOT_FOUND: '면접 세션을 찾을 수 없어요.',
   AI_TIMEOUT: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해주세요.',
+
+  // 인증 — 401 다섯 가지 (이슈 #53 4번, Cue-A/backend docs/03-auth.md "프론트가 401 을 나누는 법")
+  //
+  // TOKEN_EXPIRED 는 apiClient 가 재발급 → 재시도로 조용히 처리합니다. 사용자가 이
+  // 문구를 보는 건 재발급까지 실패해서 로그인 화면으로 튕긴 다음입니다.
+  TOKEN_EXPIRED: '로그인이 만료되었어요. 다시 로그인해 주세요.',
   INVALID_TOKEN: '로그인이 만료되었어요. 다시 로그인해 주세요.',
+  INVALID_REFRESH_TOKEN: '로그인이 만료되었어요. 다시 로그인해 주세요.',
+  UNAUTHORIZED: '로그인이 필요해요.',
+  // 재사용 탐지로 전 기기가 끊긴 상황이라, 만료와 같은 문구를 쓰면 사용자가 자기
+  // 실수인 줄 압니다. (이슈 #53 4번)
+  REFRESH_TOKEN_REUSED: '보안을 위해 로그아웃되었어요. 다시 로그인해 주세요.',
 
   // AUTH-1 · AUTH-3 (docs/design-system.md 대상 아님, 기능명세서 규칙·제약 기준)
   INVALID_CREDENTIALS: '이메일 또는 비밀번호가 올바르지 않아요.',

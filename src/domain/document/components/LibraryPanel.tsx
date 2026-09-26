@@ -3,8 +3,7 @@ import { NavLink } from 'react-router-dom'
 
 import { ROUTES } from '@/app/routes'
 
-/** 사용자당 문서 상한. 백엔드 `DocumentRegisterService.MAX_DOCUMENTS_PER_USER` 와 같은 값입니다. */
-const MAX_DOCUMENTS = 20
+import { MAX_DOCUMENTS } from '../lib/documentDisplay'
 
 const ICON_SLOT = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-sm'
 
