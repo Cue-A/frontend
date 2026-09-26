@@ -19,8 +19,8 @@ type WsEnvelope = { type: string; payload: unknown }
  *
  * 경로(`/ws/interviews/{sessionId}`)와 `{ type, payload }` 봉투 파싱은 이 파일에만
  * 둔다. 이슈 #32 에서 경로가 바뀔 예정이라 여기만 고치면 된다.
- * 연결 인증은 아직 정해지지 않았다 (docs/90-open-questions.md Q6a) — 지금은 아무것도
- * 싣지 않는다.
+ * 연결 인증은 아직 정해지지 않았다 (docs/90-open-questions.md Q6a, Cue-A/backend#3 —
+ * 쿼리 파라미터 토큰 · 단기 티켓 발급 중 택1 로 열려 있음) — 지금은 아무것도 싣지 않는다.
  *
  * 반환값은 연결을 정리하는 함수다.
  */

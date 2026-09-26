@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { ROUTES, toAnalyzing } from '@/app/routes'
 import { toUserMessage } from '@/shared/api/errorMessage'
+import Button from '@/shared/ui/Button'
 
 import { useAnswerRecording } from '../hooks/useAnswerRecording'
 import { useInterviewSession } from '../hooks/useInterviewSession'
@@ -16,10 +18,11 @@ import type { MediaTrackFailureReason, MediaTrackState } from '../types/media'
 import ExitConfirmModal from './ExitConfirmModal'
 import InterviewSessionPage from './InterviewSessionPage'
 
-function InterviewStatusScreen({ message }: { message: string }) {
+function InterviewStatusScreen({ message, children }: { message: string; children?: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-neutral-50 p-6">
       <p className="text-h2 text-neutral-900">{message}</p>
+      {children}
     </div>
   )
 }
@@ -174,6 +177,27 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   }
 
   if (!session.question) {
+    if (session.firstQuestionTimedOut) {
+      // 세션 설정 화면으로 돌아간다. 아직 질문도 녹화도 없는 시점이라 잃을 진행
+      // 상황이 없으므로, X 버튼(handleConfirmExit)과 달리 이탈 확인 모달 없이 바로
+      // 나간다 — 이 early return 은 그 모달(238번 줄)이 렌더링되기 전이라 어차피
+      // 모달을 띄울 수도 없다. useBlocker(100번 줄)가 이 navigate 도 막으려 들므로
+      // hasConfirmedExitRef 로 명시적으로 우회한다.
+      const handleReturnToSetup = () => {
+        hasConfirmedExitRef.current = true
+        navigate(ROUTES.SESSION_SETUP)
+      }
+
+      return (
+        <InterviewStatusScreen message="질문을 준비하는 데 시간이 오래 걸리고 있어요.">
+          <p className="text-body-md text-neutral-500">새로고침해도 복구되지 않아요. 처음부터 다시 시작해주세요.</p>
+          <Button variant="secondary" onClick={handleReturnToSetup} className="mt-2">
+            처음 화면으로 돌아가기
+          </Button>
+        </InterviewStatusScreen>
+      )
+    }
+
     return <InterviewStatusScreen message="첫 질문을 준비하는 중이에요..." />
   }
 
