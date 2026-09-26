@@ -98,6 +98,11 @@ export default function ReportPage() {
           currentAttempt={data.attempt}
           options={options}
           onChange={setOptions}
+          available={{
+            showTimeline: data.summary.turns.length > 0,
+            showImprovedAnswer: data.improvedAnswer !== null,
+            showGaze: data.metrics.some((metric) => metric.key === 'gaze'),
+          }}
         />
 
         {/*
