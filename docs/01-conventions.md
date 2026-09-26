@@ -78,14 +78,38 @@ if (error) return <ErrorView code={error.code} />
 서버의 `message` 를 그대로 뿌리지 않습니다 — 서버 문구는 개발자용이라 바뀔 수 있고,
 바뀌는 순간 사용자 화면이 같이 바뀝니다.
 
+매핑표는 `shared/api/errorMessage.ts` 한 곳에 있고, 화면은 `toUserMessage(code)` 로만 문구를 얻습니다.
+백엔드 `common/exception/ErrorCode.java` 의 코드를 **전부** 매핑해 둡니다. 백엔드에 코드가 추가되면
+같은 PR 에서, 늦어도 연동하는 PR 에서 매핑을 추가합니다.
+
 ```ts
 const ERROR_MESSAGE: Record<string, string> = {
   SESSION_NOT_FOUND: '면접 세션을 찾을 수 없어요.',
-  AI_TIMEOUT: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해주세요.',
+  AI_TIMEOUT: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해 주세요.',
 }
 ```
 
-매핑에 없는 코드는 공통 문구로 떨어뜨리고, 콘솔이 아니라 에러 리포팅으로 남깁니다.
+문구는 이렇게 씁니다.
+
+- **다음에 할 행동**을 적습니다. 다시 시도하면 풀리는 것만 "잠시 후 다시 시도해 주세요" 를 붙이고,
+  다시 해도 결과가 같은 것(형식 · 크기 · 상한 · 끝난 세션)에는 붙이지 않습니다
+- 여러 화면이 같이 쓰는 코드는 **어느 화면에서 떠도 맞는 말**로 적습니다. 예를 들어
+  `UNSUPPORTED_FILE_FORMAT` 은 문서 업로드와 답변 녹화 업로드가 같이 써서 공통 문구에는 허용 형식을
+  적지 않습니다
+- 화면에 맞춘 구체적인 문구가 필요하면 그 화면이 **덮어씁니다.** 공통 매핑을 화면 하나에 맞춰 고치지 않습니다
+
+```ts
+// domain/document/lib/documentErrorMessage.ts
+export const DOCUMENT_UPLOAD_MESSAGES: ErrorMessageOverrides = {
+  UNSUPPORTED_FILE_FORMAT: 'pdf · docx · txt 파일만 올릴 수 있어요.',
+}
+
+toUserMessage(code, DOCUMENT_UPLOAD_MESSAGES)
+```
+
+매핑에 없는 코드는 공통 문구("잠시 후 다시 시도해 주세요.")로 떨어뜨리고 `console.error` 로 남깁니다.
+에러 리포팅이 붙으면 그쪽으로 옮깁니다. 서버가 JSON 이 아닌 응답을 줘서 apiClient 가 만든
+`HTTP_{상태}` 코드는 상태별로 나눠 보여줍니다(404 · 405 → 쓸 수 없는 기능, 413 → 파일 크기, 5xx → 서버 문제).
 
 ### 화면을 따로 만들어야 하는 에러
 
