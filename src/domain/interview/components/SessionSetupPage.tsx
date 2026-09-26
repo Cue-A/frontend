@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom'
 
 import { toDeviceCheck } from '@/app/routes'
 import { ApiError } from '@/shared/api/apiError'
-import { toUserMessage } from '@/shared/api/errorMessage'
 
 import { createSession, getCompanies } from '../api/sessionApi'
 import { useSessionSetup } from '../hooks/useSessionSetup'
+import { sessionStartErrorMessage } from '../lib/sessionStartErrorMessage'
 import {
   ANSWER_SECONDS_CHOICES,
   DELIVERY_MODES,
@@ -73,7 +73,7 @@ export default function SessionSetupPage() {
       .catch((cause: unknown) => {
         setIsStarting(false)
         setError(
-          cause instanceof ApiError ? toUserMessage(cause.code) : '잠시 후 다시 시도해 주세요.',
+          cause instanceof ApiError ? sessionStartErrorMessage(cause.code) : '잠시 후 다시 시도해 주세요.',
         )
       })
   }
