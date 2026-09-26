@@ -27,3 +27,4 @@ registerMock('POST', '/api/auth/oauth/kakao', () => FAKE_RESULT)
 // 눈으로 보긴 어렵지만, isRealApi(auth) 로 실 서버에 붙이기 전까지 빈 핸들러로
 // MOCK_NOT_FOUND 가 나지 않게 자리를 잡아둡니다.
 registerMock('POST', '/api/auth/refresh', () => FAKE_RESULT)
+registerMock('POST', '/api/auth/logout', () => undefined)
