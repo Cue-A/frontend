@@ -48,18 +48,18 @@ export const STATUS_VIEW: Record<DocumentIndexStatus, StatusView> = {
   FAILED: { label: '실패', tone: 'danger', description: '문서를 읽지 못했어요. 다시 올려주세요' },
 }
 
-const MARKDOWN_NOT_USABLE = '직접 작성한 문서는 아직 면접에 쓸 수 없어요'
-
 /**
  * 이 문서로 면접을 시작할 수 없는 이유. 시작할 수 있으면 null 입니다.
  *
- * 백엔드 세션 시작(`POST /api/interviews`)은 **준비가 끝난(`COMPLETED`) 파일 문서**만 받습니다.
- * 직접 작성한 문서는 준비가 끝나도 거절됩니다 (Cue-A/backend#36). A-05 는 이 이유를 보여주고
- * 그 문서를 못 고르게 막습니다 — 고르게 두면 "면접 시작" 을 누른 뒤에야 막힙니다.
+ * 백엔드 세션 시작(`POST /api/interviews`)은 **준비가 끝난(`COMPLETED`) 문서**만 받습니다.
+ * A-05 는 이 이유를 보여주고 그 문서를 못 고르게 막습니다 — 고르게 두면 "면접 시작" 을 누른 뒤에야 막힙니다.
+ *
+ * 직접 작성한 문서도 고를 수 있습니다. 백엔드가 본문을 `.txt` 사본으로 S3 에 올려 AI 에 넘기게 되면서
+ * 파일 문서와 같은 조건이 됐습니다 (Cue-A/backend#39). 사본이 없는 예전 직접 작성 문서만 서버에서
+ * 거절되는데, 응답에 그걸 구분할 값이 없어서 화면에서는 미리 막지 못합니다.
  */
 export function interviewBlockReason(document: DocumentSummary): string | null {
   if (document.indexStatus !== 'COMPLETED') return STATUS_VIEW[document.indexStatus].description
-  if (document.sourceType === 'MARKDOWN') return MARKDOWN_NOT_USABLE
   return null
 }
 

@@ -13,7 +13,7 @@ export type DocumentTableBody =
   | { kind: 'loading' }
   | { kind: 'error'; message: string; onRetry: () => void }
   /** 보관함 자체가 비었을 때. 올리기를 열 수 있으면 버튼을 둡니다 */
-  | { kind: 'empty'; onUpload?: () => void }
+  | { kind: 'empty'; onUpload?: () => void; onWrite?: () => void }
   /** 문서는 있는데 탭 · 검색에 걸리는 게 없을 때 */
   | { kind: 'no-match' }
   | { kind: 'rows'; documents: DocumentSummary[] }
@@ -73,12 +73,21 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
         <Notice>
           <p className="text-body-md text-neutral-900">아직 등록한 문서가 없어요.</p>
           <p className="mt-1 text-body-sm text-neutral-500">
-            자기소개서를 올리면 그 내용을 바탕으로 면접 질문을 만들어 드려요.
+            자기소개서를 올리거나 직접 적으면 그 내용을 바탕으로 면접 질문을 만들어 드려요.
           </p>
-          {body.onUpload && (
-            <Button variant="primary" size="sm" onClick={body.onUpload} className="mt-4">
-              파일 올리기
-            </Button>
+          {(body.onUpload || body.onWrite) && (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {body.onWrite && (
+                <Button size="sm" onClick={body.onWrite}>
+                  직접 작성
+                </Button>
+              )}
+              {body.onUpload && (
+                <Button variant="primary" size="sm" onClick={body.onUpload}>
+                  파일 올리기
+                </Button>
+              )}
+            </div>
           )}
         </Notice>
       )
