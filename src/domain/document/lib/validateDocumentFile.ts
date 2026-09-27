@@ -38,7 +38,8 @@ export function validateDocumentFile(file: File): string | null {
 
   if (!ALLOWED_DOCUMENT_EXTENSIONS.includes(extension as (typeof ALLOWED_DOCUMENT_EXTENSIONS)[number])) {
     const allowed = ALLOWED_DOCUMENT_EXTENSIONS.join(' · ')
-    return `${allowed} 파일만 올릴 수 있어요. ${extension ? `.${extension}` : '확장자가 없는 파일'} 은 지원하지 않아요.`
+    // 조사를 확장자 뒤에 바로 붙이면 읽는 법에 따라 은/는 이 갈려서(.hwp 은?) '파일은' 으로 받습니다.
+    return `${allowed} 파일만 올릴 수 있어요. ${extension ? `.${extension} 파일은` : '확장자가 없는 파일은'} 지원하지 않아요.`
   }
 
   if (file.size > MAX_DOCUMENT_FILE_BYTES) {
