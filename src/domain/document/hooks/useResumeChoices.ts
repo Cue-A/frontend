@@ -37,10 +37,11 @@ export type UseResumeChoicesResult = (
  * (docs/01-conventions.md — 도메인 간 참조는 hooks 레벨). 무엇을 고를 수 없는지도 여기서 정합니다.
  *
  * - **자기소개서와 포트폴리오를 둘 다** 보여줍니다. 백엔드 세션 시작은 문서 종류를 보지 않고
- *   "준비가 끝난 파일 문서인가" 만 봅니다(`InterviewStartService.findUsableFileDocument`).
+ *   "준비가 끝났고 AI 가 읽을 파일이 있는가" 만 봅니다(`InterviewStartService.findUsableFileDocument`).
  *   종류는 목록에서 구분만 해줍니다
- * - 준비가 안 됐거나 직접 작성한 문서는 **목록에 두되 고를 수 없게** 합니다. 빼버리면 보관함에 있는
- *   문서가 왜 안 보이는지 알 수 없습니다
+ * - **직접 작성한 문서도** 고를 수 있습니다. 백엔드가 본문을 파일 사본으로도 저장합니다 (Cue-A/backend#39)
+ * - 준비가 안 된 문서는 **목록에 두되 고를 수 없게** 합니다. 빼버리면 보관함에 있는 문서가 왜 안 보이는지
+ *   알 수 없습니다
  * - 사용자당 20개가 상한이라 한 번에 전부 받습니다
  */
 export function useResumeChoices(): UseResumeChoicesResult {

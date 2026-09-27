@@ -1,4 +1,4 @@
-import { IconPlus, IconSearch } from '@tabler/icons-react'
+import { IconPencil, IconPlus, IconSearch } from '@tabler/icons-react'
 import { useState } from 'react'
 
 import { toUserMessage } from '@/shared/api/errorMessage'
@@ -12,6 +12,7 @@ import type { DocumentSummary } from '../types/document'
 import DocumentContentDialog from './DocumentContentDialog'
 import DocumentTable, { type DocumentTableBody } from './DocumentTable'
 import DocumentUploadDialog from './DocumentUploadDialog'
+import DocumentWriteDialog from './DocumentWriteDialog'
 import LibraryPanel from './LibraryPanel'
 import LibraryTopBar from './LibraryTopBar'
 
@@ -21,29 +22,32 @@ import LibraryTopBar from './LibraryTopBar'
  * 등록한 문서를 보고, 종류별로 거르고, 원본을 다시 열어보고, 새로 올립니다.
  * 올리기 창은 임시 시안입니다 (DocumentUploadDialog 주석 참고, 이슈 #54 1-4).
  *
- * 시안의 "직접 작성" 버튼은 뺐습니다. 직접 작성한 문서는 아직 면접에 쓸 수 없어서
- * (Cue-A/backend#36) 지금 만들게 하면 A-05 에서 고르려다 막힙니다.
+ * "직접 작성" 은 본문을 적어서 저장합니다. 직접 작성한 문서도 파일 문서처럼 면접에 쓸 수 있습니다
+ * (Cue-A/backend#39). 작성 창도 임시 시안입니다 (DocumentWriteDialog 주석 참고).
  */
 export default function LibraryDocumentsPage() {
   const documents = useDocuments()
   const opener = useOpenDocument()
   const [tab, setTab] = useState<DocumentTab>('ALL')
   const [query, setQuery] = useState('')
-  const [uploadOpen, setUploadOpen] = useState(false)
-  const [uploadedTitle, setUploadedTitle] = useState<string | null>(null)
+  const [dialog, setDialog] = useState<'upload' | 'write' | null>(null)
+  const [savedNotice, setSavedNotice] = useState<string | null>(null)
 
   // 사용자당 20개가 상한입니다. 채우면 올려봐야 서버가 거절하고, 지우는 기능도 아직 없어서
   // 버튼을 잠그고 이유를 글로 적습니다 (Cue-A/backend#38).
   const atLimit = documents.status === 'ready' && documents.page.totalElements >= MAX_DOCUMENTS
-  const canUpload = documents.status === 'ready' && !atLimit
+  const canAdd = documents.status === 'ready' && !atLimit
 
-  const openUpload = () => {
-    setUploadedTitle(null)
-    setUploadOpen(true)
+  const openDialog = (next: 'upload' | 'write') => {
+    setSavedNotice(null)
+    setDialog(next)
   }
+  const openUpload = () => openDialog('upload')
+  const openWrite = () => openDialog('write')
 
-  const handleUploaded = (document: DocumentSummary) => {
-    setUploadedTitle(document.title)
+  const handleSaved = (document: DocumentSummary) => {
+    const verb = document.sourceType === 'MARKDOWN' ? '저장했어요' : '올렸어요'
+    setSavedNotice(`‘${document.title}’ 문서를 ${verb}.`)
     // 방금 올린 문서가 보이도록 거르는 조건을 풉니다. 다른 탭에 있으면 올렸는데 안 보입니다.
     setTab('ALL')
     setQuery('')
@@ -56,7 +60,7 @@ export default function LibraryDocumentsPage() {
   } else if (documents.status === 'error') {
     body = { kind: 'error', message: toUserMessage(documents.error.code), onRetry: documents.reload }
   } else if (documents.page.documents.length === 0) {
-    body = { kind: 'empty', onUpload: openUpload }
+    body = { kind: 'empty', onUpload: openUpload, onWrite: openWrite }
   } else {
     const visible = filterDocuments(documents.page.documents, tab, query)
     body = visible.length === 0 ? { kind: 'no-match' } : { kind: 'rows', documents: visible }
@@ -96,7 +100,11 @@ export default function LibraryDocumentsPage() {
                   className="w-56 rounded-sm border border-neutral-200 bg-neutral-0 py-2 pl-9 pr-3 text-body-md text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none"
                 />
               </label>
-              <Button variant="primary" size="sm" disabled={!canUpload} onClick={openUpload} className="whitespace-nowrap">
+              <Button size="sm" disabled={!canAdd} onClick={openWrite} className="whitespace-nowrap">
+                <IconPencil size={16} stroke={2} aria-hidden />
+                직접 작성
+              </Button>
+              <Button variant="primary" size="sm" disabled={!canAdd} onClick={openUpload} className="whitespace-nowrap">
                 <IconPlus size={16} stroke={2} aria-hidden />
                 파일 업로드
               </Button>
@@ -126,9 +134,9 @@ export default function LibraryDocumentsPage() {
           ))}
         </div>
 
-        {uploadedTitle && (
+        {savedNotice && (
           <p role="status" className="text-body-sm text-badge-success-text">
-            ‘{uploadedTitle}’ 문서를 올렸어요.
+            {savedNotice}
           </p>
         )}
 
@@ -143,11 +151,19 @@ export default function LibraryDocumentsPage() {
 
       <DocumentContentDialog document={opener.viewing} onClose={opener.closeViewing} />
 
-      {uploadOpen && (
+      {dialog === 'upload' && (
         <DocumentUploadDialog
           defaultType={tab === 'PORTFOLIO' ? 'PORTFOLIO' : 'RESUME'}
-          onUploaded={handleUploaded}
-          onClose={() => setUploadOpen(false)}
+          onUploaded={handleSaved}
+          onClose={() => setDialog(null)}
+        />
+      )}
+
+      {dialog === 'write' && (
+        <DocumentWriteDialog
+          defaultType={tab === 'PORTFOLIO' ? 'PORTFOLIO' : 'RESUME'}
+          onSaved={handleSaved}
+          onClose={() => setDialog(null)}
         />
       )}
     </div>

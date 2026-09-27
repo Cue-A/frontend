@@ -4,6 +4,7 @@ import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
 import { createDocument } from '../api/documentApi'
+import { DOCUMENT_UPLOAD_MESSAGES } from '../lib/documentErrorMessage'
 import type { DocumentSummary, DocumentType } from '../types/document'
 
 export type UploadInput = {
@@ -41,7 +42,7 @@ export function useUploadDocument(): UseUploadDocumentResult {
       const code = cause instanceof ApiError ? cause.code : 'UNKNOWN'
       // 파일 내용은 개인정보라 남기지 않습니다. 크기와 코드만 남깁니다.
       console.error('문서 업로드 실패 size=%d code=%s', file.size, code)
-      setError(toUserMessage(code))
+      setError(toUserMessage(code, DOCUMENT_UPLOAD_MESSAGES))
       return null
     } finally {
       setUploading(false)
