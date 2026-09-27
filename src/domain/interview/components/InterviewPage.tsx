@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { ROUTES, toAnalyzing } from '@/app/routes'
@@ -177,7 +176,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   }
 
   if (!session.question) {
-    if (session.firstQuestionTimedOut) {
+    if (session.firstQuestionTimedOut || session.firstQuestionError) {
       // 세션 설정 화면으로 돌아간다. 아직 질문도 녹화도 없는 시점이라 잃을 진행
       // 상황이 없으므로, X 버튼(handleConfirmExit)과 달리 이탈 확인 모달 없이 바로
       // 나간다 — 이 early return 은 그 모달(238번 줄)이 렌더링되기 전이라 어차피
@@ -188,11 +187,13 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         navigate(ROUTES.SESSION_SETUP)
       }
 
+      const title = session.firstQuestionError ? '첫 질문을 만들지 못했어요.' : '질문을 준비하는 데 시간이 오래 걸리고 있어요.'
+
       return (
-        <InterviewStatusScreen message="질문을 준비하는 데 시간이 오래 걸리고 있어요.">
-          <p className="text-body-md text-neutral-500">새로고침해도 복구되지 않아요. 처음부터 다시 시작해주세요.</p>
+        <InterviewStatusScreen message={title}>
+          <p className="text-body-md text-neutral-500">새로고침해도 복구되지 않아요. 처음부터 시작해 주세요.</p>
           <Button variant="secondary" onClick={handleReturnToSetup} className="mt-2">
-            처음 화면으로 돌아가기
+            면접 다시 설정하기
           </Button>
         </InterviewStatusScreen>
       )

@@ -46,6 +46,13 @@ export type UseInterviewSessionResult = {
    * 돌아가지 않는다 — 그 뒤로는 쓸 일이 없어서다.
    */
   firstQuestionTimedOut: boolean
+  /**
+   * 첫 질문이 오기 전에 백엔드가 세션을 정리하며 보낸 에러 메시지(#54 2-3 follow-up).
+   * 이 시점의 에러는 재시도 대상이 아니다 — 백엔드가 이미 세션을 ABORTED 로 정리한
+   * 뒤라 같은 세션으로 이어갈 수 없다. firstQuestionTimedOut 과 마찬가지로 첫 질문
+   * 이후에는 다시 null 로 돌아가지 않는다.
+   */
+  firstQuestionError: string | null
   /** 질문당 남은 시간(초). answerTimeLimitSec 이 null 이면 제한 없음이라 항상 null. */
   remainingSec: number | null
   /**
@@ -95,6 +102,7 @@ export function useInterviewSession(
   const [sessionEnd, setSessionEnd] = useState<SessionEndPush | null>(null)
   const [remainingSec, setRemainingSec] = useState<number | null>(answerTimeLimitSec)
   const [firstQuestionTimedOut, setFirstQuestionTimedOut] = useState(false)
+  const [firstQuestionError, setFirstQuestionError] = useState<string | null>(null)
 
   const phaseRef = useRef(phase)
   useEffect(() => {
@@ -153,6 +161,13 @@ export function useInterviewSession(
 
   const handleError = useCallback(
     (error: ErrorPush) => {
+      // 첫 질문 전 에러는 백엔드가 세션을 ABORTED 로 정리한 뒤다. 같은 세션으로는
+      // 이어갈 수 없으니 90초 타임아웃을 기다리지 않고 바로 알린다(#72 리뷰).
+      if (!questionRef.current) {
+        setFirstQuestionError(toUserMessage(error.errorCode))
+        return
+      }
+
       if (error.needsRerecord) {
         setNeedsRerecord(true)
         setSubmitError(null)
@@ -313,6 +328,7 @@ export function useInterviewSession(
     sessionEnd,
     remainingSec,
     firstQuestionTimedOut,
+    firstQuestionError,
     beginSubmit,
     submitAnswer,
     cancelSubmit,
