@@ -47,12 +47,14 @@ export type UseInterviewSessionResult = {
    */
   firstQuestionTimedOut: boolean
   /**
-   * 첫 질문이 오기 전에 백엔드가 세션을 정리하며 보낸 에러 메시지(#54 2-3 follow-up).
-   * 이 시점의 에러는 재시도 대상이 아니다 — 백엔드가 이미 세션을 ABORTED 로 정리한
-   * 뒤라 같은 세션으로 이어갈 수 없다. firstQuestionTimedOut 과 마찬가지로 첫 질문
-   * 이후에는 다시 null 로 돌아가지 않는다.
+   * 첫 질문이 오기 전에 백엔드가 세션을 정리하며 에러를 보냈다는 신호(#54 2-3
+   * follow-up, PR #72 리뷰). 이 시점의 에러는 재시도 대상이 아니다 — 백엔드가 이미
+   * 세션을 ABORTED 로 정리한 뒤라 같은 세션으로 이어갈 수 없다. 화면은 에러 코드별
+   * 문구를 구분해 보여주지 않고 이 신호 유무로만 분기하므로 boolean 이다 — 코드별
+   * 문구가 필요해지면 그때 errorCode 를 들고 있는 쪽으로 바꾼다. firstQuestionTimedOut
+   * 과 마찬가지로 첫 질문 이후에는 다시 false 로 돌아가지 않는다.
    */
-  firstQuestionError: string | null
+  firstQuestionError: boolean
   /** 질문당 남은 시간(초). answerTimeLimitSec 이 null 이면 제한 없음이라 항상 null. */
   remainingSec: number | null
   /**
@@ -102,7 +104,7 @@ export function useInterviewSession(
   const [sessionEnd, setSessionEnd] = useState<SessionEndPush | null>(null)
   const [remainingSec, setRemainingSec] = useState<number | null>(answerTimeLimitSec)
   const [firstQuestionTimedOut, setFirstQuestionTimedOut] = useState(false)
-  const [firstQuestionError, setFirstQuestionError] = useState<string | null>(null)
+  const [firstQuestionError, setFirstQuestionError] = useState(false)
 
   const phaseRef = useRef(phase)
   useEffect(() => {
@@ -164,7 +166,7 @@ export function useInterviewSession(
       // 첫 질문 전 에러는 백엔드가 세션을 ABORTED 로 정리한 뒤다. 같은 세션으로는
       // 이어갈 수 없으니 90초 타임아웃을 기다리지 않고 바로 알린다(#72 리뷰).
       if (!questionRef.current) {
-        setFirstQuestionError(toUserMessage(error.errorCode))
+        setFirstQuestionError(true)
         return
       }
 
