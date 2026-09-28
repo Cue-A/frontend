@@ -57,7 +57,7 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
 export default function AnalyzingPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
-  const { stageIndex, isDone, tip } = useAnalysisProgress()
+  const { stageIndex, isDone, isTimedOut, tip } = useAnalysisProgress()
 
   useEffect(() => {
     if (!isDone || !sessionId) return
@@ -129,7 +129,54 @@ export default function AnalyzingPage() {
         })}
       </ol>
 
-      <p className="text-body-sm text-neutral-400">면접 Tip · {tip}</p>
+      {/*
+        팁 자리는 10분이 지나면 안내 박스로 바뀝니다. 둘의 높이 차이가 커서 자리를 처음부터 안내 박스 높이만큼
+        잡아둡니다. 안 잡으면 화면이 세로 가운데 정렬이라 바뀌는 순간 위쪽 내용이 통째로 밀려 올라갑니다. (PR #68 리뷰)
+      */}
+      <div className="flex min-h-44 w-full max-w-md items-start justify-center">
+        {isTimedOut ? (
+          <AnalysisTimedOutNotice />
+        ) : (
+          <p className="text-body-sm text-neutral-400">면접 Tip · {tip}</p>
+        )}
+      </div>
     </main>
+  )
+}
+
+/**
+ * 기다림 상한(`ANALYSIS_TIMEOUT_MS`)을 넘겼을 때 분석 중 화면 아래에 붙는 안내입니다.
+ *
+ * 화면을 통째로 바꾸지 않고 시안의 분석 중 화면은 그대로 둔 채 팁 자리에 안내와 버튼을 넣습니다.
+ * 분석이 뒤에서 아직 돌고 있을 수 있고 우리는 그걸 확인할 통로가 아직 없어서(Q6b), "실패했어요" 가
+ * 아니라 "오래 걸리고 있어요" 로 적습니다.
+ *
+ * 버튼은 "다시 기다리기" 하나입니다. 빠져나갈 길은 화면 왼쪽 위의 "처음 화면으로"(PR #65)가
+ * 타임아웃과 관계없이 늘 보여주므로, 여기에 같은 버튼을 또 두면 한 화면에 두 개가 됩니다. (PR #68 리뷰)
+ *
+ * 이 창을 벗어나면 이번 리포트로 돌아올 방법(리포트 목록 · 알림)이 아직 없다는 것도 숨기지 않습니다.
+ * 없는 길을 있는 것처럼 적으면 사용자가 찾으러 헤맵니다.
+ */
+function AnalysisTimedOutNotice() {
+  return (
+    <div
+      role="status"
+      // 팁에서 안내로 순간 바뀌면 튀어 보여서 나타날 때만 흐리게 들어옵니다. 움직임 줄이기를 켠 사용자에게는 끕니다.
+      className="flex w-full flex-col items-center gap-4 rounded-md bg-badge-warning-bg p-5 transition-opacity duration-300 starting:opacity-0 motion-reduce:transition-none"
+    >
+      <div className="flex flex-col gap-1">
+        <p className="text-body-md font-semibold text-badge-warning-text">
+          분석이 오래 걸리고 있어요
+        </p>
+        <p className="break-keep text-body-sm text-neutral-700">
+          10분이 넘도록 분석이 끝나지 않았어요. 서버가 바쁘거나 문제가 생겼을 수 있어요. 지난 리포트를
+          모아 보는 화면은 아직 준비 중이라, 이 창을 벗어나면 이번 리포트로 돌아올 길이 없어요.
+        </p>
+      </div>
+
+      <Button size="sm" variant="primary" onClick={() => window.location.reload()}>
+        다시 기다리기
+      </Button>
+    </div>
   )
 }
