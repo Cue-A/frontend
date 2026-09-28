@@ -123,10 +123,14 @@ export function submitAnswer(sessionId: string, submission: AnswerSubmission) {
 }
 
 /**
- * 면접 중도 이탈. `POST /api/interviews/{sessionId}/abort` 는 백엔드에 아직 없는
- * 엔드포인트다(Cue-A/backend#25, "Front의 면접 중단 요청 처리" 항목 대기 중). 경로는
- * 이슈 #26 본문이 예상한 모양을 그대로 썼다 — 실제 경로·응답이 확정되면 이 함수만
- * 고치면 된다.
+ * 면접 중도 이탈. `POST /api/interviews/{sessionId}/abort` — 백엔드 `InterviewController.abort`
+ * 로 실제로 있다(Cue-A/backend#25, PR#43 로 머지됨). 경로 · 메서드 · 바디 없음까지 여기 모양과
+ * 그대로 맞는다.
+ *
+ * 그래도 여전히 mock 으로만 동작한다 — `interviews` 도메인 전체(세션 시작 · WS · 답변 제출 ·
+ * abort)가 `VITE_REAL_APIS` 로 한 번에 켜지는 구조라서(`shared/api/mock.ts`), abort 하나만 골라
+ * real 로 못 돌린다. 도메인 전체를 켤 준비(이슈 #54 섹션 2 나머지, 특히 WS 인증 미확정인
+ * 2-4)가 끝나야 의미 있게 켤 수 있다.
  */
 export function abortSession(sessionId: string) {
   return api.post<void>(`/api/interviews/${sessionId}/abort`)
