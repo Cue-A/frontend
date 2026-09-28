@@ -10,6 +10,7 @@ import { DOCUMENT_TABS, filterDocuments, MAX_DOCUMENTS, type DocumentTab } from 
 import type { DocumentSummary } from '../types/document'
 
 import DocumentContentDialog from './DocumentContentDialog'
+import DocumentDeleteDialog from './DocumentDeleteDialog'
 import DocumentTable, { type DocumentTableBody } from './DocumentTable'
 import DocumentUploadDialog from './DocumentUploadDialog'
 import DocumentWriteDialog from './DocumentWriteDialog'
@@ -32,11 +33,28 @@ export default function LibraryDocumentsPage() {
   const [query, setQuery] = useState('')
   const [dialog, setDialog] = useState<'upload' | 'write' | null>(null)
   const [savedNotice, setSavedNotice] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<DocumentSummary | null>(null)
 
-  // 사용자당 20개가 상한입니다. 채우면 올려봐야 서버가 거절하고, 지우는 기능도 아직 없어서
-  // 버튼을 잠그고 이유를 글로 적습니다 (Cue-A/backend#38).
+  // 사용자당 20개가 상한입니다. 채우면 올려봐야 서버가 거절해서 버튼을 잠그고, 지우면 자리가 난다는 걸
+  // 글로 적습니다 (지운 문서는 상한에서 빠집니다 — Cue-A/backend#40).
   const atLimit = documents.status === 'ready' && documents.page.totalElements >= MAX_DOCUMENTS
   const canAdd = documents.status === 'ready' && !atLimit
+
+  const openDelete = (document: DocumentSummary) => {
+    setSavedNotice(null)
+    setDeleting(document)
+  }
+
+  // 지운 뒤에는 탭 · 검색을 그대로 둡니다. 보던 목록에서 그 줄만 빠지는 게 자연스럽습니다.
+  const handleDeleted = (document: DocumentSummary) => {
+    setSavedNotice(`‘${document.title}’ 문서를 지웠어요.`)
+    documents.refresh()
+  }
+
+  const handleGone = (message: string) => {
+    setSavedNotice(message)
+    documents.refresh()
+  }
 
   const openDialog = (next: 'upload' | 'write') => {
     setSavedNotice(null)
@@ -112,7 +130,7 @@ export default function LibraryDocumentsPage() {
             {/* 비활성 버튼의 이유는 글로 적습니다 (docs/01-conventions.md). */}
             {atLimit && (
               <p className="break-keep text-body-sm text-neutral-500">
-                문서는 {MAX_DOCUMENTS}개까지 등록할 수 있어요. 지우는 기능은 준비 중이에요.
+                문서는 {MAX_DOCUMENTS}개까지 등록할 수 있어요. 필요 없는 문서를 지우면 다시 올릴 수 있어요.
               </p>
             )}
           </div>
@@ -146,10 +164,19 @@ export default function LibraryDocumentsPage() {
           </p>
         )}
 
-        <DocumentTable body={body} openingId={opener.openingId} onOpen={opener.open} />
+        <DocumentTable body={body} openingId={opener.openingId} onOpen={opener.open} onDelete={openDelete} />
       </div>
 
       <DocumentContentDialog document={opener.viewing} onClose={opener.closeViewing} />
+
+      {deleting && (
+        <DocumentDeleteDialog
+          document={deleting}
+          onDeleted={handleDeleted}
+          onGone={handleGone}
+          onClose={() => setDeleting(null)}
+        />
+      )}
 
       {dialog === 'upload' && (
         <DocumentUploadDialog

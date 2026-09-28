@@ -319,3 +319,22 @@ registerMock('GET', '/api/documents/:documentId', ({ documentId }): DocumentDeta
     updatedAt: document.updatedAt,
   }
 })
+
+/**
+ * 문서 삭제 목업. 백엔드는 행을 숨기는 소프트 삭제지만, 목업에서는 목록 · 상세 · 상한에서 빠지는
+ * 결과가 같아서 저장소에서 뺍니다. 없는 문서 · 이미 지운 문서는 백엔드처럼 `DOCUMENT_NOT_FOUND` 입니다.
+ */
+registerMock('DELETE', '/api/documents/:documentId', ({ documentId }) => {
+  const index = store.findIndex((item) => item.documentId === documentId)
+  if (index < 0) {
+    throw new ApiError('DOCUMENT_NOT_FOUND', '문서를 찾을 수 없습니다')
+  }
+
+  store.splice(index, 1)
+  const url = downloadUrls.get(documentId)
+  if (url) {
+    URL.revokeObjectURL(url)
+    downloadUrls.delete(documentId)
+  }
+  return null
+})

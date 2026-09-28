@@ -12,7 +12,8 @@ import type { DocumentIndexStatus, DocumentSummary, DocumentType } from '../type
 
 /**
  * 사용자당 문서 상한. 백엔드 `DocumentRegisterService.MAX_DOCUMENTS_PER_USER` 와 같습니다.
- * 넘으면 `DOCUMENT_LIMIT_EXCEEDED` 이고, 지우는 API 가 아직 없어 다시 시도로 풀리지 않습니다.
+ * 넘으면 `DOCUMENT_LIMIT_EXCEEDED` 입니다. 다시 시도로는 풀리지 않고, 문서를 지워야 자리가 납니다
+ * (지운 문서는 상한에서 빠집니다 — Cue-A/backend#40).
  */
 export const MAX_DOCUMENTS = 20
 
