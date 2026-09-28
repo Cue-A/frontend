@@ -213,10 +213,11 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
     if (blocker.state === 'blocked') blocker.reset()
   }
 
-  // #54 2-5: 프론트→백엔드 이탈(abort) 경로가 아직 없다(백엔드 이슈 대기). 그래서 지금은
-  // 서버에 알리지 않고 화면만 벗어난다 — 세션은 서버에 IN_PROGRESS로 남는다. 경로가
-  // 나오면 실제 이동 전에 abort 호출을 끼워 넣는 자리다. (Cue-A/backend#25)
+  // X 버튼·인앱 이동 차단(blocker) 확인 두 경로 모두 세션을 떠나는 거라 abort 호출
+  // 대상이다(이슈 #26). 실제 엔드포인트가 아직 없어(Cue-A/backend#25) 지금은 실패해도
+  // 화면 전환을 막지 않는다 — session.abortSession 주석 참고.
   const handleConfirmExit = () => {
+    session.abortSession()
     setIsExitRequested(false)
 
     // 뒤로가기 등으로 막혔던 이동이면 원래 가려던 곳으로 그대로 보낸다 — 무조건

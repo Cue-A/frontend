@@ -121,3 +121,13 @@ export function submitAnswer(sessionId: string, submission: AnswerSubmission) {
   const { questionId, audioObjectKey, videoObjectKey, isTimeout } = submission
   return api.post<void>(`/api/interviews/${sessionId}/answers`, { questionId, audioObjectKey, videoObjectKey, isTimeout })
 }
+
+/**
+ * 면접 중도 이탈. `POST /api/interviews/{sessionId}/abort` 는 백엔드에 아직 없는
+ * 엔드포인트다(Cue-A/backend#25, "Front의 면접 중단 요청 처리" 항목 대기 중). 경로는
+ * 이슈 #26 본문이 예상한 모양을 그대로 썼다 — 실제 경로·응답이 확정되면 이 함수만
+ * 고치면 된다.
+ */
+export function abortSession(sessionId: string) {
+  return api.post<void>(`/api/interviews/${sessionId}/abort`)
+}

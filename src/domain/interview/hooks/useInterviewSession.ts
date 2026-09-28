@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
-import { submitAnswer as submitAnswerRequest } from '../api/sessionApi'
+import { abortSession as abortSessionRequest, submitAnswer as submitAnswerRequest } from '../api/sessionApi'
 import { connectSessionSocket } from '../api/sessionSocket'
 import type { AnswerSubmission, ErrorPush, ProgressPush, Question, SessionEndPush, SessionPhase } from '../types/interview'
 
@@ -73,6 +73,12 @@ export type UseInterviewSessionResult = {
   cancelSubmit: (message: string) => void
   /** 질문 제시(텍스트/오디오)가 끝났을 때 컨테이너가 부른다 — presenting → answering 전환. */
   notifyPresentationDone: (questionId: string) => void
+  /**
+   * 면접 중도 이탈. X 버튼·인앱 이동 차단(blocker) 확인 모두 이걸 부른다. 실패해도
+   * 화면 전환을 막지 않는다 — 백엔드에 실제 엔드포인트가 없어(Cue-A/backend#25) 지금은
+   * 실패를 콘솔에만 남긴다. 재시도·중복 호출 방지가 붙는 커밋에서 이 자리를 고친다.
+   */
+  abortSession: () => void
 }
 
 /**
@@ -291,6 +297,13 @@ export function useInterviewSession(
     [sessionId],
   )
 
+  const abortSession = useCallback(() => {
+    void abortSessionRequest(sessionId).catch((error: unknown) => {
+      const code = error instanceof ApiError ? error.code : 'UNKNOWN'
+      console.error('면접 이탈 처리 실패 sessionId=%s code=%s', sessionId, code)
+    })
+  }, [sessionId])
+
   // 무응답 타임아웃: 질문당 제한 시간이 다 됐는데 제출하지 않은 경우.
   useEffect(() => {
     if (phase !== 'answering' || answerTimeLimitSec === null || remainingSec !== 0) return
@@ -335,5 +348,6 @@ export function useInterviewSession(
     submitAnswer,
     cancelSubmit,
     notifyPresentationDone,
+    abortSession,
   }
 }
