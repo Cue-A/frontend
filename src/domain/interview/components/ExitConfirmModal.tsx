@@ -5,6 +5,15 @@ type Props = {
   open: boolean
   onCancel: () => void
   onConfirm: () => void
+  /** abort 요청이 진행 중인지. 진행 중이면 취소·종료 버튼을 모두 잠근다. */
+  isSubmitting?: boolean
+  /**
+   * abort 실패 문구. 있으면 모달이 닫히지 않고 이 자리에 인라인으로 보여준다.
+   * 재시도는 별도 버튼 없이 "종료"를 다시 누르는 것으로 한다 — submitAnswer 실패
+   * 패턴(같은 버튼 재클릭)과 동일하게 맞췄다 (이슈 #26 follow-up, 새 토스트
+   * 컴포넌트를 만들지 않기로 함).
+   */
+  error?: { message: string } | null
 }
 
 const TITLE_ID = 'exit-confirm-modal-title'
@@ -17,10 +26,10 @@ const TITLE_ID = 'exit-confirm-modal-title'
  * 카피는 디자인 확정 시 교체 예정입니다 (#26 본문).
  *
  * `onConfirm` 이 실제로 세션을 중단시키는 동작(이탈 API 호출)은 이 컴포넌트의
- * 책임이 아닙니다 — 호출부에서 연결합니다. 프론트→백엔드 이탈 경로가 아직
- * 없어서(#54 2-5, 백엔드 이슈 대기) 지금은 UI만 먼저 준비해둡니다.
+ * 책임이 아닙니다 — 호출부에서 연결합니다. 성공·실패 판단도 호출부(useInterviewSession)
+ * 몫이라, 이 컴포넌트는 `isSubmitting`·`error` 로 전달받은 상태만 그린다.
  */
-export default function ExitConfirmModal({ open, onCancel, onConfirm }: Props) {
+export default function ExitConfirmModal({ open, onCancel, onConfirm, isSubmitting = false, error = null }: Props) {
   return (
     <Modal open={open} onClose={onCancel} labelledBy={TITLE_ID}>
       <div className="flex w-80 flex-col gap-2">
@@ -29,15 +38,17 @@ export default function ExitConfirmModal({ open, onCancel, onConfirm }: Props) {
         </h2>
 
         <p className="text-body-md text-neutral-500">지금 종료하면 리포트가 생성되지 않습니다.</p>
+
+        {error && <p className="text-body-sm text-semantic-danger">{error.message}</p>}
       </div>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onCancel}>
+        <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           취소
         </Button>
 
-        <Button variant="primary" onClick={onConfirm}>
-          종료
+        <Button variant="primary" onClick={onConfirm} disabled={isSubmitting}>
+          {isSubmitting ? '종료하는 중...' : '종료'}
         </Button>
       </div>
     </Modal>

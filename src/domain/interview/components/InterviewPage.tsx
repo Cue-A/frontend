@@ -208,27 +208,42 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   // 둘 다 같은 모달로 확인받는다.
   const isExitModalOpen = isExitRequested || blocker.state === 'blocked'
 
+  // abort 진행 중엔 취소도 막는다 — 배경에서 도는 요청과 화면 상태(모달 열림)가
+  // 어긋나지 않게 하려는 것이다. 버튼이 이미 잠겨 있어(ExitConfirmModal) 보통은
+  // 여기까지 안 오지만, Modal 바깥(배경) 클릭으로 오는 onClose 경로도 막아야 한다.
   const handleCancelExit = () => {
+    if (session.isAborting) return
     setIsExitRequested(false)
     if (blocker.state === 'blocked') blocker.reset()
   }
 
   // X 버튼·인앱 이동 차단(blocker) 확인 두 경로 모두 세션을 떠나는 거라 abort 호출
-  // 대상이다(이슈 #26). 실제 엔드포인트가 아직 없어(Cue-A/backend#25) 지금은 실패해도
-  // 화면 전환을 막지 않는다 — session.abortSession 주석 참고.
+  // 대상이다(이슈 #26). abort 가 성공해야만 모달을 닫고 화면을 옮긴다 — 실패하면
+  // 모달이 열린 채로 남고 session.abortError 가 인라인 문구를 채운다. 재시도는 같은
+  // "종료" 버튼을 다시 누르는 것으로 한다.
   const handleConfirmExit = () => {
-    session.abortSession()
-    setIsExitRequested(false)
+    void (async () => {
+      const succeeded = await session.abortSession()
+      if (!succeeded) return
 
-    // 뒤로가기 등으로 막혔던 이동이면 원래 가려던 곳으로 그대로 보낸다 — 무조건
-    // 랜딩으로 보내면 "뒤로가기" 의미가 사라진다.
-    if (blocker.state === 'blocked') {
-      blocker.proceed()
-      return
-    }
+      // 알려진 경쟁 상태(고치지 않고 남김): abort 가 진행되는 그 사이에 면접이
+      // 정상적으로 끝나(session_end 수신) session.isFinished 가 true 로 바뀌면,
+      // 위의 "정상 종료 → 분석중 이동" effect 와 아래 랜딩 이동이 잠깐 겹칠 수
+      // 있다. 발생 조건이 좁고(종료를 누른 그 순간 면접이 끝나야 함), 이
+      // 파일에 이미 비슷한 성격의 미해결 경쟁 상태가 여럿 있어(submitAnswer 의
+      // "session_end 가 REST 응답보다 먼저 도착" 주석 참고) 같은 관행으로 둔다.
+      setIsExitRequested(false)
 
-    hasConfirmedExitRef.current = true
-    navigate(ROUTES.LANDING)
+      // 뒤로가기 등으로 막혔던 이동이면 원래 가려던 곳으로 그대로 보낸다 — 무조건
+      // 랜딩으로 보내면 "뒤로가기" 의미가 사라진다.
+      if (blocker.state === 'blocked') {
+        blocker.proceed()
+        return
+      }
+
+      hasConfirmedExitRef.current = true
+      navigate(ROUTES.LANDING)
+    })()
   }
 
   return (
@@ -261,7 +276,13 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         remainingSec={session.remainingSec}
       />
 
-      <ExitConfirmModal open={isExitModalOpen} onCancel={handleCancelExit} onConfirm={handleConfirmExit} />
+      <ExitConfirmModal
+        open={isExitModalOpen}
+        onCancel={handleCancelExit}
+        onConfirm={handleConfirmExit}
+        isSubmitting={session.isAborting}
+        error={session.abortError}
+      />
     </>
   )
 }

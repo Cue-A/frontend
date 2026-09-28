@@ -73,12 +73,17 @@ export type UseInterviewSessionResult = {
   cancelSubmit: (message: string) => void
   /** 질문 제시(텍스트/오디오)가 끝났을 때 컨테이너가 부른다 — presenting → answering 전환. */
   notifyPresentationDone: (questionId: string) => void
+  /** abort 요청이 진행 중인지. 진행 중이면 컨테이너가 종료·취소 버튼을 잠근다. */
+  isAborting: boolean
+  /** abort 실패 문구. 성공하거나 새로 시도하면 지워진다. */
+  abortError: SubmitErrorState | null
   /**
-   * 면접 중도 이탈. X 버튼·인앱 이동 차단(blocker) 확인 모두 이걸 부른다. 실패해도
-   * 화면 전환을 막지 않는다 — 백엔드에 실제 엔드포인트가 없어(Cue-A/backend#25) 지금은
-   * 실패를 콘솔에만 남긴다. 재시도·중복 호출 방지가 붙는 커밋에서 이 자리를 고친다.
+   * 면접 중도 이탈. X 버튼·인앱 이동 차단(blocker) 확인 모두 이걸 부른다.
+   * 성공하면 `true` — 호출부가 그제서야 모달을 닫고 화면을 옮긴다. 실패하면 `false`를
+   * 돌려주고 `abortError` 에 문구를 채운다 — 모달은 열린 채로 남고, 같은 "종료" 버튼을
+   * 다시 누르면 재시도된다. 이미 진행 중이면 새 호출을 무시한다(중복 호출 방지).
    */
-  abortSession: () => void
+  abortSession: () => Promise<boolean>
 }
 
 /**
@@ -111,6 +116,8 @@ export function useInterviewSession(
   const [remainingSec, setRemainingSec] = useState<number | null>(answerTimeLimitSec)
   const [firstQuestionTimedOut, setFirstQuestionTimedOut] = useState(false)
   const [firstQuestionError, setFirstQuestionError] = useState(false)
+  const [isAborting, setIsAborting] = useState(false)
+  const [abortError, setAbortError] = useState<SubmitErrorState | null>(null)
 
   const phaseRef = useRef(phase)
   useEffect(() => {
@@ -297,11 +304,29 @@ export function useInterviewSession(
     [sessionId],
   )
 
-  const abortSession = useCallback(() => {
-    void abortSessionRequest(sessionId).catch((error: unknown) => {
-      const code = error instanceof ApiError ? error.code : 'UNKNOWN'
-      console.error('면접 이탈 처리 실패 sessionId=%s code=%s', sessionId, code)
-    })
+  // 클릭 연타로 abort 요청이 겹치지 않도록 막는다. isAborting(state)은 렌더 사이에서만
+  // 갱신되니, 같은 틱에서 연달아 불리면 아직 이전 값을 볼 수 있어 ref 로 즉시 막는다.
+  const abortingRef = useRef(false)
+
+  const abortSession = useCallback(async (): Promise<boolean> => {
+    if (abortingRef.current) return false
+
+    abortingRef.current = true
+    setIsAborting(true)
+    setAbortError(null)
+
+    try {
+      await abortSessionRequest(sessionId)
+      return true
+    } catch (error) {
+      const message = error instanceof ApiError ? toUserMessage(error.code) : '면접 종료에 실패했어요. 다시 시도해 주세요.'
+      setAbortError({ message, retryable: true })
+      console.error('면접 이탈 처리 실패 sessionId=%s', sessionId)
+      return false
+    } finally {
+      abortingRef.current = false
+      setIsAborting(false)
+    }
   }, [sessionId])
 
   // 무응답 타임아웃: 질문당 제한 시간이 다 됐는데 제출하지 않은 경우.
@@ -348,6 +373,8 @@ export function useInterviewSession(
     submitAnswer,
     cancelSubmit,
     notifyPresentationDone,
+    isAborting,
+    abortError,
     abortSession,
   }
 }
