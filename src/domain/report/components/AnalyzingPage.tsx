@@ -11,13 +11,19 @@ import { ANALYSIS_STAGES } from '../types/analysis'
  * 시안의 로고 원입니다. 점선 링이 천천히 돌아 "멈춘 게 아니다"를 알려줍니다.
  * 로고 이미지는 아직 내보내지 않아서 글자로 둡니다.
  */
-function AnalyzingMark() {
+function AnalyzingMark({ stopped }: { stopped: boolean }) {
+  // 실패하면 링을 멈춥니다. 도는 링은 "아직 하고 있다" 는 신호라, 실패 안내와 같이 두면 말이 엇갈립니다.
+  // 애니메이션을 빼지 않고 그 자리에 세웁니다. 빼면 링이 처음 각도로 튑니다.
+  const spin = stopped ? 'animate-spin [animation-play-state:paused]' : 'animate-spin'
+
   return (
     <div
       aria-hidden
-      className="flex h-36 w-36 animate-spin items-center justify-center rounded-full border-2 border-dashed border-primary-200 [animation-duration:12s]"
+      className={`flex h-36 w-36 items-center justify-center rounded-full border-2 border-dashed border-primary-200 [animation-duration:12s] ${spin}`}
     >
-      <div className="flex h-28 w-28 animate-spin items-center justify-center rounded-full bg-neutral-0 text-display text-primary-500 shadow-card [animation-direction:reverse] [animation-duration:12s]">
+      <div
+        className={`flex h-28 w-28 items-center justify-center rounded-full bg-neutral-0 text-display text-primary-500 shadow-card [animation-direction:reverse] [animation-duration:12s] ${spin}`}
+      >
         C
       </div>
     </div>
@@ -49,23 +55,22 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
  * "처음 화면으로"가 그 자리다(#26). PR #65 리뷰에서 아이콘 레일 이름("홈")에 맞춰
  * "홈으로"로 바꾸자는 제안이 있었지만, ReportActions.tsx(이슈 #20)가 같은 랜딩
  * 이동에 "홈 대시보드가 생기기 전까진 '홈'이라 부르지 않는다"로 이미 정해둔 것과
- * 충돌해 반영하지 않았다. 실제 분석은 백엔드에서 도는 작업이라 이 화면을
- * 나가도 계속돼야 맞지만, 지금은 진행률 자체가 이 컴포넌트 안의 목업 타이머라
- * (useAnalysisProgress) 나갔다 돌아오면 처음부터 다시 돈다. 실제 연결이 붙어야
- * 고쳐지는 부분이라 지금 범위에서 손대지 않는다.
+ * 충돌해 반영하지 않았다.
+ *
+ * 분석은 백엔드에서 돈다(Cue-A/backend#50). 이 화면은 들어오면 분석을 맡기고 소켓으로 단계를 받아
+ * 끝나면 리포트로 넘어간다 (useAnalysisProgress). 실패하면 화면을 바꾸지 않고 제목과 팁 자리만 바꾼다.
  */
 export default function AnalyzingPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
-  const { stageIndex, isDone, isTimedOut, tip } = useAnalysisProgress()
+  const { stageIndex, reportId, failure, isTimedOut, tip, retry } = useAnalysisProgress(sessionId)
 
   useEffect(() => {
-    if (!isDone || !sessionId) return
+    if (!reportId) return
 
-    // 리포트 id 는 분석이 끝날 때 백엔드가 알려줍니다. 아직 그 메시지 형식이
-    // 정해지지 않아서, 목업에서는 세션 id 를 그대로 씁니다.
-    navigate(toReport(sessionId), { replace: true })
-  }, [isDone, sessionId, navigate])
+    // replace — 뒤로가기로 분석 중 화면에 돌아오면 끝난 분석을 다시 맡기게 됩니다.
+    navigate(toReport(reportId), { replace: true })
+  }, [reportId, navigate])
 
   const current = ANALYSIS_STAGES[stageIndex]
   const percent = Math.round(((stageIndex + 1) / ANALYSIS_STAGES.length) * 100)
@@ -78,12 +83,15 @@ export default function AnalyzingPage() {
         </Button>
       </div>
 
-      <AnalyzingMark />
+      <AnalyzingMark stopped={failure !== null} />
 
-      <h1 className="text-h1 text-neutral-900">분석중입니다…</h1>
+      {/* 실패해도 문장 길이를 비슷하게 둡니다. 세로 가운데 정렬이라 줄 수가 바뀌면 화면 전체가 움직입니다 */}
+      <h1 className="text-h1 text-neutral-900">{failure ? '분석을 마치지 못했어요' : '분석중입니다…'}</h1>
 
       <p className="text-body-md text-neutral-500">
-        면접 답변을 분석해서 리포트를 준비하고 있어요. 잠시만 기다려주세요.
+        {failure
+          ? '면접 답변을 분석하다가 멈췄어요. 아래 안내를 확인해 주세요.'
+          : '면접 답변을 분석해서 리포트를 준비하고 있어요. 잠시만 기다려주세요.'}
       </p>
 
       <div
@@ -91,7 +99,7 @@ export default function AnalyzingPage() {
         aria-valuemin={0}
         aria-valuemax={ANALYSIS_STAGES.length}
         aria-valuenow={stageIndex + 1}
-        aria-valuetext={`${ANALYSIS_STAGES.length}단계 중 ${stageIndex + 1}단계 · ${current.label}`}
+        aria-valuetext={`${ANALYSIS_STAGES.length}단계 중 ${stageIndex + 1}단계 · ${current.label}${failure ? ' · 멈춤' : ''}`}
         className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-neutral-200"
       >
         {/* 너비는 계산값이라 인라인 style 을 씁니다 (docs/01-conventions.md "스타일" 절) */}
@@ -102,7 +110,7 @@ export default function AnalyzingPage() {
       </div>
 
       <p className="text-body-sm font-semibold text-neutral-900 tabular-nums">
-        {stageIndex + 1}/{ANALYSIS_STAGES.length} 단계 진행 중 · {current.label}
+        {stageIndex + 1}/{ANALYSIS_STAGES.length} 단계{failure ? '에서 멈춤' : ' 진행 중'} · {current.label}
       </p>
 
       <ol className="flex flex-wrap justify-center gap-6">
@@ -134,7 +142,9 @@ export default function AnalyzingPage() {
         잡아둡니다. 안 잡으면 화면이 세로 가운데 정렬이라 바뀌는 순간 위쪽 내용이 통째로 밀려 올라갑니다. (PR #68 리뷰)
       */}
       <div className="flex min-h-44 w-full max-w-md items-start justify-center">
-        {isTimedOut ? (
+        {failure ? (
+          <AnalysisFailedNotice message={failure.message} onRetry={failure.retryable ? retry : null} />
+        ) : isTimedOut ? (
           <AnalysisTimedOutNotice />
         ) : (
           <p className="text-body-sm text-neutral-400">면접 Tip · {tip}</p>
@@ -148,8 +158,9 @@ export default function AnalyzingPage() {
  * 기다림 상한(`ANALYSIS_TIMEOUT_MS`)을 넘겼을 때 분석 중 화면 아래에 붙는 안내입니다.
  *
  * 화면을 통째로 바꾸지 않고 시안의 분석 중 화면은 그대로 둔 채 팁 자리에 안내와 버튼을 넣습니다.
- * 분석이 뒤에서 아직 돌고 있을 수 있고 우리는 그걸 확인할 통로가 아직 없어서(Q6b), "실패했어요" 가
- * 아니라 "오래 걸리고 있어요" 로 적습니다.
+ * 백엔드는 10분이 지나면 스스로 `AI_TIMEOUT` 을 보내므로 보통은 이 안내 전에 실패 안내가 뜹니다. 이 안내가 뜨는 건
+ * 그 메시지를 놓친 경우(연결 끊김 등)라 분석이 끝났는지 알 수 없습니다. 그래서 "실패했어요" 가 아니라
+ * "오래 걸리고 있어요" 로 적습니다. 상태 조회 API(Cue-A/backend#48)가 생기면 여기서 확인할 수 있습니다.
  *
  * 버튼은 "다시 기다리기" 하나입니다. 빠져나갈 길은 화면 왼쪽 위의 "처음 화면으로"(PR #65)가
  * 타임아웃과 관계없이 늘 보여주므로, 여기에 같은 버튼을 또 두면 한 화면에 두 개가 됩니다. (PR #68 리뷰)
@@ -177,6 +188,33 @@ function AnalysisTimedOutNotice() {
       <Button size="sm" variant="primary" onClick={() => window.location.reload()}>
         다시 기다리기
       </Button>
+    </div>
+  )
+}
+
+/**
+ * 분석이 실패했을 때 팁 자리에 붙는 안내입니다.
+ *
+ * 다시 요청해서 풀릴 수 있는 실패(`retryable`)에만 "다시 분석하기" 를 둡니다. 다시 요청하면 백엔드가 같은
+ * reportId 로 처음부터 다시 돌립니다. 풀리지 않는 실패(답변이 너무 적음 등)에는 버튼을 두지 않습니다 —
+ * 눌러도 같은 안내가 다시 뜨기 때문입니다. 나갈 길은 왼쪽 위 "처음 화면으로" 입니다.
+ */
+function AnalysisFailedNotice({ message, onRetry }: { message: string; onRetry: (() => void) | null }) {
+  return (
+    <div
+      role="alert"
+      className="flex w-full flex-col items-center gap-4 rounded-md bg-badge-danger-bg p-5 transition-opacity duration-300 starting:opacity-0 motion-reduce:transition-none"
+    >
+      <div className="flex flex-col gap-1">
+        <p className="text-body-md font-semibold text-badge-danger-text">리포트를 만들지 못했어요</p>
+        <p className="break-keep text-body-sm text-neutral-700">{message}</p>
+      </div>
+
+      {onRetry && (
+        <Button size="sm" variant="primary" onClick={onRetry}>
+          다시 분석하기
+        </Button>
+      )}
     </div>
   )
 }

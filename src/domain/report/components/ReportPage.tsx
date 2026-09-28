@@ -65,7 +65,7 @@ export default function ReportPage() {
     점수가 빈 리포트를 그리는 길은 아예 없습니다.
 
     분석이 도는 동안 진행률을 보여주는 건 분석 중 화면(B-02)이 맡습니다.
-    단계 값은 맞춰뒀고(ANALYSIS_STAGES), 어느 통로로 받는지만 Q6b 에 남아 있습니다.
+    분석 등록과 진행 소켓은 Cue-A/backend#50 에 맞춰 붙였고, 이 화면의 조회 API 만 아직 없습니다.
   */
 
   const metrics = options.showGaze

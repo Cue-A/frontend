@@ -113,23 +113,21 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
   - 무한 스피너 — 20초쯤이면 멈춘 줄 알고 새로고침하게 됩니다
   - 가짜 퍼센트 진행바 — 95%에서 멈추면 오히려 신뢰를 더 잃습니다
 
-### Q6b. 🔴 리포트 생성 대기 화면
+### Q6b. 🟡 리포트 생성 대기 화면
 
-- 필요한 결정: **진행 단계 값 목록.** 백엔드 `docs/13-report.md` 의 "계약 도착 시 확인할 것"
-  #4(진행률 `stage` 값 목록)가 아직 AI 계약 대기 중입니다. 면접 중 3단계와 같은지 다른지
-  정해지지 않았습니다.
-- 필요한 결정: 리포트 생성 소요 시간(같은 문서 #3) — 대기 화면 문구와 타임아웃이 여기 달림.
-- 필요한 결정: **단계 값을 백엔드가 어떤 이름으로 내보내는지.** AI 계약 3장이
-  "이 값을 프론트에 그대로 노출하지 않고 백엔드가 자체 enum 으로 매핑한다" 고
-  적고 있습니다. 면접 쪽이 이미 그렇게 돕니다(`stt` → `TRANSCRIBING`).
-  프론트 `toAnalysisStageKey` 는 AI 의 소문자 스네이크(`analyzing_gaze` 등)를
-  받는 전제라, 이름이 다르면 전부 null 로 떨어져 단계가 안 움직입니다.
-- 필요한 결정: **값이 오는 통로** — 폴링인지 WebSocket push 인지. 정해지기
-  전까지 `toAnalysisStageKey` 는 정의만 해두고 훅에 잇지 않았습니다.
-  `useAnalysisProgress` 는 목업 타이머로만 단계를 넘깁니다.
-- 진행: AI 계약은 도착했습니다. 단계 값 목록과 순서는 확정
-  (`transcribing → analyzing_speech → analyzing_gaze → analyzing_content → composing`,
-  근거 `ai/report_pipeline.py`). 남은 건 백엔드 쪽 이름과 통로입니다.
+Cue-A/backend#50 (리포트 분석 작업 등록, 아직 열린 PR)으로 대부분 정해졌습니다. 프론트는 그 계약에 맞춰 붙였습니다.
+
+- 정해진 것
+  - 통로: `POST /api/interviews/{sessionId}/reports` → 202 `{ reportId, … }` → WebSocket `/ws/reports/{reportId}`
+  - 메시지: `progress`(`stage` · `progress`) · `report`(`reportId` · `status` · `scoreTotal`) · `error`(`errorCode` · `message` · `retryable`)
+  - 단계 이름: AI 단계를 대문자로 (`TRANSCRIBING` → `ANALYZING_SPEECH` → `ANALYZING_GAZE` → `ANALYZING_CONTENT` → `COMPOSING`)
+  - 소요 시간 상한: 10분. 넘으면 백엔드가 `AI_TIMEOUT` 으로 끝냅니다
+- 남은 것
+  - **상태 조회 API** (Cue-A/backend#48). 소켓은 붙는 순간 현재 상태를 주지 않아서, 새로고침 사이에 끝난 리포트를
+    알 수 없습니다. 지금은 등록 응답의 reportId 를 sessionStorage 에 기억해 두고 소켓에만 다시 붙습니다
+  - **다른 탭 · 기기에서 연 경우.** 기억해 둔 reportId 가 없으면 등록이 409 `REPORT_ALREADY_EXISTS` 이고
+    reportId 를 알 길이 없습니다. 상태 조회나 리포트 목록이 생기면 풀립니다
+  - **리포트 조회 API.** 분석이 끝나 리포트 화면으로 넘어가도 조회 API 가 없어서 실제 모드에서는 화면이 뜨지 않습니다
 - 걸리는 작업: 리포트 화면, 분석 중 화면.
 
 ### Q12. 🟡 로그인 화면의 Google 로그인이 기능명세서에 없습니다
