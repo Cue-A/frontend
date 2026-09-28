@@ -55,8 +55,8 @@ const ERROR_MESSAGE: Record<string, string> = {
   UPLOAD_NOT_COMPLETED: '파일이 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.',
   // 백엔드는 빈 파일을 "파일이 없다" 로 받아서 이 코드를 줍니다. 사용자에겐 빈 파일 문제입니다.
   INVALID_SOURCE_TYPE: '파일 내용이 비어 있어요. 다른 파일을 골라주세요.',
-  // 다시 시도해도 풀리지 않습니다. 삭제 API 가 아직 없어서(Cue-A/backend#38) 그 사실까지 말합니다.
-  DOCUMENT_LIMIT_EXCEEDED: '문서는 20개까지 등록할 수 있어요. 아직 지우는 기능이 없어서 더 올릴 수 없어요.',
+  // 다시 시도해도 풀리지 않습니다. 지운 문서는 상한에서 빠지므로(Cue-A/backend#40) 지우는 쪽으로 안내합니다.
+  DOCUMENT_LIMIT_EXCEEDED: '문서는 20개까지 등록할 수 있어요. 필요 없는 문서를 지운 뒤 다시 올려주세요.',
   DOCUMENT_NOT_FOUND: '문서를 찾을 수 없어요.',
   STORAGE_ERROR: '파일을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
 

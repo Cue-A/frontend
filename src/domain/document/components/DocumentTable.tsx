@@ -1,4 +1,4 @@
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { IconChevronLeft, IconChevronRight, IconTrash } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
 import Badge from '@/shared/ui/Badge'
@@ -23,6 +23,8 @@ type Props = {
   /** 지금 여는 중인 문서. 그 행의 조회 버튼을 잠급니다. */
   openingId: string | null
   onOpen: (document: DocumentSummary) => void
+  /** 지우기 확인 창을 엽니다. 실제로 지우는 건 확인 창입니다 */
+  onDelete: (document: DocumentSummary) => void
 }
 
 /** 좁은 화면에서는 좌우 여백을 줄여 파일 칸에 폭을 남깁니다. */
@@ -50,7 +52,7 @@ function Notice({ children }: { children: ReactNode }) {
   )
 }
 
-function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: Props['onOpen']) {
+function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: Props['onOpen'], onDelete: Props['onDelete']) {
   switch (body.kind) {
     case 'loading':
       return (
@@ -124,10 +126,21 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
               </Badge>
             </td>
             <td className={`${CELL} text-right`}>
-              <Button size="sm" onClick={() => onOpen(document)} disabled={opening} className="whitespace-nowrap">
-                {opening ? '여는 중…' : '조회'}
-                <span className="sr-only"> — {document.title}</span>
-              </Button>
+              <div className="flex items-center justify-end gap-1">
+                <Button size="sm" onClick={() => onOpen(document)} disabled={opening} className="whitespace-nowrap">
+                  {opening ? '여는 중…' : '조회'}
+                  <span className="sr-only"> — {document.title}</span>
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(document)}
+                  title="지우기"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
+                >
+                  <IconTrash size={18} stroke={2} aria-hidden />
+                  <span className="sr-only">지우기 — {document.title}</span>
+                </button>
+              </div>
             </td>
           </tr>
         )
@@ -138,13 +151,15 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
 /**
  * 보관함 목록입니다. (C-02)
  *
- * 시안의 "조회/수정" 은 **"조회"** 만 둡니다 — 수정 API 가 없습니다. 행 끝의 ⋮ 메뉴(삭제 등)도
- * 삭제 API 가 없어서 뺐습니다(Cue-A/backend#38). 실패한 문서의 "다시 업로드" 는 업로드 흐름이
+ * 시안의 "조회/수정" 은 **"조회"** 만 둡니다 — 수정 API 가 없습니다. 행 끝의 ⋮ 메뉴(삭제 등)는
+ * 지금 들어갈 항목이 삭제 하나뿐이라 메뉴 대신 **지우기 아이콘 버튼**을 바로 둡니다(Cue-A/backend#40).
+ * 한 번 더 눌러 메뉴를 여는 수고가 없고, 표가 `overflow-hidden` 이라 아래쪽 행의 메뉴가 잘리는 문제도
+ * 없습니다. 수정이 생기면 그때 메뉴로 모읍니다. 실패한 문서의 "다시 업로드" 는 업로드 흐름이
  * 붙을 때 같이 넣습니다. (이슈 #59)
  *
  * 문서는 사용자당 20개까지라 한 페이지에 전부 옵니다. 페이지 버튼은 시안대로 두되 늘 비활성입니다.
  */
-export default function DocumentTable({ body, openingId, onOpen }: Props) {
+export default function DocumentTable({ body, openingId, onOpen, onDelete }: Props) {
   const count = body.kind === 'rows' ? body.documents.length : 0
 
   return (
@@ -161,12 +176,12 @@ export default function DocumentTable({ body, openingId, onOpen }: Props) {
             <th scope="col" className="w-28 px-4 py-3 text-center font-semibold md:w-36 md:px-6">
               상태
             </th>
-            <th scope="col" className="w-20 px-4 py-3 text-right font-semibold md:w-28 md:px-6">
+            <th scope="col" className="w-32 px-4 py-3 text-right font-semibold md:w-40 md:px-6">
               작업
             </th>
           </tr>
         </thead>
-        <tbody>{renderBody(body, openingId, onOpen)}</tbody>
+        <tbody>{renderBody(body, openingId, onOpen, onDelete)}</tbody>
       </table>
 
       <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">

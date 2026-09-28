@@ -87,7 +87,7 @@ export type DocumentListQuery = {
  * 문서 등록 입력. `sourceType` 에 따라 `file` 또는 `content` 중 하나만 있습니다.
  *
  * `documentType` 은 선택입니다. 안 보내면 백엔드가 `RESUME` 으로 둡니다.
- * 수정 · 삭제 API 가 아직 없어 잘못 고르면 되돌릴 수 없으니, 화면에 종류 선택이
+ * 수정 API 가 없어 잘못 고르면 바꿀 수 없고 지우고 다시 올려야 하니, 화면에 종류 선택이
  * 없으면 비워서 보냅니다.
  */
 export type CreateDocumentInput =

@@ -71,7 +71,7 @@ function toCreateForm(input: CreateDocumentInput): FormData {
  * - 파일: pdf · docx · txt, 10MB, 빈 파일 거부
  * - 직접 작성: 20,000자
  * - 제목: 필수, 100자
- * - 사용자당 20개 (`DOCUMENT_LIMIT_EXCEEDED`) — 삭제 API 가 아직 없어 재시도로 풀리지 않습니다
+ * - 사용자당 20개 (`DOCUMENT_LIMIT_EXCEEDED`) — 재시도로는 풀리지 않고, 문서를 지워야 자리가 납니다
  * - 분당 20회 (`RATE_LIMIT_EXCEEDED`)
  */
 export async function createDocument(input: CreateDocumentInput) {
@@ -107,4 +107,18 @@ export async function getDocuments(query: DocumentListQuery = {}) {
 export async function getDocument(documentId: string) {
   const response = await api.get<DocumentDetailResponse>(`/api/documents/${encodeURIComponent(documentId)}`)
   return toDocumentDetail(response)
+}
+
+/**
+ * 문서 삭제. `DELETE /api/documents/{documentId}` (Cue-A/backend#40)
+ *
+ * 백엔드는 행을 지우지 않고 숨깁니다(소프트 삭제). 지운 문서는 목록 · 상세 · 20개 상한 · 면접 시작에서
+ * 빠지고, **이 문서로 본 지난 면접 기록과 리포트는 그대로 남습니다.** 올린 파일(S3)은 항상 지워서
+ * 되돌릴 수 없습니다.
+ *
+ * - 없는 문서 · 남의 문서 · **이미 지운 문서** 모두 `DOCUMENT_NOT_FOUND`(404) 입니다
+ * - 분당 30회 (`RATE_LIMIT_EXCEEDED`)
+ */
+export function deleteDocument(documentId: string) {
+  return api.delete<void>(`/api/documents/${encodeURIComponent(documentId)}`)
 }
