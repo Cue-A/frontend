@@ -13,6 +13,12 @@ const PROGRESS_STAGE_LABEL: Record<ProgressPush['stage'], string> = {
   SYNTHESIZING: '음성 만드는 중',
 }
 
+/**
+ * 세션 시작 폴링 상한(90초, docs/01-conventions.md "AI 대기 · 진행 상태")과 맞춘 값이다.
+ * 첫 질문 push 가 이 안에 안 오면 유실로 본다 (#54 2-3 참고).
+ */
+const FIRST_QUESTION_TIMEOUT_MS = 90_000
+
 export type SubmitErrorState = {
   message: string
   retryable: boolean
@@ -33,6 +39,22 @@ export type UseInterviewSessionResult = {
   submitError: SubmitErrorState | null
   isFinished: boolean
   sessionEnd: SessionEndPush | null
+  /**
+   * 첫 질문이 90초 넘게 오지 않았다는 신호. 백엔드에 catch-up 버퍼가 없어(#54 2-3,
+   * Cue-A/backend#35) push 가 드롭되면 이 상태로 영원히 멈추므로, 화면이 무한
+   * 스피너 대신 이 신호로 안내 · 이탈 경로를 보여준다. 첫 질문 이후에는 다시 false 로
+   * 돌아가지 않는다 — 그 뒤로는 쓸 일이 없어서다.
+   */
+  firstQuestionTimedOut: boolean
+  /**
+   * 첫 질문이 오기 전에 백엔드가 세션을 정리하며 에러를 보냈다는 신호(#54 2-3
+   * follow-up, PR #72 리뷰). 이 시점의 에러는 재시도 대상이 아니다 — 백엔드가 이미
+   * 세션을 ABORTED 로 정리한 뒤라 같은 세션으로 이어갈 수 없다. 화면은 에러 코드별
+   * 문구를 구분해 보여주지 않고 이 신호 유무로만 분기하므로 boolean 이다 — 코드별
+   * 문구가 필요해지면 그때 errorCode 를 들고 있는 쪽으로 바꾼다. firstQuestionTimedOut
+   * 과 마찬가지로 첫 질문 이후에는 다시 false 로 돌아가지 않는다.
+   */
+  firstQuestionError: boolean
   /** 질문당 남은 시간(초). answerTimeLimitSec 이 null 이면 제한 없음이라 항상 null. */
   remainingSec: number | null
   /**
@@ -81,6 +103,8 @@ export function useInterviewSession(
   const [submitError, setSubmitError] = useState<SubmitErrorState | null>(null)
   const [sessionEnd, setSessionEnd] = useState<SessionEndPush | null>(null)
   const [remainingSec, setRemainingSec] = useState<number | null>(answerTimeLimitSec)
+  const [firstQuestionTimedOut, setFirstQuestionTimedOut] = useState(false)
+  const [firstQuestionError, setFirstQuestionError] = useState(false)
 
   const phaseRef = useRef(phase)
   useEffect(() => {
@@ -139,6 +163,13 @@ export function useInterviewSession(
 
   const handleError = useCallback(
     (error: ErrorPush) => {
+      // 첫 질문 전 에러는 백엔드가 세션을 ABORTED 로 정리한 뒤다. 같은 세션으로는
+      // 이어갈 수 없으니 90초 타임아웃을 기다리지 않고 바로 알린다(#72 리뷰).
+      if (!questionRef.current) {
+        setFirstQuestionError(true)
+        return
+      }
+
       if (error.needsRerecord) {
         setNeedsRerecord(true)
         setSubmitError(null)
@@ -178,6 +209,15 @@ export function useInterviewSession(
 
     return disconnect
   }, [sessionId, handleQuestion, handleProgress, handleError, handleSessionEnd])
+
+  // 첫 질문 대기 타임아웃. question 이 null 인 동안만 돈다 — 한 번 질문이 오면
+  // question 은 그 뒤로 계속 non-null 이라 이 effect 는 다시 타이머를 걸지 않는다.
+  useEffect(() => {
+    if (question) return
+
+    const timer = setTimeout(() => setFirstQuestionTimedOut(true), FIRST_QUESTION_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [question])
 
   // 질문당 제한 시간 카운트다운. answerTimeLimitSec 이 null 이면 제한 없음이라 돌리지 않는다.
   useEffect(() => {
@@ -289,6 +329,8 @@ export function useInterviewSession(
     isFinished: phase === 'finished',
     sessionEnd,
     remainingSec,
+    firstQuestionTimedOut,
+    firstQuestionError,
     beginSubmit,
     submitAnswer,
     cancelSubmit,
