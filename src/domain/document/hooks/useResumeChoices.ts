@@ -4,7 +4,7 @@ import { DOCUMENT_TYPE_LABEL, formatBadgeOf, formatMeta, interviewBlockReason } 
 
 import { useDocuments } from './useDocuments'
 
-/** 고른 뒤 면접 옵션에 담기는 값. 세션 생성에는 `documentId` 가 `documentPublicId` 로 실립니다. */
+/** 고른 뒤 면접 옵션에 담기는 값. 세션 생성에는 `documentId` 가 그대로 실립니다. */
 export type ResumeSelection = {
   documentId: string
   title: string
