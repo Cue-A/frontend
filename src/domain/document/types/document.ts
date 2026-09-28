@@ -32,7 +32,7 @@ export type DocumentIndexStatus = 'PROCESSING' | 'COMPLETED' | 'OUTDATED' | 'FAI
 
 /** 목록 한 줄. 등록 응답도 같은 모양이라 올린 뒤 목록에 그대로 끼워 넣을 수 있습니다. */
 export type DocumentSummary = {
-  /** UUID 문자열. 세션 생성에 `documentPublicId` 로 그대로 싣습니다. */
+  /** UUID 문자열. 세션 생성에 `documentId` 로 그대로 싣습니다. */
   documentId: string
   documentType: DocumentType
   sourceType: DocumentSourceType

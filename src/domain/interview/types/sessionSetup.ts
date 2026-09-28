@@ -89,7 +89,7 @@ export type Company = {
  * `resume` 으로 둡니다.
  */
 export type SelectedResume = {
-  /** 문서 UUID. 세션 생성에 `documentPublicId` 로 그대로 싣습니다 */
+  /** 문서 UUID. 세션 생성에 `documentId` 로 그대로 싣습니다 */
   documentId: string
   title: string
   /** 원본 파일명. 직접 작성한 문서면 null */

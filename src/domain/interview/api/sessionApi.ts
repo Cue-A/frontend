@@ -12,6 +12,9 @@ export function getCompanies() {
 /**
  * 세션 시작 요청 본문. (Cue-A/backend `InterviewStartRequest`, dev 머지됨 · #54 1-6)
  *
+ * 문서 필드 이름은 `documentId` 입니다. 처음엔 `documentPublicId` 였는데 문서 API 와 맞춰 바뀌었습니다
+ * (Cue-A/backend#46). 값은 그대로 문서의 UUID 입니다.
+ *
  * 화면의 설정 중 **서버가 받지 않는 값은 싣지 않습니다.** 받을 자리가 없어서 보내도 버려집니다.
  * - `answerSeconds` · `deliveryMode` — 서버 요청에 없습니다 (#54 확인 필요 1 · 2번)
  * - `customCulture`(목록에 없는 기업의 인재상 직접 입력) — 서버 요청에 없습니다. 서버는 등록된
@@ -19,7 +22,7 @@ export function getCompanies() {
  */
 type InterviewStartRequest = {
   /** 보관함에서 고른 문서의 UUID. 필수 */
-  documentPublicId: string
+  documentId: string
   /** 등록된 기업의 숫자 id. 없으면 연습 모드 */
   companyId: number | null
   /** 자유 문자열(100자). 서버가 AI 에 그대로 넘기므로 화면에 보이는 이름을 보냅니다 */
@@ -58,7 +61,7 @@ function toCreateBody(setup: SessionSetup): InterviewStartRequest {
   }
 
   return {
-    documentPublicId: setup.resume.documentId,
+    documentId: setup.resume.documentId,
     companyId: toCompanyId(setup),
     jobRole: JOB_ROLES.find((role) => role.value === setup.jobRole)?.label ?? setup.jobRole,
     persona: setup.interviewerStyle,

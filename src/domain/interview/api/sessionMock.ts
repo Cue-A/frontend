@@ -34,8 +34,8 @@ registerMock('GET', '/api/companies', () => COMPANIES)
 registerMock('POST', '/api/interviews', (_params, body) => {
   const request = (body ?? {}) as Partial<Record<string, unknown>>
 
-  if (typeof request.documentPublicId !== 'string' || !request.documentPublicId.trim()) {
-    throw new ApiError('INVALID_REQUEST', 'documentPublicId 가 필요합니다')
+  if (typeof request.documentId !== 'string' || !request.documentId.trim()) {
+    throw new ApiError('INVALID_REQUEST', 'documentId 가 필요합니다')
   }
   if (typeof request.jobRole !== 'string' || !request.jobRole.trim() || request.jobRole.length > 100) {
     throw new ApiError('INVALID_REQUEST', 'jobRole 은 1~100자여야 합니다')
