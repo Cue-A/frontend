@@ -129,11 +129,17 @@ export default function AnalyzingPage() {
         })}
       </ol>
 
-      {isTimedOut ? (
-        <AnalysisTimedOutNotice />
-      ) : (
-        <p className="text-body-sm text-neutral-400">면접 Tip · {tip}</p>
-      )}
+      {/*
+        팁 자리는 10분이 지나면 안내 박스로 바뀝니다. 둘의 높이 차이가 커서 자리를 처음부터 안내 박스 높이만큼
+        잡아둡니다. 안 잡으면 화면이 세로 가운데 정렬이라 바뀌는 순간 위쪽 내용이 통째로 밀려 올라갑니다. (PR #68 리뷰)
+      */}
+      <div className="flex min-h-44 w-full max-w-md items-start justify-center">
+        {isTimedOut ? (
+          <AnalysisTimedOutNotice />
+        ) : (
+          <p className="text-body-sm text-neutral-400">면접 Tip · {tip}</p>
+        )}
+      </div>
     </main>
   )
 }
@@ -155,7 +161,8 @@ function AnalysisTimedOutNotice() {
   return (
     <div
       role="status"
-      className="flex w-full max-w-md flex-col items-center gap-4 rounded-md bg-badge-warning-bg p-5"
+      // 팁에서 안내로 순간 바뀌면 튀어 보여서 나타날 때만 흐리게 들어옵니다. 움직임 줄이기를 켠 사용자에게는 끕니다.
+      className="flex w-full flex-col items-center gap-4 rounded-md bg-badge-warning-bg p-5 transition-opacity duration-300 starting:opacity-0 motion-reduce:transition-none"
     >
       <div className="flex flex-col gap-1">
         <p className="text-body-md font-semibold text-badge-warning-text">
