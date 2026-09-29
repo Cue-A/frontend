@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import { USE_MOCK } from '@/shared/api/mock'
+import { ApiError } from '@/shared/api/apiError'
+import { toUserMessage } from '@/shared/api/errorMessage'
 
-import { ANALYSIS_STAGES, WAITING_TIPS } from '../types/analysis'
-
-/** 목업에서 한 단계가 넘어가는 데 걸리는 시간(ms) */
-const MOCK_STAGE_MS = 2000
+import { requestReport, type ReportRequestResponse } from '../api/reportRequestApi'
+import { connectReportSocket } from '../api/reportSocket'
+import { ANALYSIS_MESSAGES, FINAL_REQUEST_ERRORS } from '../lib/analysisErrorMessage'
+import { ANALYSIS_STAGES, toAnalysisStageKey, WAITING_TIPS } from '../types/analysis'
 
 /** 팁이 바뀌는 간격(ms) */
 const TIP_ROTATE_MS = 5000
@@ -13,48 +14,167 @@ const TIP_ROTATE_MS = 5000
 /**
  * 이만큼 기다려도 끝나지 않으면 기다림을 멈추고 안내로 바꿉니다.
  *
- * AI 가 리포트 생성 폴링 상한으로 **10분**을 권장합니다 (답변 영상 다운로드 + 시선 처리 포함,
- * `Cue-A/AI` `docs/리포트생성_API계약_백엔드전달용.md`). 면접의 90초 · 60초와 다릅니다.
- * 이보다 짧으면 정상적으로 도는 분석을 실패처럼 보여주고, 상한이 없으면 무한 스피너가 됩니다.
+ * AI 가 리포트 생성 폴링 상한으로 **10분**을 권장하고, 백엔드도 10분이 지나면 `AI_TIMEOUT` 으로 끝냅니다
+ * (Cue-A/backend#50 `ReportPoller`). 그래서 보통은 이 시간이 되기 전에 소켓 `error` 가 먼저 옵니다.
+ * 이 상한은 그 메시지를 놓쳤을 때(늦게 붙음 · 연결 끊김) 무한 스피너가 되지 않게 하는 안전장치입니다.
  * (이슈 #54 3-3, Q6a "하지 말 것")
  */
 export const ANALYSIS_TIMEOUT_MS = 10 * 60 * 1000
 
+export type AnalysisFailure = {
+  /** 사용자에게 보여줄 문구 */
+  message: string
+  /** true 면 "다시 분석하기" 로 등록을 다시 부를 수 있습니다 */
+  retryable: boolean
+}
+
 export type AnalysisProgress = {
   /** 0부터 셉니다. ANALYSIS_STAGES 의 몇 번째인지 */
   stageIndex: number
-  /** 전부 끝났으면 true */
-  isDone: boolean
-  /** 끝나지 않은 채로 `ANALYSIS_TIMEOUT_MS` 가 지났으면 true */
+  /** 끝났으면 리포트 id. 리포트 화면으로 보낼 때 씁니다 */
+  reportId: string | null
+  /** 분석이 실패했으면 이유 */
+  failure: AnalysisFailure | null
+  /** 끝나지도 실패하지도 않은 채 `ANALYSIS_TIMEOUT_MS` 가 지났으면 true */
   isTimedOut: boolean
   tip: string
+  /** 분석을 다시 요청합니다. `failure.retryable` 일 때만 부릅니다 */
+  retry: () => void
 }
 
 /**
- * 분석 진행 상태입니다.
+ * 등록 응답의 reportId 를 세션 id 로 기억해 둡니다.
  *
- * 실제 진행 상태는 백엔드가 WebSocket 으로 밀어줍니다. 프론트가 폴링하지
- * 않는다는 건 정해져 있지만, 분석 단계 메시지 형식은 아직 미확정입니다.
- * (docs/90-open-questions.md Q6b)
+ * 새로고침하면 등록을 다시 부르게 되는데, 이미 요청한 면접은 409 `REPORT_ALREADY_EXISTS` 이고 응답에 reportId 가
+ * 없습니다. 상태 조회 API 도 아직 없어서(Cue-A/backend#48) 기억해 둔 id 로 소켓에만 다시 붙습니다.
+ * 끝나거나 실패하면 지웁니다 — 실패한 리포트는 다시 요청해야 하고, 그때는 등록부터 다시 가야 합니다.
  *
- * 그래서 지금은 목업일 때만 단계가 시간에 따라 넘어갑니다. 실제 연결이
- * 붙으면 이 훅 안만 바꾸면 되고, 화면은 건드릴 필요가 없습니다.
- * 목업이 아니면 첫 단계에 머뭅니다. 없는 진행률을 지어내지 않기 위해서입니다.
+ * 탭 하나에서만 이어지면 되므로 sessionStorage 입니다. 저장이 막힌 브라우저에서는 기억하지 못할 뿐 동작은 같습니다.
  */
-export function useAnalysisProgress(): AnalysisProgress {
+const storageKey = (sessionId: string) => `cue-a:analysis:${sessionId}`
+
+function readReportId(sessionId: string): string | null {
+  try {
+    return sessionStorage.getItem(storageKey(sessionId))
+  } catch {
+    return null
+  }
+}
+
+function rememberReportId(sessionId: string, reportId: string) {
+  try {
+    sessionStorage.setItem(storageKey(sessionId), reportId)
+  } catch {
+    // 기억하지 못하면 새로고침 때 409 안내가 뜰 뿐입니다.
+  }
+}
+
+function forgetReportId(sessionId: string) {
+  try {
+    sessionStorage.removeItem(storageKey(sessionId))
+  } catch {
+    // 위와 같습니다.
+  }
+}
+
+/**
+ * 같은 세션의 등록 요청을 하나로 묶습니다.
+ *
+ * 개발 모드(StrictMode)는 effect 를 두 번 돌립니다. 그대로 두면 등록이 두 번 나가고, 백엔드는 두 번째를
+ * 409 `REPORT_ALREADY_EXISTS` 로 막아서 **개발 중에만** 분석이 실패한 것처럼 보입니다. 첫 요청이 끝나기 전에
+ * 다시 부르면 같은 요청을 돌려줍니다.
+ */
+const pendingRequests = new Map<string, Promise<ReportRequestResponse>>()
+
+function requestReportOnce(sessionId: string): Promise<ReportRequestResponse> {
+  const pending = pendingRequests.get(sessionId)
+  if (pending) return pending
+
+  const request = requestReport(sessionId).finally(() => pendingRequests.delete(sessionId))
+  pendingRequests.set(sessionId, request)
+  return request
+}
+
+/**
+ * 리포트 분석을 맡기고 진행 상황을 따라갑니다. (Cue-A/backend#50)
+ *
+ * 1. `POST /api/interviews/{sessionId}/reports` 로 분석을 등록하고 reportId 를 받습니다
+ * 2. `/ws/reports/{reportId}` 에 붙어 `progress` 로 단계를 옮깁니다
+ * 3. `report` 가 오면 `reportId` 를 채웁니다. 화면이 리포트로 보냅니다
+ * 4. `error` 나 등록 실패는 `failure` 로 줍니다
+ *
+ * 단계는 **뒤로 가지 않습니다.** 백엔드가 실패 뒤 스스로 한 번 더 돌리면(`CONTENT_FAILED` · `MEDIA_FETCH_FAILED`)
+ * 단계가 처음부터 다시 올 수 있는데, 막대가 줄어들면 고장 난 것처럼 보입니다. 모르는 단계 값도 무시합니다.
+ */
+export function useAnalysisProgress(sessionId: string | undefined): AnalysisProgress {
   const [stageIndex, setStageIndex] = useState(0)
+  const [reportId, setReportId] = useState<string | null>(null)
+  const [failure, setFailure] = useState<AnalysisFailure | null>(null)
+  /** "다시 분석하기" 를 누를 때마다 올립니다. 등록 · 소켓 · 기다림 상한이 모두 이 값으로 새로 시작합니다 */
+  const [attempt, setAttempt] = useState(0)
+  /** 기다림 상한이 지난 시도 번호. 다시 요청하면 번호가 달라져서 저절로 풀립니다 */
+  const [timedOutAttempt, setTimedOutAttempt] = useState<number | null>(null)
   const [tipIndex, setTipIndex] = useState(0)
-  const [isTimedOut, setIsTimedOut] = useState(false)
 
   useEffect(() => {
-    if (!USE_MOCK) return
+    if (!sessionId) return
 
-    const timer = window.setInterval(() => {
-      setStageIndex((previous) => Math.min(previous + 1, ANALYSIS_STAGES.length))
-    }, MOCK_STAGE_MS)
+    let alive = true
+    let disconnect = () => {}
 
-    return () => window.clearInterval(timer)
-  }, [])
+    const listen = (id: string) => {
+      disconnect = connectReportSocket(id, sessionId, {
+        onProgress: ({ stage }) => {
+          const key = toAnalysisStageKey(stage)
+          if (!key) {
+            console.error('알 수 없는 리포트 분석 단계 stage=%s', stage)
+            return
+          }
+          const index = ANALYSIS_STAGES.findIndex((item) => item.key === key)
+          setStageIndex((previous) => Math.max(previous, index))
+        },
+        onReport: (push) => {
+          forgetReportId(sessionId)
+          setReportId(push.reportId)
+        },
+        onError: (push) => {
+          forgetReportId(sessionId)
+          console.error('리포트 분석 실패 code=%s retryable=%s', push.errorCode, push.retryable)
+          setFailure({ message: toUserMessage(push.errorCode, ANALYSIS_MESSAGES), retryable: push.retryable })
+        },
+      })
+    }
+
+    // 다시 분석할 때는 기억해 둔 id 가 이미 지워져 있어서 등록부터 갑니다.
+    const saved = readReportId(sessionId)
+    if (saved) {
+      listen(saved)
+    } else {
+      requestReportOnce(sessionId)
+        .then((response) => {
+          if (!alive) return
+          rememberReportId(sessionId, response.reportId)
+          listen(response.reportId)
+        })
+        .catch((cause: unknown) => {
+          if (!alive) return
+          const code = cause instanceof ApiError ? cause.code : 'UNKNOWN'
+          console.error('리포트 분석 등록 실패 code=%s', code)
+          setFailure({
+            message: toUserMessage(code, ANALYSIS_MESSAGES),
+            retryable: !FINAL_REQUEST_ERRORS.has(code),
+          })
+        })
+    }
+
+    const timeout = window.setTimeout(() => setTimedOutAttempt(attempt), ANALYSIS_TIMEOUT_MS)
+
+    return () => {
+      alive = false
+      disconnect()
+      window.clearTimeout(timeout)
+    }
+  }, [sessionId, attempt])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -64,18 +184,19 @@ export function useAnalysisProgress(): AnalysisProgress {
     return () => window.clearInterval(timer)
   }, [])
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsTimedOut(true), ANALYSIS_TIMEOUT_MS)
-    return () => window.clearTimeout(timer)
+  const retry = useCallback(() => {
+    setFailure(null)
+    setStageIndex(0)
+    setAttempt((previous) => previous + 1)
   }, [])
 
-  const isDone = stageIndex >= ANALYSIS_STAGES.length
-
   return {
-    stageIndex: Math.min(stageIndex, ANALYSIS_STAGES.length - 1),
-    isDone,
-    // 끝난 뒤에 상한이 지나도 늦었다고 하지 않습니다. 끝났으면 리포트로 넘어갑니다.
-    isTimedOut: isTimedOut && !isDone,
+    stageIndex,
+    reportId,
+    failure,
+    // 끝났거나 실패했으면 늦었다고 하지 않습니다. 각자 자기 화면이 있습니다.
+    isTimedOut: timedOutAttempt === attempt && reportId === null && failure === null,
     tip: WAITING_TIPS[tipIndex],
+    retry,
   }
 }

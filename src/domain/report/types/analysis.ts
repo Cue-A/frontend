@@ -1,10 +1,8 @@
 /**
  * 분석 중 화면(B-02)이 쓰는 타입입니다.
  *
- * 서버 응답 타입이 아니라 **화면용 타입**입니다. 단계 값과 순서는 AI 리포트
- * 계약의 `ReportStage` 를 그대로 옮겼습니다. 이 값이 어느 통로로 오는지
- * (WebSocket push 인지 폴링인지)는 아직 정해지지 않았습니다.
- * (docs/90-open-questions.md Q6b)
+ * 단계 값과 순서는 AI 리포트 계약의 `ReportStage` 를 옮긴 것이고, 백엔드가 같은 이름을 대문자로
+ * 내보냅니다(Cue-A/backend#50 `ReportProgressStage`). 값은 WebSocket `/ws/reports/{reportId}` 로 옵니다.
  */
 
 /**
@@ -39,22 +37,13 @@ export const ANALYSIS_STAGES: AnalysisStage[] = [
 ]
 
 /**
- * 서버가 보내는 단계 값(소문자 스네이크)을 화면 단계로 옮깁니다.
+ * 서버가 보내는 단계 값을 화면 단계로 옮깁니다.
+ *
+ * 백엔드는 AI 의 소문자 스네이크(`analyzing_gaze`)를 대문자 enum(`ANALYZING_GAZE`)으로 바꿔 보냅니다
+ * (Cue-A/backend#50). 대소문자를 가리지 않게 받아서 어느 쪽이 와도 맞습니다.
  *
  * 모르는 값이 오면 null 입니다. 그때는 단계를 옮기지 않습니다 — 없는 진행률을
  * 지어내는 것보다 멈춰 있는 편이 낫습니다.
- *
- * ⚠️ **아직 아무 데서도 안 부릅니다.** 값과 순서는 맞췄지만 값을 받는 통로가
- * 없어서입니다 — `useAnalysisProgress` 는 여전히 목업 타이머로만 단계를
- * 넘깁니다. 통로(폴링인지 WebSocket push 인지)가 Q6b 로 미정이라 여기서
- * 훅까지 잇지 않았습니다.
- *
- * 이을 때 확인할 것이 하나 더 있습니다. AI 계약 3장이 **"이 값을 프론트에
- * 그대로 노출하지 않고 백엔드가 자체 enum 으로 매핑한다"** 고 적고 있습니다.
- * 면접 쪽이 이미 그렇게 돕니다(`stt` → `TRANSCRIBING`). 이 함수는 AI 의 소문자
- * 스네이크를 받는 전제라, 백엔드가 다른 이름으로 내보내면 전부 null 로 떨어져
- * 단계가 안 움직입니다. 백엔드 리포트 구현이 올라오면 값 목록부터 받아야
- * 합니다. (PR #50 리뷰, docs/90-open-questions.md Q6b)
  */
 export function toAnalysisStageKey(stage: string): AnalysisStageKey | null {
   const key = stage.toUpperCase() as AnalysisStageKey
@@ -66,6 +55,31 @@ export function toAnalysisStageKey(stage: string): AnalysisStageKey | null {
  * 화면이 몇십 초 동안 멈춰 있으면 멈춘 건지 도는 건지 헷갈리는데,
  * 문구가 바뀌면 돌아가고 있다는 게 보입니다.
  */
+/**
+ * 리포트 소켓 메시지입니다. (Cue-A/backend#50 `ReportProgressPushMessage` · `ReportPushMessage` · `ReportErrorPushMessage`)
+ * 봉투는 면접 소켓과 같은 `{ type, payload }` 이고, type 은 `progress` · `report` · `error` 셋입니다.
+ */
+export type ReportProgressPush = {
+  stage: string
+  /** 0~1. AI 가 주지 않으면 null 입니다. 화면은 쓰지 않고 단계로만 셉니다 */
+  progress: number | null
+}
+
+export type ReportDonePush = {
+  reportId: string
+  /** `PARTIAL` 은 말하기 · 시선 중 일부 축이 빠진 리포트입니다. 둘 다 리포트 화면으로 갑니다 */
+  status: 'COMPLETED' | 'PARTIAL'
+  /** 0~100 */
+  scoreTotal: number | null
+}
+
+export type ReportErrorPush = {
+  errorCode: string
+  message: string
+  /** true 면 등록 API 를 다시 불러도 됩니다. 같은 reportId 로 다시 돕니다 */
+  retryable: boolean
+}
+
 export const WAITING_TIPS = [
   '답변은 결론부터 정리해보세요',
   '경험은 숫자와 함께 말하면 더 잘 전달돼요',

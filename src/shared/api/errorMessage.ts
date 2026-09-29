@@ -2,7 +2,9 @@
  * errorCode 를 사용자에게 보여줄 문구로 바꿉니다.
  * 서버의 message 는 개발자용이라 그대로 뿌리지 않습니다. (docs/01-conventions.md "에러 처리")
  *
- * 백엔드 `common/exception/ErrorCode.java` 의 코드 37개를 **전부** 매핑했습니다 (이슈 #54 0-1).
+ * 백엔드 `common/exception/ErrorCode.java` 의 코드를 **전부** 매핑했습니다 (이슈 #54 0-1). dev 의 37개에
+ * 리포트 등록 PR(Cue-A/backend#49 · #50)이 더하는 셋(`INVALID_ANSWERS` · `SESSION_NOT_COMPLETED` ·
+ * `REPORT_ALREADY_EXISTS`)까지 넣었습니다.
  * 백엔드에 코드가 추가되면 여기에도 추가합니다 — 빠지면 콘솔에 남고 공통 문구로 떨어집니다.
  *
  * 문구 규칙
@@ -84,12 +86,18 @@ const ERROR_MESSAGE: Record<string, string> = {
   // 둘은 AI · 백엔드 사이의 계약이 어긋났을 때만 납니다. 사용자가 할 수 있는 건 다시 시도뿐입니다.
   INVALID_QUESTION_ID: '질문 정보가 맞지 않아요. 잠시 후 다시 시도해 주세요.',
   UNEXPECTED_AI_RESPONSE: 'AI 응답을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.',
+  // 백엔드가 AI 에 보낼 답변 목록을 잘못 만든 경우입니다. 서버 버그라 짧게 적습니다. (Cue-A/backend#49)
+  INVALID_ANSWERS: '분석 요청을 만들지 못했어요. 잠시 후 다시 시도해 주세요.',
 
   // ── 리포트 — 코드는 AI 계약서 9장과 백엔드 ErrorCode.java 에서 확인한 값들입니다 (이슈 #46)
   //
   // 아직 만드는 중입니다. 실패가 아니라 기다리면 되는 상태라 말투를 구분합니다.
   REPORT_NOT_READY: '리포트를 만들고 있어요. 잠시 후 다시 확인해 주세요.',
-  // 아래 셋은 AI 리포트 계약의 코드입니다. 백엔드 ErrorCode 에는 리포트 계약이 붙을 때 들어옵니다.
+  // 둘은 리포트 등록(Cue-A/backend#50)의 409 입니다. 다시 요청해도 결과가 같습니다.
+  SESSION_NOT_COMPLETED: '아직 끝나지 않은 면접이에요. 면접을 마친 뒤 리포트를 볼 수 있어요.',
+  // 실패한 리포트는 409 가 아니라 다시 돌아서, 이 코드는 "이미 만들고 있거나 다 만든" 경우입니다.
+  REPORT_ALREADY_EXISTS: '이미 분석을 요청한 면접이에요.',
+  // 아래 셋은 AI 리포트 계약의 코드이고, 백엔드 ErrorCode 에도 같은 이름으로 들어옵니다 (Cue-A/backend#49).
   //
   // 내용 분석이 실패하면 리포트가 아예 만들어지지 않습니다. 점수가 빈 리포트가 오는 게
   // 아니라 결과 자체가 없어서, 화면은 다시 연습하는 쪽으로 안내합니다.

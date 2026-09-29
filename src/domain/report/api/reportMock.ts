@@ -135,7 +135,7 @@ function toSubMetrics(analysis: AnalysisResult): SubMetric[] {
  * 들고 있고, 문서와 같은 이유로 바깥에는 그것만 나갑니다 (이슈 #54 3-2). 목업도 같은 모양으로
  * 둬야 `r1` 같은 짧은 id 에 기대는 코드가 연동 날 깨지지 않습니다.
  */
-const MOCK_REPORT_IDS = {
+export const MOCK_REPORT_IDS = {
   expired: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c01',
   noCamera: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c02',
   latest: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c03',
