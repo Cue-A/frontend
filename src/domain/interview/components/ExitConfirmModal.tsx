@@ -5,6 +5,11 @@ type Props = {
   open: boolean
   onCancel: () => void
   onConfirm: () => void
+  /**
+   * 재시도해도 안 풀리는 실패에서 abort 자체는 포기하고 그냥 나가는 탈출구.
+   * `error` 가 있을 때만 보여준다 (PR #77 리뷰, 선택 제안).
+   */
+  onForceExit?: () => void
   /** abort 요청이 진행 중인지. 진행 중이면 취소·종료 버튼을 모두 잠근다. */
   isSubmitting?: boolean
   /**
@@ -29,7 +34,7 @@ const TITLE_ID = 'exit-confirm-modal-title'
  * 책임이 아닙니다 — 호출부에서 연결합니다. 성공·실패 판단도 호출부(useInterviewSession)
  * 몫이라, 이 컴포넌트는 `isSubmitting`·`error` 로 전달받은 상태만 그린다.
  */
-export default function ExitConfirmModal({ open, onCancel, onConfirm, isSubmitting = false, error = null }: Props) {
+export default function ExitConfirmModal({ open, onCancel, onConfirm, onForceExit, isSubmitting = false, error = null }: Props) {
   return (
     <Modal open={open} onClose={onCancel} labelledBy={TITLE_ID}>
       <div className="flex w-80 flex-col gap-2">
@@ -39,10 +44,20 @@ export default function ExitConfirmModal({ open, onCancel, onConfirm, isSubmitti
 
         <p className="text-body-md text-neutral-500">지금 종료하면 리포트가 생성되지 않습니다.</p>
 
-        {error && <p className="text-body-sm text-semantic-danger">{error.message}</p>}
+        {error && (
+          <p role="alert" className="text-body-sm text-semantic-danger">
+            {error.message}
+          </p>
+        )}
       </div>
 
-      <div className="mt-6 flex justify-end gap-2">
+      <div className="mt-6 flex items-center justify-end gap-2">
+        {error && onForceExit && (
+          <Button variant="ghost" size="sm" onClick={onForceExit} disabled={isSubmitting} className="-ml-4 mr-auto">
+            그래도 나가기
+          </Button>
+        )}
+
         <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           취소
         </Button>

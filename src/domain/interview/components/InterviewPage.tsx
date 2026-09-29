@@ -217,33 +217,52 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
     if (blocker.state === 'blocked') blocker.reset()
   }
 
+  // "이제 이 화면을 떠난다"가 확정된 뒤(abort 성공 · abort 포기 둘 다) 공통으로 타는
+  // 이동 로직. 뒤로가기 등으로 막혔던 이동이면 원래 가려던 곳으로 그대로 보낸다 —
+  // 무조건 랜딩으로 보내면 "뒤로가기" 의미가 사라진다.
+  const leaveInterview = () => {
+    if (blocker.state === 'blocked') {
+      blocker.proceed()
+      return
+    }
+
+    hasConfirmedExitRef.current = true
+    navigate(ROUTES.LANDING)
+  }
+
   // X 버튼·인앱 이동 차단(blocker) 확인 두 경로 모두 세션을 떠나는 거라 abort 호출
-  // 대상이다(이슈 #26). abort 가 성공해야만 모달을 닫고 화면을 옮긴다 — 실패하면
-  // 모달이 열린 채로 남고 session.abortError 가 인라인 문구를 채운다. 재시도는 같은
-  // "종료" 버튼을 다시 누르는 것으로 한다.
+  // 대상이다(이슈 #26). abort 와 정상 종료(session_end)는 동시에 일어나지 않는다 —
+  // 백엔드가 상호 배제를 보장한다(PR #77 리뷰로 확인): 세션이 먼저 끝나 있으면 abort 가
+  // SESSION_ENDED 로 실패하고(아래 'ended' 분기), abort 가 먼저 처리되면
+  // InterviewSessionWriter.completeSession 이 IN_PROGRESS 아닌 세션은 건드리지 않아
+  // session_end 가 push 되지 않는다(Cue-A/backend#43 b549de3).
   const handleConfirmExit = () => {
     void (async () => {
-      const succeeded = await session.abortSession()
-      if (!succeeded) return
+      const outcome = await session.abortSession()
+      if (outcome === 'failed') return
 
-      // 알려진 경쟁 상태(고치지 않고 남김): abort 가 진행되는 그 사이에 면접이
-      // 정상적으로 끝나(session_end 수신) session.isFinished 가 true 로 바뀌면,
-      // 위의 "정상 종료 → 분석중 이동" effect 와 아래 랜딩 이동이 잠깐 겹칠 수
-      // 있다. 발생 조건이 좁고(종료를 누른 그 순간 면접이 끝나야 함), 이
-      // 파일에 이미 비슷한 성격의 미해결 경쟁 상태가 여럿 있어(submitAnswer 의
-      // "session_end 가 REST 응답보다 먼저 도착" 주석 참고) 같은 관행으로 둔다.
       setIsExitRequested(false)
 
-      // 뒤로가기 등으로 막혔던 이동이면 원래 가려던 곳으로 그대로 보낸다 — 무조건
-      // 랜딩으로 보내면 "뒤로가기" 의미가 사라진다.
-      if (blocker.state === 'blocked') {
-        blocker.proceed()
+      if (outcome === 'ended') {
+        // 면접이 이미 서버에서 끝나 있었다(SESSION_ENDED) — 랜딩이 아니라 분석 중
+        // 화면으로 보낸다. session_end 를 받았을 때의 effect(위)와 목적지가 같아서
+        // 겹쳐도 문제없다.
+        hasConfirmedExitRef.current = true
+        navigate(toAnalyzing(sessionId), { replace: true })
         return
       }
 
-      hasConfirmedExitRef.current = true
-      navigate(ROUTES.LANDING)
+      leaveInterview()
     })()
+  }
+
+  // 재시도해도 안 풀리는 실패(500 · 네트워크 등)에 갇히지 않게 하는 탈출구 — abort
+  // 자체를 다시 시도하지 않고 그냥 나간다. 이 PR 전에는 애초에 서버에 알리지 않고
+  // 나갔으니, 이 버튼으로 나가도 그때보다 나빠지지 않는다(PR #77 리뷰, 선택 제안).
+  // 실패 상태(session.abortError)일 때만 ExitConfirmModal 이 이 버튼을 보여준다.
+  const handleForceExit = () => {
+    setIsExitRequested(false)
+    leaveInterview()
   }
 
   return (
@@ -280,6 +299,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         open={isExitModalOpen}
         onCancel={handleCancelExit}
         onConfirm={handleConfirmExit}
+        onForceExit={handleForceExit}
         isSubmitting={session.isAborting}
         error={session.abortError}
       />
