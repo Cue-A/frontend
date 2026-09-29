@@ -20,7 +20,9 @@ const COMPANIES: Company[] = [
   { companyId: 'danggeun', name: '당근' },
 ]
 
-registerMock('GET', '/api/companies', () => COMPANIES)
+registerMock('GET', '/api/companies', () => COMPANIES, {
+  missingInBackend: '기업 API 없음 (명세서 v0.2 `/v1/companies` 시작 전)',
+})
 
 /**
  * 면접 세션 생성 목업입니다. 검사 순서와 에러 코드는 백엔드 `InterviewStartService` 를 따랐습니다.
@@ -60,11 +62,16 @@ registerMock('POST', '/api/interviews', (_params, body) => {
  * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다. 고정값만 돌려준다 — 이유는
  * sessionApi.getInterviewOptions 주석 참고 (interviewerStyle 대소문자/값 범위 불일치).
  */
-registerMock('GET', '/api/interviews/:sessionId', () => ({
-  interviewerStyle: 'friendly',
-  hideQuestionText: false,
-  answerTimeLimitSec: 90,
-}))
+registerMock(
+  'GET',
+  '/api/interviews/:sessionId',
+  () => ({
+    interviewerStyle: 'friendly',
+    hideQuestionText: false,
+    answerTimeLimitSec: 90,
+  }),
+  { missingInBackend: '면접 옵션 조회 API 없음 (명세서 v0.2 에도 없음)' },
+)
 
 /**
  * 답변 제출 목업입니다. 실제 WS 시나리오(sessionSocketMock)의 다음 턴(progress →

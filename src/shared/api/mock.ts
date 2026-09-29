@@ -92,6 +92,28 @@ type MockRoute = {
   method: HttpMethod
   segments: string[]
   handler: MockHandler
+  /** 백엔드에 아직 없는 API 면 그 사정. `registerMock` 의 `options.missingInBackend` 참고 */
+  missingInBackend?: string
+}
+
+export type MockOptions = {
+  /**
+   * **백엔드에 아직 없는 API** 라면 그 사정을 적습니다. 예) `'리포트 조회 API 없음 (명세서 v0.2 시작 전)'`
+   *
+   * 적어두면 `VITE_REAL_APIS` 로 그 도메인을 실제 서버에 붙여도 **이 API 만은 목업이 답합니다.**
+   * 스위치가 도메인 단위라, 도메인 안에 없는 API 가 하나만 섞여 있어도 도메인 전체를 켤 수 없던 문제를 풉니다 —
+   * `interviews` 를 켜면 세션 시작 · 답변 제출은 실제로 붙는데, 백엔드에 없는 옵션 조회가 404 가 나서 면접 화면이
+   * 멈췄습니다.
+   *
+   * 백엔드에 생기면 **이 옵션을 지웁니다.** 그래야 실제 서버로 갑니다.
+   *
+   * `VITE_USE_MOCK=false`(전부 실제)에서는 무시합니다. 배포 화면에 가짜 데이터가 조용히 섞이면 안 되기 때문입니다 —
+   * 그때는 404 가 그대로 보여야 무엇이 빠졌는지 압니다.
+   *
+   * 백엔드 PR 에는 있고 dev 에 머지만 안 된 API(로그인 · 리포트 분석 등록 등)에는 달지 않습니다. 로컬에서 그 PR 을
+   * 합쳐 띄우면 실제로 붙어야 하기 때문입니다.
+   */
+  missingInBackend?: string
 }
 
 const routes: MockRoute[] = []
@@ -112,22 +134,56 @@ const routes: MockRoute[] = []
  * 옛 레포의 fixtures 가 snake_case 라 그대로 옮기면 컨벤션(camelCase)과
  * 어긋나서, 백엔드 응답과 대조한 뒤에 옮기는 게 맞습니다.
  */
-export function registerMock(method: HttpMethod, path: string, handler: MockHandler) {
-  routes.push({ method, segments: toSegments(path), handler })
+export function registerMock(method: HttpMethod, path: string, handler: MockHandler, options: MockOptions = {}) {
+  routes.push({ method, segments: toSegments(path), handler, missingInBackend: options.missingInBackend })
 }
 
-export function findMock(method: HttpMethod, path: string) {
+function findRoute(method: HttpMethod, path: string) {
   const actual = toSegments(path)
-  const query = new URLSearchParams(queryOf(path))
 
   for (const route of routes) {
     if (route.method !== method) continue
 
     const params = match(route.segments, actual)
-    if (params) return (body?: unknown) => route.handler(params, body, query)
+    if (params) return { route, params }
   }
 
   return undefined
+}
+
+export function findMock(method: HttpMethod, path: string) {
+  const found = findRoute(method, path)
+  if (!found) return undefined
+
+  const query = new URLSearchParams(queryOf(path))
+  return (body?: unknown) => found.route.handler(found.params, body, query)
+}
+
+/** 한 번 알린 API 는 다시 알리지 않습니다. 화면마다 부르는 API 라 매번 찍으면 콘솔이 덮입니다 */
+const announcedMissing = new Set<MockRoute>()
+
+/**
+ * 도메인을 실제 서버로 보내는 중이어도 **목업이 답해야 하는 API** 인지 봅니다. (`MockOptions.missingInBackend`)
+ *
+ * 목업으로 돌릴 때는 콘솔에 한 번 남깁니다. 실제 연동을 확인하는 사람이 "이 화면은 진짜 서버 값" 이라고
+ * 착각하지 않게 하려는 것입니다.
+ */
+export function isMissingInBackend(method: HttpMethod, path: string): boolean {
+  if (!USE_MOCK) return false
+
+  const found = findRoute(method, path)
+  if (!found?.route.missingInBackend) return false
+
+  if (!announcedMissing.has(found.route)) {
+    announcedMissing.add(found.route)
+    console.info(
+      '[목업] %s %s 는 백엔드에 아직 없어서 목업이 답합니다 — %s',
+      method,
+      '/' + found.route.segments.join('/'),
+      found.route.missingInBackend,
+    )
+  }
+  return true
 }
 
 /**

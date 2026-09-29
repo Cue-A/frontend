@@ -1,6 +1,6 @@
 import { ApiError } from './apiError'
 import { assertBaseUrl, REST_BASE_URL } from './baseUrl'
-import { findMock, isRealApi, USING_PARTIAL_REAL } from './mock'
+import { findMock, isMissingInBackend, isRealApi, USING_PARTIAL_REAL } from './mock'
 import { clearTokens, getAccessToken, getRefreshToken, storeTokens } from './tokenStorage'
 import type { HttpMethod, Result } from './types'
 
@@ -50,7 +50,8 @@ async function parseResult<T>(response: Response): Promise<Result<T>> {
 async function requestRaw<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   // 도메인별로 갈립니다. VITE_REAL_APIS 에 든 것만 실제 서버로 가고
   // 나머지는 목업으로 갑니다. (mock.ts 의 isRealApi 주석 참고)
-  if (!isRealApi(path)) {
+  // 켠 도메인 안이라도 백엔드에 아직 없는 API 는 목업이 답합니다. (mock.ts 의 MockOptions 참고)
+  if (!isRealApi(path) || isMissingInBackend(method, path)) {
     const mock = findMock(method, path)
     if (!mock) {
       throw new ApiError('MOCK_NOT_FOUND', `등록된 목업 응답이 없습니다: ${method} ${path}`)
