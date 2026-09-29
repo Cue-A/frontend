@@ -97,7 +97,7 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
   | `progress` | `stage` (위 3종) |
   | `question` | `questionId` `questionType` `text` `audioUrl` `audioAvailable` `category` `difficulty` `questionNumber` `questionTotal` |
   | `error` | `errorCode` `message` `retryable` `needsRerecord` |
-  | `session-end` | 세션 종료 |
+  | `session_end` | 세션 종료 |
 
   `questionType` 은 `QUESTION` / `FOLLOWUP` / `REASK` 이고, **진행률은 `questionNumber`
   기준**입니다(되묻기에서는 올라가지 않습니다). `audioUrl` 이 null 이면 `audioAvailable`
