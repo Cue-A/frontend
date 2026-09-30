@@ -1,4 +1,4 @@
-import { IconCheck, IconPointFilled, IconX } from '@tabler/icons-react'
+import { IconBulb, IconCheck, IconPointFilled, IconShield, IconVolume, IconWifi, IconX } from '@tabler/icons-react'
 import { useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -15,6 +15,17 @@ import Card from '@/shared/ui/Card'
 import StepIndicator from './StepIndicator'
 
 const SUMMARY_ROW_LABELS = ['직무', '질문 수', '답변 시간', '면접관'] as const
+
+/**
+ * 환경 체크 4항목입니다. 이슈 #81 범위는 레이아웃뿐이라 실측 로직이 없고,
+ * 값 텍스트·상태 배지는 항상 placeholder 만 보여줍니다 (아래 렌더링부 참고).
+ */
+const ENV_CHECK_ITEMS = [
+  { key: 'lighting', label: '조명', Icon: IconBulb },
+  { key: 'noise', label: '주변 소음', Icon: IconVolume },
+  { key: 'network', label: '네트워크', Icon: IconWifi },
+  { key: 'permission', label: '브라우저 권한', Icon: IconShield },
+] as const
 
 type ReadyItemStatus = 'ready' | 'not-ready' | 'pending'
 
@@ -78,7 +89,20 @@ export default function DeviceCheckPage() {
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <StepIndicator current={2} />
+        <div className="flex flex-col gap-6">
+          <p className="text-body text-neutral-500">
+            모의면접<span className="font-semibold text-neutral-900"> / 장치 테스트</span>
+          </p>
+
+          {/* STEP 라벨과 Stepper 는 한 묶음이라 Figma 원본 간격(10px)을 그대로 유지한다. */}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-body-sm font-bold text-primary-500">STEP 2/4</span>
+              <span className="text-body-sm text-neutral-400">1분이면 끝나요</span>
+            </div>
+            <StepIndicator current={2} />
+          </div>
+        </div>
 
         <div className="flex flex-wrap items-start gap-6">
           {/*
@@ -167,6 +191,46 @@ export default function DeviceCheckPage() {
                     </Button>
                   </div>
                 )}
+
+                <div className="border-t border-neutral-200" />
+
+                <div className="flex flex-col gap-3">
+                  <p className="text-body-lg text-neutral-900">환경 체크</p>
+
+                  {/*
+                    TODO(design-token): design-system.md에 없는 값. 임시로 radius-md(14px)
+                    사용 중. 필요한 값: 환경 체크 행 모서리 12px (Figma 1375:1463, 문서엔
+                    radius-md(14px)/radius-lg(20px)만 있고 12px 없음).
+                  */}
+                  <ul className="flex flex-col gap-2">
+                    {ENV_CHECK_ITEMS.map(({ key, label, Icon }) => (
+                      <li key={key} className="flex items-center gap-3 rounded-md bg-surface-muted px-3.5 py-3">
+                        {/*
+                          TODO(design-token): design-system.md에 없는 값. 임시로
+                          radius-xs(6px) 사용 중. 필요한 값: 환경 체크 아이콘 칩 모서리
+                          8px (Figma 1375:1464, xs(6px)/sm(10px) 사이라 정확한 토큰 없음).
+                        */}
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-xs bg-neutral-200">
+                          <Icon size={16} stroke={2} className="text-neutral-500" aria-hidden />
+                        </span>
+
+                        <div className="flex flex-1 flex-col gap-0.5">
+                          <p className="text-body-sm font-semibold text-neutral-900">{label}</p>
+                          {/*
+                            TODO(env-check): 실측 로직 없음(이슈 #81은 레이아웃만). Figma에는
+                            dB·Mbps 같은 실제 측정값과 "양호/시끄러움" 판정이 있지만, 측정
+                            기능이 생기기 전까지는 "면접 요약" 패널의 연동 준비 중 패턴
+                            (DeviceCheckPage.tsx 의 SUMMARY_ROW_LABELS dd, text-neutral-300)과
+                            동일하게 placeholder 만 표시한다.
+                          */}
+                          <p className="text-body-sm text-neutral-300">측정 준비 중</p>
+                        </div>
+
+                        <Badge tone="neutral">확인 전</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </Card>
