@@ -18,11 +18,15 @@ type Props = {
  * AUTH-1 회원가입. 비밀번호 확인은 서버에 보내지 않고 화면에서만 검증합니다.
  * 가입에 성공하면 바로 로그인된 것으로 보고, 보호 라우트에서 튕겨 왔으면 그
  * 경로로, 아니면 랜딩으로 보냅니다 (`useLoginRedirect`).
+ *
+ * 닉네임은 백엔드 `SignupRequest.nickname` 이 필수(50자 이하)라 같이 받습니다 — 없으면
+ * 실제 서버에서 전부 거절됩니다. 응답의 `user.nickname` 도 이 값입니다. (PR #60 리뷰)
  */
 export default function SignupForm({ onSwitchToLogin }: Props) {
   const redirectAfterLogin = useLoginRedirect()
   const { isSubmitting, error, submit } = useAuthSubmit()
   const [email, setEmail] = useState('')
+  const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [mismatch, setMismatch] = useState(false)
@@ -36,7 +40,7 @@ export default function SignupForm({ onSwitchToLogin }: Props) {
     }
     setMismatch(false)
 
-    const result = await submit(() => signup({ email, password }))
+    const result = await submit(() => signup({ email, password, nickname }))
     if (!result) return
 
     storeTokens(result.accessToken, result.refreshToken)
@@ -53,6 +57,19 @@ export default function SignupForm({ onSwitchToLogin }: Props) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
+          className={FIELD_CLASS}
+        />
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="text-body-sm font-medium text-neutral-700">닉네임</span>
+        <input
+          type="text"
+          required
+          maxLength={50}
+          value={nickname}
+          onChange={(event) => setNickname(event.target.value)}
+          placeholder="면접에서 불릴 이름"
           className={FIELD_CLASS}
         />
       </label>

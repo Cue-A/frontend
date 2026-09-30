@@ -92,10 +92,30 @@ const AUTH_FAILURE_CODES = new Set(['INVALID_TOKEN', 'INVALID_REFRESH_TOKEN', 'R
  */
 let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null
 
+/**
+ * 재발급 실행을 탭 사이에서도 하나로 묶습니다.
+ *
+ * 위 `refreshPromise` 는 탭(JS 컨텍스트) 단위라, 두 탭이 거의 동시에 만료되면 각자 이
+ * 함수를 부릅니다. 잠금이 없으면 둘 다 아직 회전 전인 같은 refresh token 을 들고 거의
+ * 동시에 요청을 보내고, 늦게 도착한 쪽이 이미 회전된 값으로 판정되어 재사용 탐지에
+ * 걸려 전 기기가 로그아웃됩니다. (Cue-A/backend docs/03-auth.md "회전과 재사용 탐지",
+ * 이슈 #53, PR #60 리뷰)
+ *
+ * Web Locks API 로 실행 자체를 직렬화하면 이걸 피할 수 있습니다 — 잠금을 먼저 얻은 탭이
+ * 재발급을 끝내고 `storeTokens` 로 localStorage 를 갱신한 뒤에야 다음 탭의 콜백이
+ * 시작되므로, `getRefreshToken()` 을 그 안에서 다시 읽으면 이미 새 값입니다. 없는(구형)
+ * 브라우저에서는 잠금 없이 그대로 돕니다 — 탭 안 dedupe(`refreshPromise`)는 여전히
+ * 적용되고, 탭이 하나뿐이면 애초에 경쟁이 없습니다.
+ */
+function withRefreshLock<T>(run: () => Promise<T>): Promise<T> {
+  if (!('locks' in navigator)) return run()
+  return navigator.locks.request('cue-a:refresh', run)
+}
+
 function refreshTokens(): Promise<{ accessToken: string; refreshToken: string }> {
   if (refreshPromise) return refreshPromise
 
-  refreshPromise = (async () => {
+  refreshPromise = withRefreshLock(async () => {
     const currentRefreshToken = getRefreshToken()
     if (!currentRefreshToken) {
       throw new ApiError('INVALID_REFRESH_TOKEN', '재발급 토큰이 없습니다')
@@ -108,7 +128,7 @@ function refreshTokens(): Promise<{ accessToken: string; refreshToken: string }>
     })
     storeTokens(response.accessToken, response.refreshToken)
     return response
-  })()
+  })
 
   // 끝나면(성공하든 실패하든) 다음 401 이 새 재발급을 시작할 수 있게 비웁니다.
   return refreshPromise.finally(() => {

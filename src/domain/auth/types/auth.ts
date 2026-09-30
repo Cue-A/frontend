@@ -7,6 +7,8 @@ export type LoginRequest = {
 export type SignupRequest = {
   email: string
   password: string
+  /** 필수, 50자 이하 (Cue-A/backend `SignupRequest`) */
+  nickname: string
 }
 
 /** 로그인 수단. 계정 연동을 지원해서 배열로 옵니다 (Cue-A/backend docs/03-auth.md). */
