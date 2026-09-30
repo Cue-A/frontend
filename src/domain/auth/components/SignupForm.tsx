@@ -1,12 +1,11 @@
 import { type FormEvent, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
-import { ROUTES } from '@/app/routes'
 import { storeTokens } from '@/shared/api/tokenStorage'
 import Button from '@/shared/ui/Button'
 
 import { signup } from '../api/authApi'
 import { useAuthSubmit } from '../hooks/useAuthSubmit'
+import { useLoginRedirect } from '../hooks/useLoginRedirect'
 
 const FIELD_CLASS =
   'rounded-sm border border-neutral-300 px-4 py-3 text-body-md text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-500'
@@ -17,10 +16,11 @@ type Props = {
 
 /**
  * AUTH-1 회원가입. 비밀번호 확인은 서버에 보내지 않고 화면에서만 검증합니다.
- * 가입에 성공하면 바로 로그인된 것으로 보고 랜딩으로 보냅니다.
+ * 가입에 성공하면 바로 로그인된 것으로 보고, 보호 라우트에서 튕겨 왔으면 그
+ * 경로로, 아니면 랜딩으로 보냅니다 (`useLoginRedirect`).
  */
 export default function SignupForm({ onSwitchToLogin }: Props) {
-  const navigate = useNavigate()
+  const redirectAfterLogin = useLoginRedirect()
   const { isSubmitting, error, submit } = useAuthSubmit()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -40,7 +40,7 @@ export default function SignupForm({ onSwitchToLogin }: Props) {
     if (!result) return
 
     storeTokens(result.accessToken, result.refreshToken)
-    navigate(ROUTES.LANDING)
+    redirectAfterLogin()
   }
 
   return (

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 
-import { ROUTES } from '@/app/routes'
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 import { storeTokens } from '@/shared/api/tokenStorage'
 
 import { loginWithKakao } from '../api/authApi'
+import { useLoginRedirect } from './useLoginRedirect'
 
 type Status = 'loading' | 'error'
 
@@ -39,7 +39,7 @@ type UseKakaoCallbackResult = {
  */
 export function useKakaoCallback(): UseKakaoCallbackResult {
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
+  const redirectAfterLogin = useLoginRedirect()
   const [asyncResult, setAsyncResult] = useState<UseKakaoCallbackResult>({
     status: 'loading',
     message: null,
@@ -58,14 +58,14 @@ export function useKakaoCallback(): UseKakaoCallbackResult {
     loginWithKakao(code)
       .then((result) => {
         storeTokens(result.accessToken, result.refreshToken)
-        navigate(ROUTES.LANDING, { replace: true })
+        redirectAfterLogin()
       })
       .catch((cause: unknown) => {
         const userMessage =
           cause instanceof ApiError ? toUserMessage(cause.code) : '잠시 후 다시 시도해 주세요.'
         setAsyncResult({ status: 'error', message: userMessage })
       })
-  }, [code, kakaoError, navigate])
+  }, [code, kakaoError, redirectAfterLogin])
 
   // 카카오 동의 화면에서 취소하면 code 대신 error 가 붙어 돌아옵니다.
   if (kakaoError) {
