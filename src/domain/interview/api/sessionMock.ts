@@ -73,3 +73,11 @@ registerMock('GET', '/api/interviews/:sessionId', () => ({
 registerMock('POST', '/api/interviews/:sessionId/answers', ({ sessionId }) => {
   advanceMockSession(sessionId)
 })
+
+/**
+ * 면접 중도 이탈 목업입니다. 성공만 흉내낸다 — 실패 경로 확인은 수동으로 이 핸들러를
+ * 잠깐 throw 하도록 바꿔서 검증한다. 백엔드엔 실제 엔드포인트가 있지만(Cue-A/backend#25,
+ * PR#43) `interviews` 도메인 전체가 아직 mock 이라 이 목업이 계속 쓰인다 —
+ * sessionApi.abortSession 주석 참고.
+ */
+registerMock('POST', '/api/interviews/:sessionId/abort', () => {})
