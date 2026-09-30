@@ -320,4 +320,6 @@ registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
   }
 
   return { ...SAMPLE_REPORT, reportId }
+}, {
+  missingInBackend: '리포트 조회 API 없음 (명세서 v0.2 `/v1/reports/{reportId}` 시작 전)',
 })
