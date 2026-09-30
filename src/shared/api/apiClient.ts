@@ -92,6 +92,8 @@ const AUTH_FAILURE_CODES = new Set(['INVALID_TOKEN', 'INVALID_REFRESH_TOKEN', 'R
  */
 let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null
 
+const REFRESH_LOCK = 'cue-a:refresh'
+
 /**
  * 재발급 실행을 탭 사이에서도 하나로 묶습니다.
  *
@@ -101,15 +103,53 @@ let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | nul
  * 걸려 전 기기가 로그아웃됩니다. (Cue-A/backend docs/03-auth.md "회전과 재사용 탐지",
  * 이슈 #53, PR #60 리뷰)
  *
- * Web Locks API 로 실행 자체를 직렬화하면 이걸 피할 수 있습니다 — 잠금을 먼저 얻은 탭이
- * 재발급을 끝내고 `storeTokens` 로 localStorage 를 갱신한 뒤에야 다음 탭의 콜백이
- * 시작되므로, `getRefreshToken()` 을 그 안에서 다시 읽으면 이미 새 값입니다. 없는(구형)
- * 브라우저에서는 잠금 없이 그대로 돕니다 — 탭 안 dedupe(`refreshPromise`)는 여전히
- * 적용되고, 탭이 하나뿐이면 애초에 경쟁이 없습니다.
+ * **단순히 잠금만 걸면 부족합니다 (PR #80 리뷰).** 크롬은 탭(렌더러)마다 localStorage
+ * 사본을 두고 다른 탭의 쓰기를 비동기로 전달합니다. 앞 탭이 `storeTokens` 후 잠금을
+ * 풀어도, 뒤 탭이 잠금을 받는 시점에 `getRefreshToken()` 이 아직 옛 값을 돌려줄 수
+ * 있습니다(약 20% 확률로 재현됨) — 그러면 뒤 탭도 같은 옛 토큰으로 재발급을 시도해
+ * 재사용 탐지에 걸립니다.
+ *
+ * 그래서 잠금을 두 단계로 나눕니다.
+ * 1. `ifAvailable: true` 로 먼저 시도합니다. 비어 있으면(= 이 탭이 첫 재발급) 바로 돕니다.
+ * 2. 다른 탭이 이미 쓰고 있었다면(= 기다려야 했다면), 이 탭이 기다리기 직전에 봤던
+ *    refresh token(`before`)이 실제로 바뀔 때까지(`storage` 이벤트) 잠깐 더 기다린
+ *    뒤에야 돕니다. 값이 그대로여도 1초 뒤에는 진행합니다(앞 탭이 실패한 경우 등).
+ *
+ * 없는(구형) 브라우저에서는 잠금 없이 그대로 돕니다 — 탭 안 dedupe(`refreshPromise`)는
+ * 여전히 적용되고, 탭이 하나뿐이면 애초에 경쟁이 없습니다.
  */
-function withRefreshLock<T>(run: () => Promise<T>): Promise<T> {
+async function withRefreshLock<T>(run: () => Promise<T>): Promise<T> {
   if (!('locks' in navigator)) return run()
-  return navigator.locks.request('cue-a:refresh', run)
+
+  const before = getRefreshToken()
+
+  const first = await navigator.locks.request(REFRESH_LOCK, { ifAvailable: true }, async (lock) =>
+    lock ? { value: await run() } : null,
+  )
+  if (first) return first.value
+
+  return navigator.locks.request(REFRESH_LOCK, async () => {
+    await waitForRefreshTokenChange(before, 1000)
+    return run()
+  })
+}
+
+/** `before` 와 다른 refresh token 이 보이거나 `timeoutMs` 가 지나면 풀립니다. */
+function waitForRefreshTokenChange(before: string | null, timeoutMs: number): Promise<void> {
+  if (getRefreshToken() !== before) return Promise.resolve()
+
+  return new Promise((resolve) => {
+    const done = () => {
+      window.removeEventListener('storage', onStorage)
+      window.clearTimeout(timer)
+      resolve()
+    }
+    const onStorage = () => {
+      if (getRefreshToken() !== before) done()
+    }
+    const timer = window.setTimeout(done, timeoutMs)
+    window.addEventListener('storage', onStorage)
+  })
 }
 
 function refreshTokens(): Promise<{ accessToken: string; refreshToken: string }> {

@@ -21,6 +21,9 @@ type Props = {
  *
  * 닉네임은 백엔드 `SignupRequest.nickname` 이 필수(50자 이하)라 같이 받습니다 — 없으면
  * 실제 서버에서 전부 거절됩니다. 응답의 `user.nickname` 도 이 값입니다. (PR #60 리뷰)
+ *
+ * 보낼 때 앞뒤 공백을 지웁니다 — `required` 는 공백만 넣어도 통과하는데, 백엔드는 trim
+ * 하지 않고 `@NotBlank` 로만 봐서 공백뿐인 값도 그대로 저장됩니다. (PR #80 리뷰)
  */
 export default function SignupForm({ onSwitchToLogin }: Props) {
   const redirectAfterLogin = useLoginRedirect()
@@ -40,7 +43,7 @@ export default function SignupForm({ onSwitchToLogin }: Props) {
     }
     setMismatch(false)
 
-    const result = await submit(() => signup({ email, password, nickname }))
+    const result = await submit(() => signup({ email, password, nickname: nickname.trim() }))
     if (!result) return
 
     storeTokens(result.accessToken, result.refreshToken)
@@ -67,9 +70,10 @@ export default function SignupForm({ onSwitchToLogin }: Props) {
           type="text"
           required
           maxLength={50}
+          autoComplete="nickname"
           value={nickname}
           onChange={(event) => setNickname(event.target.value)}
-          placeholder="면접에서 불릴 이름"
+          placeholder="화면에 표시될 이름"
           className={FIELD_CLASS}
         />
       </label>
