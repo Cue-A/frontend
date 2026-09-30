@@ -1,6 +1,6 @@
 import { ApiError } from './apiError'
 import { assertBaseUrl, REST_BASE_URL } from './baseUrl'
-import { findMock, isMissingInBackend, isRealApi, USING_PARTIAL_REAL } from './mock'
+import { mockFor, USING_PARTIAL_REAL } from './mock'
 import { clearTokens, getAccessToken, getRefreshToken, storeTokens } from './tokenStorage'
 import type { HttpMethod, Result } from './types'
 
@@ -48,16 +48,10 @@ async function parseResult<T>(response: Response): Promise<Result<T>> {
  * 다시 타지 않게 합니다 (그러지 않으면 재발급 실패가 또 재발급을 부릅니다).
  */
 async function requestRaw<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
-  // 도메인별로 갈립니다. VITE_REAL_APIS 에 든 것만 실제 서버로 가고
-  // 나머지는 목업으로 갑니다. (mock.ts 의 isRealApi 주석 참고)
-  // 켠 도메인 안이라도 백엔드에 아직 없는 API 는 목업이 답합니다. (mock.ts 의 MockOptions 참고)
-  if (!isRealApi(path) || isMissingInBackend(method, path)) {
-    const mock = findMock(method, path)
-    if (!mock) {
-      throw new ApiError('MOCK_NOT_FOUND', `등록된 목업 응답이 없습니다: ${method} ${path}`)
-    }
-    return mock(body) as T
-  }
+  // 도메인별로 갈립니다. VITE_REAL_APIS 에 든 것만 실제 서버로 가고 나머지는 목업으로 갑니다.
+  // 켠 도메인 안이라도 백엔드에 아직 없는 API 는 목업이 답합니다. (mock.ts 의 mockFor 주석 참고)
+  const mock = mockFor(method, path)
+  if (mock) return mock(body) as T
 
   // 주소가 비어 있으면 요청이 개발 서버로 나가서 index.html 을 받아옵니다.
   // 그러면 JSON 파싱이 깨지면서 HTTP_200 같은 엉뚱한 에러가 납니다.
