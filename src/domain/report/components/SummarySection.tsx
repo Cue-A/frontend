@@ -39,8 +39,12 @@ export default function SummarySection({ summary, subtitle }: Props) {
           </p>
         )}
 
+        {/*
+          카드 사이 간격은 아래 잘한 점 / 아쉬운 점과 같은 gap-3 입니다. 간격 없이 붙이면 둥근 모서리끼리
+          맞닿은 자리가 파여서 카드가 겹친 것처럼 보입니다. (#28 에서 테두리 칸을 둥근 카드로 바꾸며 생긴 것)
+        */}
         {summary.overview.length > 0 && (
-          <dl className="flex flex-wrap">
+          <dl className="flex flex-wrap gap-3">
             {summary.overview.map((fact) => (
               <div key={fact.key} className="min-w-40 flex-1 rounded-sm bg-neutral-50 p-4">
                 <dt className="text-body-sm text-neutral-500">{fact.label}</dt>
