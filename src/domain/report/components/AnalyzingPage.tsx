@@ -52,10 +52,9 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
  * 스피너만 두면 얼마나 더 기다려야 하는지 알 수 없어서 사람들이 새로고침합니다.
  *
  * 사이드바가 없어서 분석 중에 다른 화면으로 나갈 길도 같이 없었다 — 왼쪽 위
- * "처음 화면으로"가 그 자리다(#26). PR #65 리뷰에서 아이콘 레일 이름("홈")에 맞춰
- * "홈으로"로 바꾸자는 제안이 있었지만, ReportActions.tsx(이슈 #20)가 같은 랜딩
- * 이동에 "홈 대시보드가 생기기 전까진 '홈'이라 부르지 않는다"로 이미 정해둔 것과
- * 충돌해 반영하지 않았다.
+ * "홈으로"가 그 자리다(#26). 홈 대시보드(A-04)가 생기기 전에는 "처음 화면으로"라는
+ * 이름으로 랜딩에 보냈다 — ReportActions.tsx(이슈 #20)가 "홈이 생기기 전까진 '홈'이라
+ * 부르지 않는다"로 정해둬서 PR #65 리뷰의 "홈으로" 제안을 미뤘던 것을 이제 반영했다.
  *
  * 분석은 백엔드에서 돈다(Cue-A/backend#50). 이 화면은 들어오면 분석을 맡기고 소켓으로 단계를 받아
  * 끝나면 리포트로 넘어간다 (useAnalysisProgress). 실패하면 화면을 바꾸지 않고 제목과 팁 자리만 바꾼다.
@@ -78,8 +77,8 @@ export default function AnalyzingPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center gap-6 bg-neutral-50 p-6 text-center">
       <div className="absolute left-6 top-6">
-        <Button variant="ghost" size="sm" to={ROUTES.LANDING}>
-          처음 화면으로
+        <Button variant="ghost" size="sm" to={ROUTES.HOME}>
+          홈으로
         </Button>
       </div>
 
