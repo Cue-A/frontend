@@ -45,7 +45,7 @@ const ERROR_MESSAGE: Record<string, string> = {
   EMAIL_ALREADY_EXISTS: '이미 가입된 이메일이에요.',
   // 회원가입 비밀번호 규칙 — 영문 · 숫자를 하나 이상씩 넣어 8~64자 (Cue-A/backend#34 `AuthService`).
   // 빠져 있으면 공통 문구("잠시 후 다시 시도해 주세요")로 떨어져서, 다시 눌러도 계속 실패하는데 이유를 알 수 없습니다.
-  INVALID_PASSWORD_FORMAT: '비밀번호는 영문과 숫자를 모두 넣어 8자 이상으로 만들어 주세요.',
+  INVALID_PASSWORD_FORMAT: '비밀번호는 영문과 숫자를 모두 넣어 8~64자로 만들어 주세요.',
   // AUTH-2 카카오. code 교환이 실패했을 때 백엔드가 내려주는 코드입니다 (이슈 #53).
   OAUTH_FAILED: '카카오 로그인에 실패했어요. 다시 시도해 주세요.',
 
