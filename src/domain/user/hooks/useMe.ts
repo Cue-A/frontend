@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { ApiError } from '@/shared/api/apiError'
+import type { TopBarProfile } from '@/shared/ui/TopBarActions'
 
 import { getMe } from '../api/userApi'
 import type { Me } from '../types/user'
@@ -39,4 +40,10 @@ export function useMe(): UseMeResult {
   }, [])
 
   return state
+}
+
+/** 상단 알림 · 프로필 묶음(`shared/ui/TopBarActions`)에 넘길 모양으로 바꿉니다. */
+export function toTopBarProfile(me: UseMeResult): TopBarProfile {
+  if (me.status === 'ready') return { status: 'ready', nickname: me.me.nickname, email: me.me.email }
+  return { status: me.status }
 }
