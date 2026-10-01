@@ -1,11 +1,29 @@
+import { IconCircleCheck } from '@tabler/icons-react'
+
 import Card from '@/shared/ui/Card'
 
+import type { AxisRetry } from '../hooks/useAxisRetry'
 import type { ScoreMetric, SubMetric } from '../types/report'
+
+import FailedMetricRow from './FailedMetricRow'
 
 type Props = {
   metrics: ScoreMetric[]
   subMetrics: SubMetric[]
   comment: string | null
+  /** 실패한 축을 다시 분석하는 상태와 동작 (`useAxisRetry`) */
+  retry: AxisRetry
+}
+
+/** 다시 분석해서 점수를 받은 축 이름들. 방금 살아난 줄을 알려주는 데 씁니다 */
+function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
+  const recoveredAxes = Object.entries(retry.outcomes)
+    .filter(([, outcome]) => outcome?.kind === 'recovered')
+    .map(([axis]) => axis)
+
+  return metrics
+    .filter((metric) => metric.status === 'ok' && recoveredAxes.includes(metric.key))
+    .map((metric) => metric.label)
 }
 
 /**
@@ -29,10 +47,16 @@ type Props = {
  * 남습니다. 그건 계약 위반이라 0점으로 그리지 않고 문구로 드러냅니다.
  * (PR #50 리뷰)
  *
+ * **분석이 실패한 축**(`retryAxis` 가 있는 줄)은 `FailedMetricRow` 로 그립니다. 사유와 "다시 분석" 버튼이
+ * 그 줄에 같이 있습니다. 다시 분석해서 점수를 받으면 리포트가 통째로 새 값으로 바뀌고,
+ * 무엇이 바뀌었는지 절 머리에 한 줄로 알려줍니다 — 총점도 같이 바뀌어서, 말없이 숫자만 바뀌면 왜 바뀌었는지 모릅니다.
+ *
  * 막대 너비는 계산값이라 인라인 style 을 씁니다.
  * (docs/01-conventions.md "스타일" 절)
  */
-export default function ScoreSection({ metrics, subMetrics, comment }: Props) {
+export default function ScoreSection({ metrics, subMetrics, comment, retry }: Props) {
+  const recovered = recoveredLabels(metrics, retry)
+
   return (
     <Card label="세부 점수" padding="lg">
       <div className="flex flex-col gap-6">
@@ -41,8 +65,28 @@ export default function ScoreSection({ metrics, subMetrics, comment }: Props) {
           {comment && <p className="text-body-md text-neutral-500">{comment}</p>}
         </div>
 
+        {recovered.length > 0 && (
+          <p role="status" className="flex items-center gap-2 text-body-md text-semantic-success">
+            <IconCircleCheck size={18} aria-hidden className="shrink-0" />
+            {recovered.join(' · ')} 점수를 다시 받았어요. 총점도 새로 계산했어요.
+          </p>
+        )}
+
         <ul className="flex flex-col gap-3">
           {metrics.map((metric) => {
+            if (metric.retryAxis) {
+              return (
+                <FailedMetricRow
+                  key={metric.key}
+                  metric={metric}
+                  axis={metric.retryAxis}
+                  running={retry.running}
+                  outcome={retry.outcomes[metric.retryAxis]}
+                  onRetry={retry.retry}
+                />
+              )
+            }
+
             // 막대를 그릴 수 있는 줄인지 한 번만 판정합니다.
             // `status` 가 `'ok'` 인데 `score` 가 비는 응답도 타입으로는 막히지 않아서
             // 둘 다 봅니다. 그 경우는 계약 위반이라 조용히 0점으로 그리지 않습니다.

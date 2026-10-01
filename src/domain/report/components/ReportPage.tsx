@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import { useAxisRetry } from '../hooks/useAxisRetry'
 import { useReport } from '../hooks/useReport'
 import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
 
 import AnswerVideoSection from './AnswerVideoSection'
+import CompanyCommentSection from './CompanyCommentSection'
 import ImprovedAnswerSection from './ImprovedAnswerSection'
 import ReportActions from './ReportActions'
 import ReportDocActions from './ReportDocActions'
@@ -19,8 +21,10 @@ import TimelineSection from './TimelineSection'
  *
  * 시안 순서대로 위에서 아래로 한 줄로 쌓습니다.
  * 유틸리티(인쇄 · 공유) → 제목 · 종합 점수 → 리포트 옵션 → 안내 →
- * 이번 면접 요약 → 세부 점수 → 답변 영상 → XAI 타임라인 → 개선 답변 예시
+ * 이번 면접 요약 → (인재상 코멘트) → 세부 점수 → 답변 영상 → XAI 타임라인 → 개선 답변 예시
  * → 다음 단계
+ *
+ * 인재상 코멘트는 기업을 고른 면접에서만 나옵니다. 시안에 없던 자리라 요약 바로 아래에 붙였습니다.
  *
  * 사이드바 없이 혼자 그립니다. 시안에 사이드바가 없고 자체 상단바를 쓰기 때문에
  * AppLayout 밖에 두었습니다. (router.tsx)
@@ -30,7 +34,8 @@ import TimelineSection from './TimelineSection'
  */
 export default function ReportPage() {
   const { reportId } = useParams()
-  const { data, isLoading, error } = useReport(reportId)
+  const { data, isLoading, error, reload } = useReport(reportId)
+  const retry = useAxisRetry(reportId, reload)
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
 
   if (isLoading) {
@@ -65,7 +70,8 @@ export default function ReportPage() {
     점수가 빈 리포트를 그리는 길은 아예 없습니다.
 
     분석이 도는 동안 진행률을 보여주는 건 분석 중 화면(B-02)이 맡습니다.
-    분석 등록과 진행 소켓은 Cue-A/backend#50 에 맞춰 붙였고, 이 화면의 조회 API 만 아직 없습니다.
+    분석 등록과 진행 소켓은 Cue-A/backend#50 에 맞춰 붙였고, 이 화면의 조회 API 와 실패한 축만 다시
+    분석하는 API(`reportRetryApi.ts`)가 아직 없습니다. 둘 다 목업이 답합니다.
   */
 
   const metrics = options.showGaze
@@ -133,10 +139,15 @@ export default function ReportPage() {
           subtitle={`${data.jobRole} · ${data.interviewDate}`}
         />
 
+        {data.companyComment && (
+          <CompanyCommentSection comment={data.companyComment} companyName={data.companyName} />
+        )}
+
         <ScoreSection
           metrics={metrics}
           subMetrics={data.subMetrics}
           comment={data.metricsComment}
+          retry={retry}
         />
 
         {data.video && <AnswerVideoSection video={data.video} />}

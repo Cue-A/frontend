@@ -17,6 +17,15 @@
 export type MetricStatus = 'ok' | 'failed' | 'skipped'
 
 /**
+ * 실패했을 때 **그 축만** 다시 분석할 수 있는 축입니다.
+ *
+ * 내용은 여기 없습니다. 내용 분석이 실패하면 리포트가 아예 만들어지지 않아서(`CONTENT_FAILED`),
+ * 리포트 화면에 실패한 내용 축이 나올 일이 없습니다. 그 경우는 분석 등록부터 다시 갑니다.
+ * (AI 계약 14장 "FAILED(내용 실패)는 생성 재요청으로 복구")
+ */
+export type RetryAxis = 'speech' | 'gaze'
+
+/**
  * 점수의 근거가 된 답변 구간입니다.
  *
  * 재생 위치로 점프하는 기능은 아직 없지만 값은 처음부터 옵니다.
@@ -54,6 +63,12 @@ export type ScoreMetric = {
   display: number | null
   /** `status` 가 `'ok'` 가 아닐 때 막대 대신 보여줄 문구. 예) '카메라를 사용하지 않았습니다' */
   unavailableLabel: string | null
+  /**
+   * 분석이 실패해서 **다시 분석할 수 있으면** 그 축 이름, 아니면 null 입니다.
+   *
+   * 미사용(`skipped`)은 null 입니다. 카메라를 안 켠 회차에 시선을 다시 돌려도 결과가 같습니다.
+   */
+  retryAxis: RetryAxis | null
   evidence: Evidence[]
 }
 
@@ -77,7 +92,13 @@ export type TurnFlow = {
   turnId: number
   /** 'Q1 자기소개' 처럼 번호까지 포함한 제목 */
   title: string
-  comment: string
+  /**
+   * 이 문항의 한 줄 코멘트입니다. AI 가 만들어 보냅니다(`questions[].comment`).
+   *
+   * **생성에 실패하면 null 입니다.** 점수 · 상태 같은 다른 값은 그대로 옵니다. 화면은 줄을 비워둡니다 —
+   * "코멘트를 만들지 못했어요" 를 문항마다 적으면 실패가 리포트의 주인공처럼 보입니다.
+   */
+  comment: string | null
   /** '안정' · '보통' · '흔들림' */
   status: string
   /** 영상 기준 시작 초. XAI 타임라인의 마커 위치로도 씁니다 */
@@ -148,8 +169,12 @@ export type ImprovedAnswer = {
 }
 
 export type ReportSummary = {
-  /** 한 줄 총평 */
-  verdict: string
+  /**
+   * 한 줄 총평입니다. AI 가 만들어 보냅니다(`summary`).
+   *
+   * **생성에 실패하면 null 입니다.** 나머지 요약(개요 · 흐름 · 잘한 점)은 그대로 오므로 총평 칸만 그리지 않습니다.
+   */
+  verdict: string | null
   overview: OverviewFact[]
   turns: TurnFlow[]
   strengths: Highlight[]
@@ -206,6 +231,15 @@ export type Report = {
   notices: string[]
 
   summary: ReportSummary
+
+  /**
+   * 기업 인재상에 비춰 본 코멘트입니다. AI 가 1~2문장으로 만들어 보냅니다(`company_comment`).
+   *
+   * **기업을 고른 면접에서만** 옵니다. 기업을 안 골랐거나 생성에 실패하면 null 이고, 그때는 자리를
+   * 만들지 않습니다. 어느 쪽이든 사용자가 따로 할 일이 없어서 빈 칸으로 남길 이유가 없습니다.
+   */
+  companyComment: string | null
+
   metrics: ScoreMetric[]
   subMetrics: SubMetric[]
   /** 세부 점수 소제목. 예) '2회차 대비 내용 구성이 가장 크게 좋아졌어요' */
