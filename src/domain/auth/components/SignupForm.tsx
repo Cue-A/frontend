@@ -22,8 +22,9 @@ type Props = {
  * 닉네임은 백엔드 `SignupRequest.nickname` 이 필수(50자 이하)라 같이 받습니다 — 없으면
  * 실제 서버에서 전부 거절됩니다. 응답의 `user.nickname` 도 이 값입니다. (PR #60 리뷰)
  *
- * 보낼 때 앞뒤 공백을 지웁니다 — `required` 는 공백만 넣어도 통과하는데, 백엔드는 trim
- * 하지 않고 `@NotBlank` 로만 봐서 공백뿐인 값도 그대로 저장됩니다. (PR #80 리뷰)
+ * 보낼 때 앞뒤 공백을 지웁니다 — `required` 는 공백만 넣어도 통과하는데, 백엔드는 trim 하지
+ * 않습니다. 공백뿐인 값은 `@NotBlank` 가 400 으로 거절하지만, 앞뒤에 공백이 붙은 값("
+ * 김보민 " 등)은 그대로 저장됩니다. (PR #80 리뷰)
  */
 export default function SignupForm({ onSwitchToLogin }: Props) {
   const redirectAfterLogin = useLoginRedirect()
