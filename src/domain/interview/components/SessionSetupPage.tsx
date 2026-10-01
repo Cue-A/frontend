@@ -136,7 +136,7 @@ export default function SessionSetupPage() {
 
           <div className="flex flex-wrap gap-6">
             {/* 이름 옆 ? 버튼이 label 안에 있으면 누를 때 셀렉트가 같이 반응할 수 있어서 label 을 이름에만 씌웁니다 */}
-            <div className="flex min-w-52 flex-1 flex-col gap-2">
+            <div className="flex min-w-52 flex-1 flex-col gap-3">
               <span className={FIELD_LABEL_CLASS}>
                 <label htmlFor={answerSecondsId}>시간</label>
                 <FieldHelp topic="시간">
@@ -163,7 +163,7 @@ export default function SessionSetupPage() {
               </select>
             </div>
 
-            <div className="flex min-w-52 flex-1 flex-col gap-2">
+            <div className="flex min-w-52 flex-1 flex-col gap-3">
               <span className={FIELD_LABEL_CLASS}>
                 <label htmlFor={questionCountId}>질문수</label>
                 <FieldHelp topic="질문수">

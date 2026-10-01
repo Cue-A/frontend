@@ -12,7 +12,7 @@ type Props<T extends string> = {
 }
 
 /**
- * 값 하나를 고르는 칩 묶음입니다. 직무 · 면접관 스타일 · 진행 방식이 같은 모양이라
+ * 값 하나를 고르는 칩 묶음입니다. 면접관 스타일 · 진행 방식이 같은 모양이라
  * 하나로 씁니다. (A-05)
  *
  * 라디오 버튼으로 만들었습니다. 보기엔 칩이지만 하는 일은 "여럿 중 하나 고르기"라,
@@ -29,8 +29,10 @@ export default function ChipGroup<T extends string>({
   onChange,
 }: Props<T>) {
   return (
-    <fieldset className="flex flex-col gap-3">
-      <legend className="flex items-center gap-2 text-body-lg text-neutral-900">
+    // legend 는 fieldset 의 flex gap 을 받지 않습니다. 그래서 이름과 칩 사이 간격은 legend 의 mb-3 으로 줍니다
+    // (다른 항목의 이름 → 칸 간격 gap-3 과 같은 12px)
+    <fieldset>
+      <legend className="mb-3 flex items-center gap-2 text-body-lg text-neutral-900">
         {label}
         {required && <Badge tone="danger">필수</Badge>}
       </legend>
