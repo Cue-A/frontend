@@ -11,6 +11,8 @@
  * 붙기 전까지 로컬·배포 동작이 갈립니다. 나중에 쿠키로 바꿔도 응답 모양은 그대로라
  * 프론트 수정 범위는 이 파일 하나입니다. (Cue-A/backend docs/03-auth.md)
  */
+import { clearDrafts } from '../lib/draftStorage'
+
 let accessToken: string | null = null
 
 const REFRESH_TOKEN_KEY = 'cue-a:refreshToken'
@@ -41,8 +43,14 @@ export function storeTokens(newAccessToken: string, newRefreshToken: string) {
   setRefreshToken(newRefreshToken)
 }
 
-/** 로그아웃하거나 재발급이 끝내 실패했을 때 씁니다. */
+/**
+ * 로그아웃하거나 재발급이 끝내 실패했을 때 씁니다.
+ *
+ * 이 탭에 임시로 남겨 둔 값(옵션 설정 등 — `shared/lib/draftStorage`)도 같이 지웁니다. 같은 탭에서 다른 계정으로
+ * 들어왔을 때 앞 사람이 고른 문서 같은 값이 남으면 안 됩니다.
+ */
 export function clearTokens() {
   setAccessToken(null)
   setRefreshToken(null)
+  clearDrafts()
 }

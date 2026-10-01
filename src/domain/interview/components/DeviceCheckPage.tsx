@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ROUTES, toInterview } from '@/app/routes'
 
 import { useDeviceCheck } from '../hooks/useDeviceCheck'
+import { clearSavedSessionSetup } from '../hooks/useSessionSetup'
 import { canStartInterview } from '../lib/canStartInterview'
 import type { DeviceCheckState, DeviceFailureReason } from '../types/deviceCheck'
 
@@ -72,6 +73,8 @@ export default function DeviceCheckPage() {
     // 이 화면의 점검 결과(INT-4)를 면접 진행 화면의 시작 값으로 넘긴다 — 스트림 자체는
     // (여기서 만든 스트림은 라우트를 벗어나며 정리돼서) 재사용 못 하고 그쪽에서 새로
     // 받지만, "이미 점검했다" 는 정보는 넘겨서 'unchecked' 로 잠깐 깜빡이지 않게 한다.
+    // 옵션 설정에서 고른 값은 "← 옵션" 으로 돌아갈 때를 위해 남겨 뒀는데, 면접을 시작하면 쓸 일이 끝나서 지운다.
+    clearSavedSessionSetup()
     navigate(toInterview(sessionId), { state: { initialDeviceStatus: { camera, mic } } })
   }
 
@@ -253,9 +256,9 @@ export default function DeviceCheckPage() {
             {!canStart && <p className="text-body-sm text-neutral-400">마이크가 있어야 시작할 수 있어요</p>}
 
             {/*
-              "← 옵션"은 옵션설정 값을 복원해서 돌아가는 경로가 아직 없어(useSessionSetup
-              은 SessionSetupPage 로컬 state), 눌러도 항상 빈 옵션설정 화면으로 간다.
-              기존 값 복원이 필요해지면 별도 상태/라우팅 설계가 필요하다.
+              "← 옵션"으로 돌아가면 옵션 설정에서 고른 값이 그대로 채워져 있다. useSessionSetup 이
+              고른 값을 이 탭(sessionStorage)에 남겨 두기 때문이다. 다시 "장치 테스트하러 가기" 를 누르면
+              세션이 새로 만들어진다 — 지금 세션은 쓰이지 않은 채 남는다.
             */}
             <div className="flex items-center gap-3">
               <Button to={ROUTES.SESSION_SETUP} size="lg">

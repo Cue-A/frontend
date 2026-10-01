@@ -12,15 +12,12 @@ export type Choice<T extends string = string> = {
   label: string
 }
 
-export type JobRole = 'FRONTEND' | 'BACKEND' | 'DATA' | 'PM' | 'DESIGNER'
-
-export const JOB_ROLES: Choice<JobRole>[] = [
-  { value: 'FRONTEND', label: '프론트엔드 개발자' },
-  { value: 'BACKEND', label: '백엔드 개발자' },
-  { value: 'DATA', label: '데이터 분석가' },
-  { value: 'PM', label: '기획/PM' },
-  { value: 'DESIGNER', label: '디자이너' },
-]
+/**
+ * 직무는 **사용자가 직접 적습니다.** 전에는 다섯 개(프론트엔드 · 백엔드 · 데이터 분석가 · 기획/PM · 디자이너) 중에
+ * 고르는 칩이었는데, 목록에 없는 직무로는 연습할 수 없었습니다. 서버도 정해진 값이 아니라 자유 문자열을 받아서
+ * AI 에 그대로 넘깁니다 (Cue-A/backend `InterviewStartRequest.jobRole` — `@NotBlank`, 100자).
+ */
+export const MAX_JOB_ROLE_LENGTH = 100
 
 /**
  * 면접관 스타일. 기능명세서 INT-2 에 **친절형 · 압박형 2종**으로 정해져 있습니다.
@@ -66,12 +63,23 @@ export const ANSWER_SECONDS_CHOICES: Choice<string>[] = [
  *
  * 전에는 5 / 7 / 9 였습니다. 시안에 "9문항" 한 값만 보여서 프론트가 임시로
  * 채운 값이었는데(PR #13), 명세서에 값이 적혀 있는 걸 뒤늦게 확인했습니다.
+ *
+ * 기본값은 `DEFAULT_QUESTION_COUNT`(6문항)입니다.
  */
 export const QUESTION_COUNT_CHOICES: Choice<string>[] = [
   { value: '3', label: '3문항' },
   { value: '6', label: '6문항' },
   { value: '9', label: '9문항' },
 ]
+
+/** 답변 시간 기본값(초). 시안의 "질문당 90초" 입니다 */
+export const DEFAULT_ANSWER_SECONDS = 90
+
+/**
+ * 질문 수 기본값. 전에는 시안대로 9문항이었는데 6문항으로 바꿨습니다 (2026-10-01).
+ * 서버도 질문 수를 안 보내면 6문항으로 시작해서 값이 같습니다 (Cue-A/backend `InterviewStartRequest`).
+ */
+export const DEFAULT_QUESTION_COUNT = 6
 
 /** 목록에 없는 기업을 고를 때 쓰는 값입니다. 이때 인재상을 직접 받습니다. */
 export const CUSTOM_COMPANY = 'CUSTOM'
@@ -99,7 +107,8 @@ export type SelectedResume = {
 }
 
 export type SessionSetup = {
-  jobRole: JobRole | null
+  /** 적은 그대로입니다. 앞뒤 공백은 보낼 때 자릅니다 */
+  jobRole: string
   /** 면접에 쓸 수 있는 문서만 고를 수 있어서, 값이 있으면 곧 시작 가능한 문서입니다 */
   resume: SelectedResume | null
 
@@ -117,4 +126,4 @@ export type SessionSetup = {
 }
 
 /** 면접을 시작하려면 다 채워야 하는 값들입니다. 시안의 "필수" 배지와 같습니다. */
-export const REQUIRED_LABELS = ['직무 선택', '자기소개서 불러오기', '면접관 스타일'] as const
+export const REQUIRED_LABELS = ['직무 입력', '자기소개서 불러오기', '면접관 스타일'] as const

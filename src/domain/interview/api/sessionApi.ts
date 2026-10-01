@@ -1,7 +1,7 @@
 import { api } from '@/shared/api/apiClient'
 
 import type { AnswerSubmission, InterviewOptions } from '../types/interview'
-import { CUSTOM_COMPANY, JOB_ROLES, type Company, type InterviewerStyle, type SessionSetup } from '../types/sessionSetup'
+import { CUSTOM_COMPANY, type Company, type InterviewerStyle, type SessionSetup } from '../types/sessionSetup'
 
 import './sessionMock'
 
@@ -25,7 +25,7 @@ type InterviewStartRequest = {
   documentId: string
   /** 등록된 기업의 숫자 id. 없으면 연습 모드 */
   companyId: number | null
-  /** 자유 문자열(100자). 서버가 AI 에 그대로 넘기므로 화면에 보이는 이름을 보냅니다 */
+  /** 자유 문자열(100자). 서버가 AI 에 그대로 넘깁니다. 사용자가 적은 직무를 앞뒤 공백만 잘라 보냅니다 */
   jobRole: string
   /** 이름만 다르고 값은 같습니다 (`FRIENDLY` · `PRESSURE`) */
   persona: InterviewerStyle
@@ -56,14 +56,16 @@ function toCompanyId(setup: SessionSetup): number | null {
  * `canStart` 로 버튼을 잠급니다. 그래도 불렸다면 서버에 빈 값을 보내지 않고 여기서 멈춥니다.
  */
 function toCreateBody(setup: SessionSetup): InterviewStartRequest {
-  if (!setup.resume || !setup.jobRole || !setup.interviewerStyle) {
+  const jobRole = setup.jobRole.trim()
+
+  if (!setup.resume || !jobRole || !setup.interviewerStyle) {
     throw new Error('필수 항목(문서 · 직무 · 면접관)이 비어 있는 채로 세션 생성을 불렀습니다')
   }
 
   return {
     documentId: setup.resume.documentId,
     companyId: toCompanyId(setup),
-    jobRole: JOB_ROLES.find((role) => role.value === setup.jobRole)?.label ?? setup.jobRole,
+    jobRole,
     persona: setup.interviewerStyle,
     questionCount: setup.questionCount,
   }
