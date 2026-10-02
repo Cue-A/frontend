@@ -19,7 +19,7 @@ type Props = {
  */
 export default function UpcomingEventsCard({ events }: Props) {
   return (
-    <Card label="다가오는 면접일" padding="lg">
+    <Card label="다가오는 면접일" padding="lg" surface="glass-soft">
       <CardHeader title="다가오는 면접일" />
 
       {events === null ? (

@@ -101,10 +101,21 @@ export default function LibraryDocumentsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-h1 text-neutral-900">자소서 / 포트폴리오</h1>
               {documents.status === 'ready' && (
-                <Badge tone={atLimit ? 'warning' : 'brand'}>
-                  <span className="sr-only">등록한 문서 </span>
-                  {documents.page.totalElements} / {MAX_DOCUMENTS}개
-                </Badge>
+                // 전에 패널에 있던 막대(meter)의 뜻을 배지에도 남깁니다. 글자만 두면 스크린리더가 "15 / 20개" 를
+                // 그냥 글로 읽어서, 20 이 상한이라는 정보가 사라집니다. (PR #88 리뷰)
+                <span
+                  role="meter"
+                  aria-label="등록한 문서 수"
+                  aria-valuemin={0}
+                  aria-valuemax={MAX_DOCUMENTS}
+                  aria-valuenow={documents.page.totalElements}
+                  aria-valuetext={`${MAX_DOCUMENTS}개 중 ${documents.page.totalElements}개`}
+                  className="inline-flex"
+                >
+                  <Badge tone={atLimit ? 'warning' : 'brand'}>
+                    {documents.page.totalElements} / {MAX_DOCUMENTS}개
+                  </Badge>
+                </span>
               )}
             </div>
             <p className="mt-2 break-keep text-body-md text-neutral-500">

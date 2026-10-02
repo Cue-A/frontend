@@ -1,4 +1,5 @@
 import { monthlyDiffText } from '../lib/homeDisplay'
+import { practicePeriodOf } from '../lib/practicePeriod'
 import type { HomeOverview, PracticeRecord } from '../types/home'
 
 import SkeletonBlock from './SkeletonBlock'
@@ -19,8 +20,8 @@ function StatCard({ label, value, unit, caption, highlight = false, stale = fals
   // 그라디언트 판은 `shared/ui/Card` 에 없는 모양이라 여기서 직접 그립니다. Card 에 색을 className 으로
   // 넘기면 어느 쪽 배경이 이길지 알 수 없습니다 (Card.tsx 주석).
   const surface = highlight
-    ? 'bg-[image:var(--gradient-brand)] text-neutral-0 shadow-float'
-    : 'bg-neutral-0 text-neutral-900 shadow-card'
+    ? 'bg-[image:var(--gradient-brand)] text-neutral-0'
+    : 'bg-neutral-0/80 text-neutral-900'
   const subText = highlight ? 'text-neutral-0/80' : 'text-neutral-500'
 
   return (
@@ -55,7 +56,7 @@ type Props = {
   record: PracticeRecord | null
   recordStale: boolean
   recordFailed: boolean
-  /** 고른 기간 탭 이름 (4주 · 10주 · 6개월 · 1년) */
+  /** 고른 기간 탭 이름 (4주 · 10주 · 6개월 · 1년). 기록이 아직 없을 때만 씁니다 — 있으면 그 기록의 기간을 적습니다 */
   periodLabel: string
 }
 
@@ -71,6 +72,9 @@ export default function StatCards({ overview, record, recordStale, recordFailed,
 
   const average = recordValue((value) => value.averageScore)
   const best = record?.bestScore ?? null
+  // 탭을 바꾸는 중에는 숫자가 아직 이전 기간 것입니다(`recordStale`). 글자만 새 기간으로 바꾸면 "4주 누적" 옆에
+  // 10주치 횟수가 잠깐 보여서, 글자도 숫자와 같은 기록의 기간을 따릅니다. (PR #88 리뷰)
+  const shownPeriodLabel = record ? practicePeriodOf(record.period).label : periodLabel
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -98,7 +102,7 @@ export default function StatCards({ overview, record, recordStale, recordFailed,
         label="총 연습"
         value={recordValue((value) => value.totalCount)}
         unit="회"
-        caption={recordFailed && !record ? '불러오지 못했어요' : `${periodLabel} 누적`}
+        caption={recordFailed && !record ? '불러오지 못했어요' : `${shownPeriodLabel} 누적`}
         stale={recordStale}
       />
     </div>

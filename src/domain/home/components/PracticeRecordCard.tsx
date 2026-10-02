@@ -37,12 +37,14 @@ function MiniStat({ label, value }: { label: string; value: string }) {
  * 없어서 **보여주기만** 합니다. 기간은 탭으로만 바꿉니다.
  */
 export default function PracticeRecordCard({ period, onPeriodChange, practice }: Props) {
-  const { label: periodLabel } = practicePeriodOf(period)
   const { record, isStale, error, retry } = practice
+  // 설명의 기간은 아래 잔디 · 숫자와 같은 기록을 따릅니다. 탭을 바꾸는 중에는 아직 이전 기간 기록이라,
+  // 고른 탭 이름을 적으면 글자와 잔디가 서로 다른 기간을 가리킵니다. (PR #88 리뷰)
+  const { label: periodLabel } = practicePeriodOf(record && !error ? record.period : period)
   const isEmpty = record !== null && record.totalCount === 0
 
   return (
-    <Card label="연습 기록" padding="lg">
+    <Card label="연습 기록" padding="lg" surface="glass">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-h2 text-neutral-900">연습 기록</h2>

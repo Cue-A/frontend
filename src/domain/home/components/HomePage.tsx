@@ -42,7 +42,7 @@ export default function HomePage() {
   const isNewUser = ready !== null && ready.streak.best === 0 && ready.recentReports.length === 0
 
   return (
-    <div className="min-h-screen bg-wash px-6 py-6 md:px-10">
+    <div className="min-h-screen bg-wash-tall px-6 py-6 md:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <HomeTopBar me={me} />
         <HomeGreeting me={me} isNewUser={isNewUser} />

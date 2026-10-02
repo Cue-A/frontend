@@ -26,6 +26,15 @@ export function usePracticeRecord(period: PracticePeriod): UsePracticeRecordResu
   const [failed, setFailed] = useState<{ period: PracticePeriod; error: ApiError } | null>(null)
   const [attempt, setAttempt] = useState(0)
 
+  // 기간이 바뀌면 지난 실패를 지웁니다. 안 지우면 실패했던 기간으로 돌아왔을 때 새 요청이 막 시작됐는데도
+  // 예전 에러가 먼저 보입니다 (4주 실패 → 10주 → 다시 4주). 성공 · 다시 불러오기에서만 지우던 것을 고쳤습니다.
+  // effect 가 아니라 렌더 중에 맞춥니다 — effect 에서 지우면 예전 에러가 한 번 그려진 뒤에 사라집니다. (PR #88 리뷰)
+  const [failedCheckedFor, setFailedCheckedFor] = useState(period)
+  if (failedCheckedFor !== period) {
+    setFailedCheckedFor(period)
+    setFailed(null)
+  }
+
   useEffect(() => {
     let cancelled = false
 

@@ -17,7 +17,7 @@ type Props = {
 
 /**
  * AUTH-3 로그인. 성공하면 토큰을 저장하고, 보호 라우트에서 튕겨 왔으면 그
- * 경로로, 아니면 랜딩으로 돌아갑니다 (`useLoginRedirect`).
+ * 경로로, 아니면 홈 대시보드로 갑니다 (`useLoginRedirect`).
  */
 export default function LoginForm({ onSwitchToSignup }: Props) {
   const redirectAfterLogin = useLoginRedirect()

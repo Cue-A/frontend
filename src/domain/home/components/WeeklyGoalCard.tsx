@@ -56,7 +56,7 @@ type Props = {
 /** 이번 주 목표. 목표를 고치는 화면(모달)은 아직 없어서 "목표 수정" 은 준비 중입니다 */
 export default function WeeklyGoalCard({ goal }: Props) {
   return (
-    <Card label="이번 주 목표" padding="lg">
+    <Card label="이번 주 목표" padding="lg" surface="glass-soft">
       <CardHeader
         title="이번 주 목표"
         aside={<ComingSoonLink label={goal === null ? '목표 정하기' : '목표 수정'} withArrow={false} />}

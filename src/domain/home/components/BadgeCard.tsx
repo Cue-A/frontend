@@ -33,7 +33,7 @@ type Props = {
 /** 획득한 뱃지. 아직 못 딴 배지는 회색으로 두고 이름은 보여줍니다 — 무엇을 하면 받는지 알 수 있게 */
 export default function BadgeCard({ badges }: Props) {
   return (
-    <Card label="획득한 뱃지" padding="lg">
+    <Card label="획득한 뱃지" padding="lg" surface="glass-soft">
       <CardHeader
         title="획득한 뱃지"
         aside={

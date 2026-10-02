@@ -29,7 +29,7 @@ type Props = {
 /** 기업별 인재상과 질문은행. 시안에서 한 판 안에 구분선으로 나뉘어 있습니다 */
 export default function DiscoverCard({ talentKeywords, popularQuestions }: Props) {
   return (
-    <Card label="기업별 인재상 · 질문은행" padding="lg">
+    <Card label="기업별 인재상 · 질문은행" padding="lg" surface="glass-soft">
       <CardHeader title="기업별 인재상" aside={<ComingSoonLink label="전체보기" />} />
       {talentKeywords ? <TagList items={talentKeywords} /> : <SkeletonBlock className="mt-4 h-8 w-full" />}
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 type Padding = 'none' | 'sm' | 'md' | 'lg'
-type Surface = 'white' | 'brand'
+type Surface = 'white' | 'brand' | 'glass' | 'glass-soft'
 
 /**
  * 판의 색은 여기서만 정합니다.
@@ -17,6 +17,14 @@ const SURFACE_CLASS: Record<Surface, string> = {
   white: 'bg-neutral-0 shadow-card',
   /** 종합 점수처럼 강조되는 판 — 연한 브랜드 배경에 그림자는 없습니다. */
   brand: 'bg-primary-100',
+  /**
+   * 워시 배경(`bg-wash-tall`) 위에 놓는 반투명 판 — 배경 색이 비쳐 보이게 하고 그림자는 없습니다. (홈 A-04)
+   * 그림자를 없애려고 `shadow-card` 토큰을 지우면 앱 전체 카드에서 사라지므로, 그림자 없는 판은 여기서 고릅니다.
+   * 단색 배경 위에서는 판이 배경에 묻히니 `white` 를 쓰세요. (PR #88 리뷰)
+   */
+  glass: 'bg-neutral-0/80',
+  /** `glass` 보다 더 비치는 판 — 옆 칸처럼 한 단계 물러나 보여야 할 때 씁니다. */
+  'glass-soft': 'bg-neutral-0/60',
 }
 
 /** 카드는 `radius-lg` 입니다 (docs/design-system.md §4). */

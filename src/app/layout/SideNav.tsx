@@ -158,7 +158,15 @@ export default function SideNav({ onLogout }: Props) {
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Escape') collapse()
+    if (event.key !== 'Escape') return
+
+    // 하위 항목은 접히면서 화면에서 사라집니다. 거기 있던 포커스가 body 로 날아가면 Tab 이 화면 맨 처음부터
+    // 다시 시작해서, 사라지기 전에 그 메뉴의 여닫기 버튼으로 옮깁니다. (PR #88 리뷰)
+    const target = event.target as HTMLElement
+    if (target.closest('[data-nav-children]')) {
+      target.closest('[data-nav-group]')?.querySelector<HTMLElement>(':scope > button')?.focus()
+    }
+    collapse()
   }
 
   return (
@@ -271,7 +279,8 @@ function NavRow({ item, pathname, expanded, open, onToggle }: NavRowProps) {
   )
 
   return (
-    <li>
+    // data-nav-group · data-nav-children 은 Esc 로 접을 때 포커스를 돌려보낼 버튼을 찾는 표시입니다 (handleKeyDown)
+    <li data-nav-group={children ? '' : undefined}>
       {children ? (
         <button
           type="button"
@@ -289,7 +298,7 @@ function NavRow({ item, pathname, expanded, open, onToggle }: NavRowProps) {
       )}
 
       {showChildren && (
-        <ul id={childrenId} aria-label={`${label} 하위 메뉴`} className="mt-1 flex flex-col gap-1 pl-9">
+        <ul id={childrenId} data-nav-children aria-label={`${label} 하위 메뉴`} className="mt-1 flex flex-col gap-1 pl-9">
           {children.map((child) => {
             // 계정 설정 > 회원 탈퇴(/mypage/account/withdraw)처럼 하위 항목 안쪽 화면에서도 그 항목을 켭니다.
             const childActive = child.to !== undefined && (pathname === child.to || pathname.startsWith(`${child.to}/`))

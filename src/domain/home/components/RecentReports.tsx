@@ -23,14 +23,14 @@ const KIND_CLASS = {
   neutral: 'bg-neutral-50 text-neutral-700',
 } as const
 
-const ROW_CLASS = 'flex items-center gap-4 rounded-lg bg-neutral-0 px-5 py-4 shadow-card'
+const ROW_CLASS = 'flex items-center gap-4 rounded-lg bg-neutral-0/80 px-5 py-4'
 
 function ReportRow({ report }: { report: RecentReport }) {
   const kind = INTERVIEW_KIND_DISPLAY[report.kind]
   const minutes = Math.max(1, Math.round(report.durationSec / 60))
 
   return (
-    <Link to={toReport(report.reportId)} className={`${ROW_CLASS} transition-shadow hover:shadow-float`}>
+    <Link to={toReport(report.reportId)} className={`${ROW_CLASS} transition-colors hover:bg-neutral-0`}>
       <span
         aria-hidden
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm text-body-sm font-bold ${KIND_CLASS[kind.tone]}`}
