@@ -47,7 +47,7 @@ type Props = {
  * 누르는 게 아니라 읽는 것이라 span 입니다. 버튼처럼 보이면 사람들이 누릅니다.
  */
 export default function Badge({ children, tone = 'neutral', onTint = false }: Props) {
-  const bgClass = onTint ? 'bg-white' : TONE_BG_CLASS[tone]
+  const bgClass = onTint ? 'bg-neutral-0' : TONE_BG_CLASS[tone]
 
   return <span className={`${BASE_CLASS} ${bgClass} ${TONE_TEXT_CLASS[tone]}`}>{children}</span>
 }
