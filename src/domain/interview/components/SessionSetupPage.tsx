@@ -28,9 +28,9 @@ import Card from '@/shared/ui/Card'
 import ChipGroup from './ChipGroup'
 import CompanyQuestionSection from './CompanyQuestionSection'
 import FieldHelp from './FieldHelp'
+import InterviewFlowHeader from './InterviewFlowHeader'
 import ResumeField from './ResumeField'
 import SetupSummary from './SetupSummary'
-import StepIndicator from './StepIndicator'
 
 /** 셀렉트 모양은 기업 맞춤 질문 쪽과 같습니다. */
 const FIELD_CLASS =
@@ -96,7 +96,7 @@ export default function SessionSetupPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-      <StepIndicator current={1} />
+      <InterviewFlowHeader current={1} />
 
       <div className="flex flex-wrap items-start gap-6">
         <Card padding="lg" className="flex min-w-80 flex-[3] flex-col gap-8">

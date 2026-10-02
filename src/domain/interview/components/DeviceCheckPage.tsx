@@ -13,7 +13,7 @@ import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
-import StepIndicator from './StepIndicator'
+import InterviewFlowHeader from './InterviewFlowHeader'
 
 const SUMMARY_ROW_LABELS = ['직무', '질문 수', '답변 시간', '면접관'] as const
 
@@ -171,17 +171,8 @@ export default function DeviceCheckPage() {
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <div className="flex flex-col gap-6">
-          <p className="text-body text-neutral-500">
-            모의면접<span className="font-semibold text-neutral-900"> / 장치 테스트</span>
-          </p>
-
-          {/* STEP 라벨과 Stepper 는 한 묶음이라 Figma 원본 간격(10px)을 그대로 유지한다. */}
-          <div className="flex flex-col gap-2.5">
-            <span className="text-body-sm font-bold text-primary-500">STEP 2/4</span>
-            <StepIndicator current={2} />
-          </div>
-        </div>
+        {/* 경로 표시 · STEP 라벨 · 단계 표시는 옵션 설정과 같은 모양이라 한 컴포넌트로 그립니다 (이슈 #81) */}
+        <InterviewFlowHeader current={2} />
 
         <div className="flex flex-wrap items-start gap-6">
           {/* Card 는 40px 패딩 프리셋이 없어 가장 가까운 padding="lg"(24px)로 확정했다 (PR #84 리뷰). */}
