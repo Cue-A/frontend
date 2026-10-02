@@ -119,7 +119,7 @@ export default function LibraryDocumentsPage() {
               )}
             </div>
             <p className="mt-2 break-keep text-body-md text-neutral-500">
-              자소서를 등록하면 그 내용으로 면접 질문을 만들어 드려요. 등록한 문서와 상태를 여기서 다시 확인할 수 있어요.
+              자소서를 등록하면 그 내용으로 면접 질문을 만들어 드려요. 등록한 문서를 여기서 다시 확인할 수 있어요.
             </p>
           </div>
 
