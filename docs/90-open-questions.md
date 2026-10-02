@@ -157,6 +157,25 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   계약(`Cue-A/backend` `docs/03-auth.md`).
 - `POST /api/auth/oauth/kakao` 가 실제로 붙는 3단계 전에는 정해져야 합니다.
 
+### Q14. 🟡 회원 탈퇴 API 와 탈퇴 정책이 없습니다
+
+기능명세서 P0 에 "마이페이지 > 계정 설정 > 로그아웃 · 회원 탈퇴" 가 있는데, 백엔드(dev · #34)에는
+로그아웃과 내 정보 조회만 있고 탈퇴 API 가 없습니다. 계정 설정 시안도 아직 없습니다.
+
+- **임시 결정: 탈퇴 흐름(이유 고르기 → 최종 확인 창 → 완료)과 탈퇴 뒤 토큰 정리까지 만들고, API 는
+  `POST /api/users/me/withdrawal` (본문 `{ reason, detail? }`) 로 가정해 목업(`missingInBackend`)이 답하게
+  둡니다.** 계정 설정은 프로필 시안을, 탈퇴 흐름은 프레시코드 탈퇴 화면을 참고해 임시로 그렸습니다.
+- 남은 결정 (백엔드)
+  - 경로 · 응답. 탈퇴 뒤 그 사용자의 refresh token 을 모두 끊는지
+  - 탈퇴 이유(`reason` 7종 · `detail`)를 저장할지. 저장한다면 enum 값을 같이 맞춥니다
+  - 지워지는 범위. 최종 확인 창은 "면접 기록과 답변 녹화 · 리포트 · 보관함 문서 · 계정 정보가 지워진다" 고 안내합니다.
+    다르거나 재가입 제한 기간이 있으면 문구를 고칩니다
+  - 비밀번호 재확인을 받을지. 카카오로만 가입한 계정은 비밀번호가 없어서 받는다면 방법을 따로 정해야 합니다
+  - 카카오 계정 연결 끊기(unlink)를 백엔드가 같이 하는지
+- 남은 결정 (기획): 계정 설정 · 탈퇴 화면 시안, 탈퇴 이유 목록.
+- 걸리는 작업: `domain/user/api/userApi.ts` 의 `withdraw`, `domain/user/components/WithdrawPage.tsx` ·
+  `WithdrawConfirmDialog.tsx`, `domain/user/lib/withdrawReasons.ts`.
+
 ---
 
 ## 그 외

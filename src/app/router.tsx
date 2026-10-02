@@ -11,6 +11,9 @@ import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
 import ReportPage from '@/domain/report/components/ReportPage'
+import AccountSettingsPage from '@/domain/user/components/AccountSettingsPage'
+import MyPage from '@/domain/user/components/MyPage'
+import WithdrawPage from '@/domain/user/components/WithdrawPage'
 
 import AppLayout, { type AppLayoutHandle } from './layout/AppLayout'
 import NotFoundPage from './NotFoundPage'
@@ -65,6 +68,9 @@ export const router = createBrowserRouter([
           },
           { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
           { path: ROUTES.LIBRARY_DOCUMENTS, element: <LibraryDocumentsPage /> },
+          { path: ROUTES.MYPAGE, element: <MyPage /> },
+          { path: ROUTES.MYPAGE_ACCOUNT, element: <AccountSettingsPage /> },
+          { path: ROUTES.MYPAGE_WITHDRAW, element: <WithdrawPage /> },
         ],
       },
     ],

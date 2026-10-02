@@ -1,5 +1,7 @@
 import { IconSettings } from '@tabler/icons-react'
+import { Link } from 'react-router-dom'
 
+import { ROUTES } from '@/app/routes'
 import { useLogout } from '@/domain/auth/hooks/useLogout'
 import { toTopBarProfile, type UseMeResult } from '@/domain/user/hooks/useMe'
 import TopBarActions from '@/shared/ui/TopBarActions'
@@ -32,10 +34,10 @@ type Props = {
 }
 
 /**
- * 홈 오른쪽 위 줄 — 테마(장식) · 설정(준비 중) · 알림 · 프로필.
+ * 홈 오른쪽 위 줄 — 테마(장식) · 설정 · 알림 · 프로필.
  *
- * 알림 · 프로필은 보관함과 같은 `TopBarActions` 입니다. 톱니바퀴는 시안에 갈 곳이 적혀 있지 않고 설정 화면
- * (마이페이지 > 계정 설정)도 아직 없어서, 사이드바의 준비 중 메뉴처럼 흐리게 두고 마우스를 올리면 알려줍니다.
+ * 알림 · 프로필은 보관함과 같은 `TopBarActions` 입니다. 톱니바퀴는 시안에 갈 곳이 적혀 있지 않아서, 설정에 가장
+ * 가까운 마이페이지 > 계정 설정으로 보냅니다.
  */
 export default function HomeTopBar({ me }: Props) {
   const logout = useLogout()
@@ -44,16 +46,16 @@ export default function HomeTopBar({ me }: Props) {
     <div className="flex items-center justify-end gap-3">
       <ThemeSwatches />
 
-      <span
-        aria-disabled
-        title="설정 (준비 중이에요)"
-        className="flex h-10 w-10 items-center justify-center rounded-sm bg-neutral-0 text-neutral-300 shadow-card"
+      <Link
+        to={ROUTES.MYPAGE_ACCOUNT}
+        title="계정 설정"
+        className="flex h-10 w-10 items-center justify-center rounded-sm bg-neutral-0 text-neutral-700 shadow-card transition-colors hover:text-neutral-900"
       >
         <IconSettings size={20} stroke={2} aria-hidden />
-        <span className="sr-only">설정 (준비 중)</span>
-      </span>
+        <span className="sr-only">계정 설정</span>
+      </Link>
 
-      <TopBarActions profile={toTopBarProfile(me)} onLogout={logout} />
+      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE} onLogout={logout} />
     </div>
   )
 }
