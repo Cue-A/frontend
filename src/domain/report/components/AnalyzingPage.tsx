@@ -87,21 +87,29 @@ export default function AnalyzingPage() {
         배경 장식 원 2개. Figma(837:699 bg-blob-1 / 837:700 bg-blob-2)의 원본 SVG를 받아
         확인한 실제 값이다 — 좌상단: circle r=280 fill=#E4E1FE(=primary-100 정확히 일치)
         opacity=0.5 blur=40px, 우하단: circle r=310 fill=#C9C3FB(≈primary-200, 반올림 오차
-        1) opacity=0.4 blur=45px. 위치·크기는 모두 4px 배수라 Tailwind 기본 spacing 숫자
-        클래스로, blur 40px는 Tailwind 기본 blur-2xl과 정확히 일치한다.
+        1) opacity=0.4. 위치·크기는 모두 4px 배수라 Tailwind 기본 spacing 숫자 클래스로,
+        blur는 두 원 다 Tailwind 기본 blur-2xl(40px)로 맞췄다 — 원래 45px였던 우하단 원도
+        시각적으로 차이가 거의 없어 새 값을 안 만들고 토큰에 맞췄다 (PR #84 리뷰).
       */}
       {/*
-        두 원은 서로 다른 불규칙 keyframes(blob-drift-1/2, tokens.css)와 다른 주기(18s·24s)로
-        움직여서 규칙적인 왕복이 아니라 제각각 떠다니는 것처럼 보이게 한다.
-        motion-reduce 사용자에게는 정적으로 둔다.
+        두 원은 서로 다른 불규칙 keyframes(blob-drift-1/2, tokens.css @theme 의 --animate-*)와
+        다른 주기(18s·24s)로 움직여서 규칙적인 왕복이 아니라 제각각 떠다니는 것처럼 보이게
+        한다. motion-reduce 사용자에게는 정적으로 둔다.
       */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-45 -top-55 -z-10 size-140 animate-[blob-drift-1_18s_ease-in-out_infinite] rounded-full bg-primary-100 opacity-50 blur-2xl motion-reduce:animate-none"
+        className="pointer-events-none absolute -left-45 -top-55 -z-10 size-140 animate-blob-drift-1 rounded-full bg-primary-100 opacity-50 blur-2xl motion-reduce:animate-none"
       />
+      {/*
+        왼쪽 위 원과 달리 왼쪽/위 기준(left/top)으로 고정하면 Figma 프레임(1440×1024)
+        크기에서만 모서리에 붙고, 그보다 넓은 화면에서는 원이 가운데로 떠버리고 낮은
+        화면에서는 잘린다 (PR #84 리뷰). 오른쪽/아래 기준으로 고정해야 뷰포트 크기와
+        무관하게 항상 우하단 모서리에 붙는다. 값은 Figma 그대로 환산:
+        1440 - 1120 - 620 = -300px(-right-75), 1024 - 560 - 620 = -156px(-bottom-39).
+      */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-280 top-140 -z-10 size-155 animate-[blob-drift-2_24s_ease-in-out_infinite] rounded-full bg-primary-200 opacity-40 blur-[45px] motion-reduce:animate-none"
+        className="pointer-events-none absolute -bottom-39 -right-75 -z-10 size-155 animate-blob-drift-2 rounded-full bg-primary-200 opacity-40 blur-2xl motion-reduce:animate-none"
       />
 
       <div className="absolute left-6 top-6">

@@ -133,6 +133,36 @@
    * 글자를 이 색으로 쓰면 안 된다 — 흰색에 가까워서 대비가 안 나온다.
    * ------------------------------------------------------------------- */
   --color-surface-muted: #f9f8ff; /* 카드 안 보조 패널 (Figma 1377:1462) */
+
+  /* ---------------------------------------------------------------------
+   * 배경 장식 원 모션 (AnalyzingPage 전용)
+   *
+   * 규칙적인 왕복(2점 ping-pong)이 아니라 불규칙한 % 지점에 서로 다른 이동값을
+   * 둬서 "랜덤하게 떠다니는" 느낌을 낸다. 두 원의 지속시간도 다르게 둬서(18s·24s)
+   * 서로 박자가 겹치지 않게 한다. --animate-* 로 등록해서 Tailwind 기본
+   * animate-spin 과 같은 방식으로 쓴다 — animate-[...] arbitrary value 없이
+   * animate-blob-drift-1/2 클래스로 쓰고, 주기도 여기 한 곳에서만 관리한다.
+   * (PR #84 리뷰)
+   * ------------------------------------------------------------------- */
+  --animate-blob-drift-1: blob-drift-1 18s ease-in-out infinite;
+  --animate-blob-drift-2: blob-drift-2 24s ease-in-out infinite;
+
+  @keyframes blob-drift-1 {
+    0% { transform: translate(0, 0); }
+    22% { transform: translate(130px, -90px); }
+    47% { transform: translate(-75px, 85px); }
+    68% { transform: translate(95px, 140px); }
+    86% { transform: translate(-110px, -45px); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes blob-drift-2 {
+    0% { transform: translate(0, 0); }
+    18% { transform: translate(-110px, 85px); }
+    39% { transform: translate(100px, -110px); }
+    61% { transform: translate(140px, 65px); }
+    83% { transform: translate(-65px, -130px); }
+    100% { transform: translate(0, 0); }
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -224,30 +254,4 @@
   font-size: 17px;
   font-weight: 700; /* Bold */
   line-height: 22px; /* 리포트 타임라인 수치, 짧은 라벨 */
-}
-
-/* ---------------------------------------------------------------------
- * 배경 장식 원 모션 (AnalyzingPage 전용)
- *
- * 규칙적인 왕복(2점 ping-pong)이 아니라 불규칙한 % 지점에 서로 다른 이동값을
- * 둬서 "랜덤하게 떠다니는" 느낌을 낸다. 두 원의 지속시간도 다르게 둬서(18s·24s)
- * 서로 박자가 겹치지 않게 한다. `animate-[blob-drift-1_18s_ease-in-out_infinite]`
- * 형태로 arbitrary value 로 참조해서 쓴다 (Tailwind 기본 animate-spin 이 자체
- * @keyframes 를 갖는 것과 같은 방식).
- * ------------------------------------------------------------------- */
-@keyframes blob-drift-1 {
-  0% { transform: translate(0, 0); }
-  22% { transform: translate(130px, -90px); }
-  47% { transform: translate(-75px, 85px); }
-  68% { transform: translate(95px, 140px); }
-  86% { transform: translate(-110px, -45px); }
-  100% { transform: translate(0, 0); }
-}
-@keyframes blob-drift-2 {
-  0% { transform: translate(0, 0); }
-  18% { transform: translate(-110px, 85px); }
-  39% { transform: translate(100px, -110px); }
-  61% { transform: translate(140px, 65px); }
-  83% { transform: translate(-65px, -130px); }
-  100% { transform: translate(0, 0); }
 }
