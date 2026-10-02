@@ -8,8 +8,8 @@ import Card from '@/shared/ui/Card'
  * 세 버튼 모두 시안에 있는 자리인데, 지금 실제로 되는 건 화면 이동 두 개뿐입니다.
  * 문구는 **지금 실제로 일어나는 일**에 맞춰 적습니다 (이슈 #20).
  *
- * - "처음 화면으로" — 시안 문구는 "홈으로 이동"이지만 홈 대시보드 화면이 아직
- *   없어서 랜딩으로 갑니다. 그 화면이 생기면 문구와 목적지를 같이 바꿉니다.
+ * - "홈으로 이동" — 홈 대시보드(A-04)로 갑니다. 홈이 생기기 전에는 "처음 화면으로" 라는
+ *   이름으로 랜딩에 보냈습니다. 시안 문구로 되돌렸습니다.
  * - "다시 연습하기" — 이번 회차 설정을 그대로 불러오려면
  *   `POST /sessions/{id}/retry` 가 필요한데 P1 이라 아직 없습니다. 지금은
  *   빈 옵션 설정 화면으로만 갑니다. 설정을 채워준다고 적으면 거짓말이 됩니다.
@@ -27,8 +27,8 @@ export default function ReportActions() {
         </p>
 
         <nav className="flex flex-wrap gap-3">
-          <Button to={ROUTES.LANDING} className="flex-1">
-            처음 화면으로
+          <Button to={ROUTES.HOME} className="flex-1">
+            홈으로 이동
           </Button>
 
           <Button disabled className="flex-1">

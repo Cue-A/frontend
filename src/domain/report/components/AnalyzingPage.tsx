@@ -54,10 +54,9 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
  * 스피너만 두면 얼마나 더 기다려야 하는지 알 수 없어서 사람들이 새로고침합니다.
  *
  * 사이드바가 없어서 분석 중에 다른 화면으로 나갈 길도 같이 없었다 — 왼쪽 위
- * "처음 화면으로"가 그 자리다(#26). PR #65 리뷰에서 아이콘 레일 이름("홈")에 맞춰
- * "홈으로"로 바꾸자는 제안이 있었지만, ReportActions.tsx(이슈 #20)가 같은 랜딩
- * 이동에 "홈 대시보드가 생기기 전까진 '홈'이라 부르지 않는다"로 이미 정해둔 것과
- * 충돌해 반영하지 않았다.
+ * "홈으로"가 그 자리다(#26). 홈 대시보드(A-04)가 생기기 전에는 "처음 화면으로"라는
+ * 이름으로 랜딩에 보냈다 — ReportActions.tsx(이슈 #20)가 "홈이 생기기 전까진 '홈'이라
+ * 부르지 않는다"로 정해둬서 PR #65 리뷰의 "홈으로" 제안을 미뤘던 것을 이제 반영했다.
  *
  * 분석은 백엔드에서 돈다(Cue-A/backend#50). 이 화면은 들어오면 분석을 맡기고 소켓으로 단계를 받아
  * 끝나면 리포트로 넘어간다 (useAnalysisProgress). 실패하면 화면을 바꾸지 않고 제목과 팁 자리만 바꾼다.
@@ -113,8 +112,8 @@ export default function AnalyzingPage() {
       />
 
       <div className="absolute left-6 top-6">
-        <Button variant="ghost" size="sm" to={ROUTES.LANDING}>
-          처음 화면으로
+        <Button variant="ghost" size="sm" to={ROUTES.HOME}>
+          홈으로
         </Button>
       </div>
 
@@ -205,7 +204,7 @@ export default function AnalyzingPage() {
  * 그 메시지를 놓친 경우(연결 끊김 등)라 분석이 끝났는지 알 수 없습니다. 그래서 "실패했어요" 가 아니라
  * "오래 걸리고 있어요" 로 적습니다. 상태 조회 API(Cue-A/backend#48)가 생기면 여기서 확인할 수 있습니다.
  *
- * 버튼은 "다시 기다리기" 하나입니다. 빠져나갈 길은 화면 왼쪽 위의 "처음 화면으로"(PR #65)가
+ * 버튼은 "다시 기다리기" 하나입니다. 빠져나갈 길은 화면 왼쪽 위의 "홈으로"(PR #65)가
  * 타임아웃과 관계없이 늘 보여주므로, 여기에 같은 버튼을 또 두면 한 화면에 두 개가 됩니다. (PR #68 리뷰)
  *
  * 이 창을 벗어나면 이번 리포트로 돌아올 방법(리포트 목록 · 알림)이 아직 없다는 것도 숨기지 않습니다.
@@ -240,7 +239,7 @@ function AnalysisTimedOutNotice() {
  *
  * 다시 요청해서 풀릴 수 있는 실패(`retryable`)에만 "다시 분석하기" 를 둡니다. 다시 요청하면 백엔드가 같은
  * reportId 로 처음부터 다시 돌립니다. 풀리지 않는 실패(답변이 너무 적음 등)에는 버튼을 두지 않습니다 —
- * 눌러도 같은 안내가 다시 뜨기 때문입니다. 나갈 길은 왼쪽 위 "처음 화면으로" 입니다.
+ * 눌러도 같은 안내가 다시 뜨기 때문입니다. 나갈 길은 왼쪽 위 "홈으로" 입니다.
  */
 function AnalysisFailedNotice({ message, onRetry }: { message: string; onRetry: (() => void) | null }) {
   return (

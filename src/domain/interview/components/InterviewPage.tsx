@@ -94,7 +94,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const { setAudioElement, amplitude } = useQuestionAudio(session.question, session.notifyPresentationDone)
 
   // 뒤로가기 등 인앱 이동으로 세션을 잃지 않도록 막는다(#26 — X 버튼·beforeunload 만으로는
-  // 브라우저 뒤로가기가 안 잡혔다). "확인" 누른 직후의 navigate(ROUTES.LANDING) 호출도
+  // 브라우저 뒤로가기가 안 잡혔다). "확인" 누른 직후의 navigate(ROUTES.HOME) 호출도
   // 이 블로커 대상이라, ref 로 "방금 확인했다"를 동기적으로 알려서 그 navigate 까지
   // 다시 막히지 않게 한다 — state 로 하면 리렌더가 한 박자 늦어 navigate 호출 시점에는
   // 아직 이전 값을 본다.
@@ -219,7 +219,8 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
 
   // "이제 이 화면을 떠난다"가 확정된 뒤(abort 성공 · abort 포기 둘 다) 공통으로 타는
   // 이동 로직. 뒤로가기 등으로 막혔던 이동이면 원래 가려던 곳으로 그대로 보낸다 —
-  // 무조건 랜딩으로 보내면 "뒤로가기" 의미가 사라진다.
+  // 무조건 홈으로 보내면 "뒤로가기" 의미가 사라진다. X 버튼으로 나가면 홈 대시보드로 간다
+  // (홈이 생기기 전에는 랜딩이었다).
   const leaveInterview = () => {
     if (blocker.state === 'blocked') {
       blocker.proceed()
@@ -227,7 +228,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
     }
 
     hasConfirmedExitRef.current = true
-    navigate(ROUTES.LANDING)
+    navigate(ROUTES.HOME)
   }
 
   // X 버튼·인앱 이동 차단(blocker) 확인 두 경로 모두 세션을 떠나는 거라 abort 호출
