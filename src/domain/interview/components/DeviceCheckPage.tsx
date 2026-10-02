@@ -6,7 +6,7 @@ import { ROUTES, toInterview } from '@/app/routes'
 
 import { useDeviceCheck } from '../hooks/useDeviceCheck'
 import { canStartInterview } from '../lib/canStartInterview'
-import type { DeviceCheckState, DeviceFailureReason } from '../types/deviceCheck'
+import type { DeviceCheckState, DeviceFailureReason, NetworkCheckStatus } from '../types/deviceCheck'
 
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
@@ -17,8 +17,10 @@ import StepIndicator from './StepIndicator'
 const SUMMARY_ROW_LABELS = ['직무', '질문 수', '답변 시간', '면접관'] as const
 
 /**
- * 환경 체크 4항목입니다. 이슈 #81 범위는 레이아웃뿐이라 실측 로직이 없고,
- * 값 텍스트·상태 배지는 항상 placeholder 만 보여줍니다 (아래 렌더링부 참고).
+ * 환경 체크 4항목입니다. 조명·주변 소음은 측정 로직 자체가 없어 placeholder 만
+ * 보여주고, 네트워크·브라우저 권한은 이미 `useDeviceCheck` 가 값을 갖고 있어서
+ * (오른쪽 "준비 상태" 패널과 같은 출처) 그 값을 그대로 보여준다 — 두 패널이
+ * 서로 다른 말을 하는 걸 피하기 위함이다 (PR #84 리뷰).
  */
 const ENV_CHECK_ITEMS = [
   { key: 'lighting', label: '조명', Icon: IconBulb },
@@ -26,6 +28,83 @@ const ENV_CHECK_ITEMS = [
   { key: 'network', label: '네트워크', Icon: IconWifi },
   { key: 'permission', label: '브라우저 권한', Icon: IconShield },
 ] as const
+
+type EnvCheckKey = (typeof ENV_CHECK_ITEMS)[number]['key']
+
+type EnvCheckDisplay = {
+  value: string
+  valueTone: 'placeholder' | 'normal'
+  badgeTone: 'neutral' | 'success' | 'warning' | 'danger'
+  badgeLabel: string
+}
+
+const PLACEHOLDER_DISPLAY: EnvCheckDisplay = {
+  value: '측정 준비 중',
+  valueTone: 'placeholder',
+  badgeTone: 'neutral',
+  badgeLabel: '확인 전',
+}
+
+/** 해당하는 장치만 짚는다 — 하나만 문제인데 둘 다 문제인 것처럼 보이지 않도록. */
+function deviceTarget(camera: boolean, mic: boolean): string {
+  if (camera && mic) return '카메라·마이크'
+  return camera ? '카메라' : '마이크'
+}
+
+function envCheckDisplay(
+  key: EnvCheckKey,
+  camera: DeviceCheckState,
+  mic: DeviceCheckState,
+  network: NetworkCheckStatus,
+): EnvCheckDisplay {
+  if (key === 'network') {
+    return network === 'available'
+      ? { value: '온라인 상태예요', valueTone: 'normal', badgeTone: 'success', badgeLabel: '정상' }
+      : { value: '연결이 끊겼어요', valueTone: 'normal', badgeTone: 'danger', badgeLabel: '끊김' }
+  }
+
+  if (key === 'permission') {
+    const cameraDenied = camera.failureReason === 'permission-denied'
+    const micDenied = mic.failureReason === 'permission-denied'
+    // 장치 없음(not-found) · 기타 오류(unknown)는 권한을 묻기 전에 실패할 수 있어서 권한이
+    // 허용됐는지 알 수 없다. 여기서 "허용"으로 빠지면 왼쪽 패널의 빨간 "실패"와 어긋난다.
+    const cameraFailed = camera.status === 'failed'
+    const micFailed = mic.status === 'failed'
+    const pending = camera.status === 'unchecked' || mic.status === 'unchecked'
+
+    if (cameraDenied || micDenied) {
+      const target = deviceTarget(cameraDenied, micDenied)
+      return { value: `${target} 권한이 거부됐어요`, valueTone: 'normal', badgeTone: 'danger', badgeLabel: '거부됨' }
+    }
+    if (cameraFailed || micFailed) {
+      const target = deviceTarget(cameraFailed, micFailed)
+      return { value: `${target} 문제로 권한을 확인하지 못했어요`, valueTone: 'normal', badgeTone: 'warning', badgeLabel: '확인 필요' }
+    }
+    if (pending) {
+      return { value: '확인 중이에요', valueTone: 'placeholder', badgeTone: 'neutral', badgeLabel: '확인 중' }
+    }
+    return { value: '카메라·마이크 허용됨', valueTone: 'normal', badgeTone: 'success', badgeLabel: '허용' }
+  }
+
+  // 조명 · 주변 소음: 측정 로직이 없어 항상 placeholder.
+  return PLACEHOLDER_DISPLAY
+}
+
+/**
+ * 환경 체크 행의 상태별 색입니다. Figma 에는 success(1375:1491 "양호")와 warning
+ * (1375:1480 "시끄러움") 두 가지만 있고, 값이 badge 토큰과 거의 같아 새 토큰 없이 쓴다:
+ * 행 배경 rgba(231,247,235,0.6) ≈ badge-success-bg/60, 아이콘 칩 #d1f0d9 ≈ badge-success-bg,
+ * 아이콘 #1e7e38 = badge-success-text (warning 도 같은 규칙).
+ * danger(권한 거부 · 네트워크 끊김)는 Figma 에 없는 상태다. 왼쪽 패널이 장치 실패를 빨간
+ * "실패"(STATUS_TONE.failed)로 보여주므로 같은 빨강으로 맞추고, 행 색은 위 규칙을 따랐다.
+ * neutral(측정 전 · 확인 중)은 기존 회색 그대로 둔다.
+ */
+const ENV_ROW_TONE_CLASS: Record<EnvCheckDisplay['badgeTone'], { row: string; chip: string; icon: string }> = {
+  neutral: { row: 'bg-surface-muted', chip: 'bg-neutral-200', icon: 'text-neutral-500' },
+  success: { row: 'bg-badge-success-bg/60', chip: 'bg-badge-success-bg', icon: 'text-badge-success-text' },
+  warning: { row: 'bg-badge-warning-bg/60', chip: 'bg-badge-warning-bg', icon: 'text-badge-warning-text' },
+  danger: { row: 'bg-badge-danger-bg/60', chip: 'bg-badge-danger-bg', icon: 'text-badge-danger-text' },
+}
 
 type ReadyItemStatus = 'ready' | 'not-ready' | 'pending'
 
@@ -96,20 +175,13 @@ export default function DeviceCheckPage() {
 
           {/* STEP 라벨과 Stepper 는 한 묶음이라 Figma 원본 간격(10px)을 그대로 유지한다. */}
           <div className="flex flex-col gap-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-body-sm font-bold text-primary-500">STEP 2/4</span>
-              <span className="text-body-sm text-neutral-400">1분이면 끝나요</span>
-            </div>
+            <span className="text-body-sm font-bold text-primary-500">STEP 2/4</span>
             <StepIndicator current={2} />
           </div>
         </div>
 
         <div className="flex flex-wrap items-start gap-6">
-          {/*
-            TODO(design-token): Card 컴포넌트에 40px 패딩 프리셋이 없음. 임시로
-            padding="lg"(24px) 사용 중. 필요한 값: Figma 673:6 콘텐츠 카드 패딩
-            40px — shared/ui/Card 에 xl 프리셋 추가를 검토해주세요.
-          */}
+          {/* Card 는 40px 패딩 프리셋이 없어 가장 가까운 padding="lg"(24px)로 확정했다 (PR #84 리뷰). */}
           <Card padding="lg" className="flex min-w-80 flex-[3] flex-col gap-8">
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between gap-4">
@@ -197,50 +269,43 @@ export default function DeviceCheckPage() {
                 <div className="flex flex-col gap-3">
                   <p className="text-body-lg text-neutral-900">환경 체크</p>
 
-                  {/*
-                    TODO(design-token): design-system.md에 없는 값. 임시로 radius-md(14px)
-                    사용 중. 필요한 값: 환경 체크 행 모서리 12px (Figma 1375:1463, 문서엔
-                    radius-md(14px)/radius-lg(20px)만 있고 12px 없음).
-                  */}
+                  {/* 행 모서리 12px, 아이콘 칩 모서리 8px 모두 정확한 토큰이 없어 가장 가까운
+                      radius-md(14px)/radius-xs(6px)로 확정했다 (PR #84 리뷰). */}
                   <ul className="flex flex-col gap-2">
-                    {ENV_CHECK_ITEMS.map(({ key, label, Icon }) => (
-                      <li key={key} className="flex items-center gap-3 rounded-md bg-surface-muted px-3.5 py-3">
-                        {/*
-                          TODO(design-token): design-system.md에 없는 값. 임시로
-                          radius-xs(6px) 사용 중. 필요한 값: 환경 체크 아이콘 칩 모서리
-                          8px (Figma 1375:1464, xs(6px)/sm(10px) 사이라 정확한 토큰 없음).
-                        */}
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-xs bg-neutral-200">
-                          <Icon size={16} stroke={2} className="text-neutral-500" aria-hidden />
-                        </span>
+                    {ENV_CHECK_ITEMS.map(({ key, label, Icon }) => {
+                      const display = envCheckDisplay(key, camera, mic, network)
+                      const tone = ENV_ROW_TONE_CLASS[display.badgeTone]
 
-                        <div className="flex flex-1 flex-col gap-0.5">
-                          <p className="text-body-sm font-semibold text-neutral-900">{label}</p>
-                          {/*
-                            TODO(env-check): 실측 로직 없음(이슈 #81은 레이아웃만). Figma에는
-                            dB·Mbps 같은 실제 측정값과 "양호/시끄러움" 판정이 있지만, 측정
-                            기능이 생기기 전까지는 "면접 요약" 패널의 연동 준비 중 패턴
-                            (DeviceCheckPage.tsx 의 SUMMARY_ROW_LABELS dd, text-neutral-300)과
-                            동일하게 placeholder 만 표시한다.
-                          */}
-                          <p className="text-body-sm text-neutral-300">측정 준비 중</p>
-                        </div>
+                      return (
+                        <li key={key} className={`flex items-center gap-3 rounded-md px-3.5 py-3 ${tone.row}`}>
+                          <span className={`flex size-8 shrink-0 items-center justify-center rounded-xs ${tone.chip}`}>
+                            <Icon size={16} stroke={2} className={tone.icon} aria-hidden />
+                          </span>
 
-                        <Badge tone="neutral">확인 전</Badge>
-                      </li>
-                    ))}
+                          <div className="flex flex-1 flex-col gap-0.5">
+                            <p className="text-body-sm font-semibold text-neutral-900">{label}</p>
+                            {/* 조명 · 주변 소음은 측정 로직이 없어 "면접 요약" 패널과 같은
+                                연한 placeholder(text-neutral-300)를 쓴다. 네트워크 · 브라우저
+                                권한은 useDeviceCheck 의 실제 값이라 본문 톤(text-neutral-500)
+                                으로 보여준다 — "준비 상태" 패널과 다른 말을 하지 않도록. */}
+                            <p className={`text-body-sm ${display.valueTone === 'placeholder' ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                              {display.value}
+                            </p>
+                          </div>
+
+                          <Badge tone={display.badgeTone} onTint={display.badgeTone !== 'neutral'}>
+                            {display.badgeLabel}
+                          </Badge>
+                        </li>
+                      )
+                    })}
                   </ul>
                 </div>
               </div>
             </div>
           </Card>
 
-          {/*
-            TODO(design-token): shared/ui/Card 는 radius 가 rounded-lg(20px)
-            고정. 임시로 그대로 사용 중. 필요한 값: 사이드 패널 모서리 16px
-            (Figma 1369:1462, 문서엔 radius-md(14px)/radius-lg(20px)만 있고
-            16px 없음).
-          */}
+          {/* Card 는 radius 가 rounded-lg(20px) 고정이라 그대로 확정했다 (PR #84 리뷰). */}
           <aside className="flex min-w-72 flex-1 flex-col gap-4">
             <Card padding="lg" className="flex flex-col gap-3.5">
               <div className="flex items-center justify-between gap-4">
