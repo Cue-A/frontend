@@ -21,7 +21,7 @@ type Props = {
  * 보관함의 자기소개서 · 포트폴리오 중 하나를 고릅니다. (A-05, 이슈 #54 1-1)
  *
  * 열릴 때마다 목록을 새로 받습니다 — 보관함에서 방금 올린 문서가 바로 보여야 합니다.
- * 면접에 쓸 수 없는 문서는 목록에 두되 이유를 적고 못 고르게 합니다.
+ * 보관함에 있는 문서는 전부 고를 수 있습니다 — 못 고르게 막던 준비 상태가 없어졌습니다 (Cue-A/backend#58).
  *
  * 브라우저 기본 `<dialog>` 를 씁니다. 포커스 가두기 · Esc 닫기를 브라우저가 해줍니다.
  *
@@ -93,40 +93,33 @@ export default function ResumePickerDialog({ selectedId, onSelect, onClose }: Pr
 
           {resumes.status === 'ready' && resumes.choices.length > 0 && (
             <ul className="flex flex-col gap-2">
-              {resumes.choices.map(({ selection, formatLabel, meta, blockReason }) => {
+              {resumes.choices.map(({ selection, formatLabel, meta }) => {
                 const selected = selection.documentId === selectedId
 
                 return (
                   <li key={selection.documentId}>
                     <button
                       type="button"
-                      disabled={blockReason !== null}
                       aria-pressed={selected}
                       onClick={() => {
                         onSelect(selection)
                         close()
                       }}
-                      className={`flex w-full items-center gap-3 rounded-sm border p-3 text-left transition-colors disabled:cursor-not-allowed ${
+                      className={`flex w-full items-center gap-3 rounded-sm border p-3 text-left transition-colors ${
                         selected
                           ? 'border-primary-500 bg-primary-100'
-                          : 'border-neutral-200 enabled:hover:border-primary-200 enabled:hover:bg-neutral-50'
+                          : 'border-neutral-200 hover:border-primary-200 hover:bg-neutral-50'
                       }`}
                     >
                       <span
                         aria-hidden
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm text-micro font-bold ${
-                          blockReason ? 'bg-neutral-50 text-neutral-400' : 'bg-primary-100 text-primary-600'
-                        }`}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary-100 text-micro font-bold text-primary-600"
                       >
                         {formatLabel}
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col">
-                        <span className={`truncate text-body-md font-semibold ${blockReason ? 'text-neutral-400' : 'text-neutral-900'}`}>
-                          {selection.title}
-                        </span>
+                        <span className="truncate text-body-md font-semibold text-neutral-900">{selection.title}</span>
                         <span className="truncate text-body-sm text-neutral-500">{meta}</span>
-                        {/* 못 고르는 이유는 글로 적습니다 (docs/01-conventions.md "비활성 버튼의 이유는 글로") */}
-                        {blockReason && <span className="break-keep text-body-sm text-badge-warning-text">{blockReason}</span>}
                       </span>
                       {selected && <span className="shrink-0 text-body-sm font-semibold text-primary-700">선택됨</span>}
                     </button>

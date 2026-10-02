@@ -8,7 +8,7 @@ import type { DocumentPage } from '../types/document'
 /**
  * 한 번에 받는 개수. 사용자당 문서 상한(20개)과 같아서 **한 페이지에 전부 옵니다.**
  * 그래서 탭 · 검색은 서버에 다시 묻지 않고 화면에서 거릅니다. 서버 필터는
- * `documentType` 하나뿐이라, "분석 실패" 탭이나 파일명 검색은 어차피 서버가 못 해줍니다.
+ * `documentType` 하나뿐이라, 파일명 검색은 어차피 서버가 못 해줍니다.
  */
 export const DOCUMENT_PAGE_SIZE = 20
 

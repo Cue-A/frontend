@@ -1,11 +1,10 @@
 import { IconChevronLeft, IconChevronRight, IconTrash } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
-import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
-import { describeDocument, formatBadgeOf, formatMeta, STATUS_VIEW } from '../lib/documentDisplay'
+import { DOCUMENT_TYPE_LABEL, formatBadgeOf, formatMeta } from '../lib/documentDisplay'
 import type { DocumentSummary } from '../types/document'
 
 /** 목록 자리에 들어갈 것. 행이 아니면 한 줄짜리 안내입니다. */
@@ -45,7 +44,7 @@ function FormatBadge({ document }: { document: DocumentSummary }) {
 function Notice({ children }: { children: ReactNode }) {
   return (
     <tr>
-      <td colSpan={4} className="break-keep px-6 py-12 text-center">
+      <td colSpan={3} className="break-keep px-6 py-12 text-center">
         {children}
       </td>
     </tr>
@@ -102,7 +101,6 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
       )
     case 'rows':
       return body.documents.map((document) => {
-        const status = STATUS_VIEW[document.indexStatus]
         const opening = openingId === document.documentId
 
         return (
@@ -112,18 +110,12 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
                 <FormatBadge document={document} />
                 <div className="min-w-0">
                   <p className="truncate text-body-md font-semibold text-neutral-900">{document.title}</p>
-                  <p className="truncate text-body-sm text-neutral-500">{describeDocument(document)}</p>
+                  <p className="truncate text-body-sm text-neutral-500">{DOCUMENT_TYPE_LABEL[document.documentType]}</p>
                 </div>
               </div>
             </td>
             <td className={`${CELL} hidden whitespace-nowrap text-right text-body-sm text-neutral-700 md:table-cell`}>
               {formatMeta(document)}
-            </td>
-            <td className={`${CELL} whitespace-nowrap text-center`}>
-              <Badge tone={status.tone}>
-                <span aria-hidden className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
-                {status.label}
-              </Badge>
             </td>
             <td className={`${CELL} text-right`}>
               <div className="flex items-center justify-end gap-1">
@@ -154,8 +146,10 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
  * 시안의 "조회/수정" 은 **"조회"** 만 둡니다 — 수정 API 가 없습니다. 행 끝의 ⋮ 메뉴(삭제 등)는
  * 지금 들어갈 항목이 삭제 하나뿐이라 메뉴 대신 **지우기 아이콘 버튼**을 바로 둡니다(Cue-A/backend#40).
  * 한 번 더 눌러 메뉴를 여는 수고가 없고, 표가 `overflow-hidden` 이라 아래쪽 행의 메뉴가 잘리는 문제도
- * 없습니다. 수정이 생기면 그때 메뉴로 모읍니다. 실패한 문서의 "다시 업로드" 는 업로드 흐름이
- * 붙을 때 같이 넣습니다. (이슈 #59)
+ * 없습니다. 수정이 생기면 그때 메뉴로 모읍니다. (이슈 #59)
+ *
+ * "상태" 칸(완료 · 분석 중 · 실패)은 뺐습니다. 문서의 준비 상태가 백엔드 응답에서 빠져서(Cue-A/backend#58)
+ * 모든 행에 똑같은 "완료" 만 남기 때문입니다. 등록한 문서는 곧바로 면접에 쓸 수 있습니다.
  *
  * 문서는 사용자당 20개까지라 한 페이지에 전부 옵니다. 페이지 버튼은 시안대로 두되 늘 비활성입니다.
  */
@@ -172,9 +166,6 @@ export default function DocumentTable({ body, openingId, onOpen, onDelete }: Pro
             </th>
             <th scope="col" className="hidden w-48 px-6 py-3 text-right font-semibold md:table-cell">
               등록일 · 용량
-            </th>
-            <th scope="col" className="w-28 px-4 py-3 text-center font-semibold md:w-36 md:px-6">
-              상태
             </th>
             <th scope="col" className="w-32 px-4 py-3 text-right font-semibold md:w-40 md:px-6">
               작업

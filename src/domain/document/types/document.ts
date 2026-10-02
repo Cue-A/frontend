@@ -16,21 +16,12 @@ export type DocumentType = 'RESUME' | 'PORTFOLIO'
 export type DocumentSourceType = 'FILE' | 'MARKDOWN'
 
 /**
- * 이 문서로 면접을 시작할 수 있는지.
+ * 목록 한 줄. 등록 응답도 같은 모양이라 올린 뒤 목록에 그대로 끼워 넣을 수 있습니다.
  *
- * - `PROCESSING` 처음 올린 문서를 준비하는 중
- * - `COMPLETED` 면접 시작 가능
- * - `OUTDATED` 쓰던 문서를 고쳐서 다시 준비하는 중. `PROCESSING` 과 문구가 달라야
- *   합니다 — 멀쩡히 쓰던 문서가 갑자기 막히면 사용자는 이유를 모릅니다
- * - `FAILED` 되돌릴 수 없는 실패. 다시 올리게 안내합니다
- *
- * **지금은 `COMPLETED` 만 옵니다.** 인덱싱이 이번 범위에서 빠져서 백엔드가 등록 즉시
- * 준비 완료로 둡니다. 나머지 셋은 인덱싱이 붙는 날 백엔드 한 줄로 내려오기 시작하므로
- * 화면 분기는 미리 만들어 둡니다. (이슈 #54 1-3)
+ * 전에 있던 `indexStatus`(준비 중 · 완료 · 실패)는 백엔드 응답에서 빠졌습니다 (Cue-A/backend#58).
+ * 인덱싱은 면접 세션을 만들 때 AI 서버가 하므로, **등록한 문서는 곧바로 면접에 쓸 수 있고** 화면이 기다리거나
+ * 막을 상태가 없습니다.
  */
-export type DocumentIndexStatus = 'PROCESSING' | 'COMPLETED' | 'OUTDATED' | 'FAILED'
-
-/** 목록 한 줄. 등록 응답도 같은 모양이라 올린 뒤 목록에 그대로 끼워 넣을 수 있습니다. */
 export type DocumentSummary = {
   /** UUID 문자열. 세션 생성에 `documentId` 로 그대로 싣습니다. */
   documentId: string
@@ -41,7 +32,6 @@ export type DocumentSummary = {
   fileName: string | null
   /** 바이트. `MARKDOWN` 문서면 null 입니다. */
   fileSize: number | null
-  indexStatus: DocumentIndexStatus
   /** ISO 8601 (`2026-09-23T10:11:12+09:00`) */
   createdAt: string
 }
@@ -69,7 +59,6 @@ export type DocumentDetail = {
   content: string | null
   /** `FILE` 원본을 받을 주소. 조회할 때마다 새로 만들어지고 **1시간 뒤 만료**됩니다. `MARKDOWN` 이면 null */
   downloadUrl: string | null
-  indexStatus: DocumentIndexStatus
   createdAt: string
   updatedAt: string
 }

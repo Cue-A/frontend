@@ -1,7 +1,7 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
-import type { DocumentIndexStatus, DocumentSourceType, DocumentType } from '../types/document'
+import type { DocumentSourceType, DocumentType } from '../types/document'
 
 import type { DocumentDetailResponse, DocumentListResponse, DocumentResponse } from './documentResponse'
 
@@ -37,10 +37,7 @@ type StoredDocument = DocumentResponse & {
   updatedAt: string
 }
 
-/**
- * 처음 목록. 화면의 상태 분기를 전부 확인할 수 있게 네 상태를 다 넣었습니다.
- * 실제 서버는 지금 `COMPLETED` 만 줍니다 (types/document.ts 의 DocumentIndexStatus 주석).
- */
+/** 처음 목록. 파일 형식(PDF · DOCX · TXT) · 직접 작성 · 포트폴리오가 섞여 있게 넣었습니다. */
 const SEED: Array<{
   documentId: string
   documentType: DocumentType
@@ -48,7 +45,6 @@ const SEED: Array<{
   title: string
   fileName: string | null
   fileSize: number | null
-  indexStatus: DocumentIndexStatus
   createdAt: string
   content?: string
 }> = [
@@ -59,7 +55,6 @@ const SEED: Array<{
     title: '카카오_자기소개서.pdf',
     fileName: '카카오_자기소개서.pdf',
     fileSize: 1_363_148,
-    indexStatus: 'COMPLETED',
     createdAt: '2026-09-20T14:02:11+09:00',
   },
   {
@@ -69,7 +64,6 @@ const SEED: Array<{
     title: '직접 작성한 자기소개서',
     fileName: null,
     fileSize: null,
-    indexStatus: 'COMPLETED',
     createdAt: '2026-09-18T21:40:05+09:00',
     content: '## 지원 동기\n\n사용자가 매일 쓰는 화면을 더 빠르게 만드는 일에 관심이 있습니다.\n',
   },
@@ -80,7 +74,6 @@ const SEED: Array<{
     title: '프론트엔드_포트폴리오.pdf',
     fileName: '프론트엔드_포트폴리오.pdf',
     fileSize: 3_250_585,
-    indexStatus: 'COMPLETED',
     createdAt: '2026-09-15T10:11:12+09:00',
   },
   {
@@ -90,7 +83,6 @@ const SEED: Array<{
     title: '네이버_자소서_초안.docx',
     fileName: '네이버_자소서_초안.docx',
     fileSize: 838_860,
-    indexStatus: 'PROCESSING',
     createdAt: '2026-09-12T09:30:00+09:00',
   },
   {
@@ -100,7 +92,6 @@ const SEED: Array<{
     title: '토스_자기소개서.docx',
     fileName: '토스_자기소개서.docx',
     fileSize: 512_000,
-    indexStatus: 'OUTDATED',
     createdAt: '2026-09-10T18:22:47+09:00',
   },
   {
@@ -110,7 +101,6 @@ const SEED: Array<{
     title: '당근_자소서.txt',
     fileName: '당근_자소서.txt',
     fileSize: 24_310,
-    indexStatus: 'FAILED',
     createdAt: '2026-09-08T08:05:59+09:00',
   },
 ]
@@ -143,7 +133,6 @@ function toResponse(document: StoredDocument): DocumentResponse {
     title: document.title,
     fileName: document.fileName,
     fileSize: document.fileSize,
-    indexStatus: document.indexStatus,
     createdAt: document.createdAt,
   }
 }
@@ -216,8 +205,6 @@ function register(form: FormData): DocumentResponse {
     documentType,
     sourceType,
     title: title.trim(),
-    // 인덱싱이 없어 실제 서버도 등록 즉시 준비 완료입니다.
-    indexStatus: 'COMPLETED' as const,
     createdAt: now,
     updatedAt: now,
   }
@@ -312,9 +299,6 @@ registerMock('GET', '/api/documents/:documentId', ({ documentId }): DocumentDeta
     title: document.title,
     content: document.sourceType === 'MARKDOWN' ? document.content : null,
     downloadUrl,
-    indexStatus: document.indexStatus,
-    indexedAt: null,
-    indexError: null,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
   }
