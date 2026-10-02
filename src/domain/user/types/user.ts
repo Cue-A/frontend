@@ -13,3 +13,22 @@ export type Me = {
   email: string | null
   providers: LoginProvider[]
 }
+
+/**
+ * 탈퇴 이유. 탈퇴 요청에 같이 보냅니다 (백엔드 계약 미정 — docs/90-open-questions.md Q14).
+ * 화면 문구는 `lib/withdrawReasons.ts` 에 있습니다.
+ */
+export type WithdrawReason =
+  | 'FOUND_JOB'
+  | 'QUESTIONS_MISMATCH'
+  | 'REPORT_UNHELPFUL'
+  | 'DEVICE_TROUBLE'
+  | 'PRIVACY'
+  | 'NEW_ACCOUNT'
+  | 'OTHER'
+
+export type WithdrawRequest = {
+  reason: WithdrawReason
+  /** `OTHER` 일 때 직접 적은 이유. 비어 있으면 보내지 않습니다 */
+  detail?: string
+}
