@@ -74,9 +74,20 @@ export default function ReportPage() {
     분석하는 API(`reportRetryApi.ts`)가 아직 없습니다. 둘 다 목업이 답합니다.
   */
 
+  /*
+    "시선 지표 포함" 을 끄면 시선 **점수**를 뺍니다. 다만 아래 두 경우의 시선 줄은 남깁니다. (PR #92 리뷰)
+
+    - **분석이 실패한 줄**(`retryAxis`): 점수가 아니라 "다시 분석" 버튼이 있는 줄입니다. 같이 빼면 위쪽 안내는
+      "세부 점수에서 빠진 항목만 다시 분석할 수 있어요" 라고 하는데 정작 누를 버튼이 없습니다
+    - **방금 다시 분석해서 살아난 줄**: 누른 결과가 눈앞에서 사라지고 총점만 바뀌면 무엇이 바뀌었는지 알 수 없습니다.
+      다른 회차로 옮기거나 새로고침하면 토글대로 다시 빠집니다
+  */
+  const keepGazeRow = (metric: (typeof data.metrics)[number]) =>
+    metric.retryAxis !== null || retry.outcomes.gaze?.kind === 'recovered'
+
   const metrics = options.showGaze
     ? data.metrics
-    : data.metrics.filter((metric) => metric.key !== 'gaze')
+    : data.metrics.filter((metric) => metric.key !== 'gaze' || keepGazeRow(metric))
 
   return (
     <div className="min-h-screen bg-neutral-50">

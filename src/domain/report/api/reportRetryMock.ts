@@ -1,11 +1,10 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
-import { ANALYSIS_STAGES } from '../types/analysis'
 import type { ReportErrorPush } from '../types/analysis'
 import type { RetryAxis } from '../types/report'
 
-import { buildMockReport, MOCK_REPORT_IDS, recoverMockAxes } from './reportMock'
+import { MOCK_REPORT_IDS, mockReportState, recoverMockAxes } from './reportMock'
 import type { ReportSocketHandlers } from './reportRequestMock'
 
 /**
@@ -16,14 +15,18 @@ import type { ReportSocketHandlers } from './reportRequestMock'
  *
  * | 리포트 | 다시 분석하면 |
  * |---|---|
- * | 3회차(`latest`) · 그 밖 | 다섯 단계를 0.8초씩 넘기고 살아납니다. 총점 · 상태가 바뀝니다 |
+ * | 3회차(`latest`) · 그 밖 | 4초 뒤 살아납니다. 총점 · 상태가 바뀝니다 |
  * | `bothFailed` 말하기 | 첫 번째는 끝까지 돌지만 **또 실패**(리포트는 그대로 `PARTIAL`), 두 번째에 살아납니다 |
  * | `bothFailed` 시선 | 첫 번째는 소켓 `error`(`AI_TIMEOUT`, 다시 요청 가능), 두 번째에 살아납니다 |
  *
  * 몇 번째인지는 메모리에만 셉니다. 새로고침하면 처음부터입니다.
+ *
+ * **진행 단계(`progress`)는 흘리지 않습니다.** 재시도는 앞 단계를 캐시로 건너뛰어서 화면이 단계 막대를 그리지
+ * 않습니다(`useAxisRetry` 의 `onProgress` 가 빈 함수). 버려질 타이머를 단계마다 예약하던 것을 뺐습니다. (PR #92 리뷰)
  */
 
-const STAGE_MS = 800
+/** 재시도가 끝나기까지 걸리는 시간. 전에 다섯 단계를 0.8초씩 넘기던 것과 같은 길이입니다 */
+const RETRY_MS = 4000
 
 const RETRY_AXES: RetryAxis[] = ['speech', 'gaze']
 
@@ -50,7 +53,7 @@ registerMock(
       throw new ApiError('INVALID_REQUEST', '다시 분석할 축이 없습니다')
     }
     // AI 계약 14장 — PARTIAL 리포트만 재시도할 수 있습니다.
-    if (buildMockReport(reportId).status !== 'partial') {
+    if (mockReportState(reportId).status !== 'partial') {
       throw new ApiError('INVALID_REQUEST', '일부 항목이 빠진 리포트만 다시 분석할 수 있습니다')
     }
 
@@ -86,45 +89,33 @@ function toOutcome(reportId: string, axes: RetryAxis[]): MockOutcome {
   return { kind: 'recovered' }
 }
 
-/** 실제 소켓과 같은 순서로 메시지를 흘립니다. 반환값은 정리 함수입니다 */
+/** 재시도가 끝나는 시점에 결과(`report` 또는 `error`) 하나만 보냅니다. 반환값은 정리 함수입니다 */
 export function connectMockRetrySocket(reportId: string, handlers: ReportSocketHandlers): () => void {
   const run = pendingRuns.get(reportId)
-  const timers: ReturnType<typeof setTimeout>[] = []
 
-  ANALYSIS_STAGES.forEach((stage, index) => {
-    timers.push(
-      setTimeout(
-        () => handlers.onProgress({ stage: stage.key, progress: (index + 1) / ANALYSIS_STAGES.length }),
-        STAGE_MS * index,
-      ),
-    )
-  })
+  const timer = setTimeout(() => {
+    pendingRuns.delete(reportId)
 
-  timers.push(
-    setTimeout(() => {
-      pendingRuns.delete(reportId)
+    // 등록 없이 소켓만 붙은 경우입니다. 실제 서버라면 아무것도 오지 않겠지만, 목업은 끝을 알려줍니다.
+    if (!run) {
+      handlers.onError({ errorCode: 'INTERNAL_ERROR', message: '등록된 재시도가 없습니다', retryable: true })
+      return
+    }
 
-      // 등록 없이 소켓만 붙은 경우입니다. 실제 서버라면 아무것도 오지 않겠지만, 목업은 끝을 알려줍니다.
-      if (!run) {
-        handlers.onError({ errorCode: 'INTERNAL_ERROR', message: '등록된 재시도가 없습니다', retryable: true })
-        return
-      }
+    const outcome = toOutcome(reportId, run.axes)
+    if (outcome.kind === 'error') {
+      handlers.onError(outcome.error)
+      return
+    }
+    if (outcome.kind === 'recovered') recoverMockAxes(reportId, run.axes)
 
-      const outcome = toOutcome(reportId, run.axes)
-      if (outcome.kind === 'error') {
-        handlers.onError(outcome.error)
-        return
-      }
-      if (outcome.kind === 'recovered') recoverMockAxes(reportId, run.axes)
+    const state = mockReportState(reportId)
+    handlers.onReport({
+      reportId,
+      status: state.status === 'partial' ? 'PARTIAL' : 'COMPLETED',
+      scoreTotal: state.totalScore,
+    })
+  }, RETRY_MS)
 
-      const report = buildMockReport(reportId)
-      handlers.onReport({
-        reportId,
-        status: report.status === 'partial' ? 'PARTIAL' : 'COMPLETED',
-        scoreTotal: report.totalScore,
-      })
-    }, STAGE_MS * ANALYSIS_STAGES.length),
-  )
-
-  return () => timers.forEach(clearTimeout)
+  return () => clearTimeout(timer)
 }

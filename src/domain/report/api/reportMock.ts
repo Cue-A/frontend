@@ -524,15 +524,30 @@ function toMockReport(shell: ReportShell, analysis: AnalysisResult): Report {
   }
 }
 
-/**
- * 목업 리포트를 만듭니다. 목록에 없는 id 는 3회차 모양에 id 만 바꿔 돌려줍니다.
- * 재시도 목업 소켓도 결과 상태(`PARTIAL` · `COMPLETED`)를 알려고 부릅니다.
- */
-export function buildMockReport(reportId: string): Report {
-  const scenario = SCENARIOS[reportId] ?? SCENARIOS[MOCK_REPORT_IDS.latest]
-  const analysis = withRecovered(scenario.analysis, recoveredAxes.get(reportId))
+/** 목록에 없는 id 는 3회차 모양으로 돌려줍니다 */
+function scenarioOf(reportId: string): MockScenario {
+  return SCENARIOS[reportId] ?? SCENARIOS[MOCK_REPORT_IDS.latest]
+}
 
-  return toMockReport({ ...scenario.shell, reportId }, analysis)
+/** 지금 시점의 분석 결과 — 다시 분석해서 살아난 축까지 반영한 것입니다 */
+function mockAnalysisOf(reportId: string): AnalysisResult {
+  return withRecovered(scenarioOf(reportId).analysis, recoveredAxes.get(reportId))
+}
+
+/** 목업 리포트를 만듭니다. 목록에 없는 id 는 3회차 모양에 id 만 바꿔 돌려줍니다. */
+export function buildMockReport(reportId: string): Report {
+  return toMockReport({ ...scenarioOf(reportId).shell, reportId }, mockAnalysisOf(reportId))
+}
+
+/**
+ * 리포트의 상태와 총점만 꺼냅니다. 재시도 목업(`reportRetryMock.ts`)이 씁니다.
+ *
+ * 전에는 상태 하나를 보려고 `buildMockReport` 로 리포트 전체를 변환했습니다. 재시도 등록 · 결과 통지가 보는 건
+ * 이 두 값뿐이라 분석 결과에서 바로 읽습니다. (PR #92 리뷰)
+ */
+export function mockReportState(reportId: string): Pick<Report, 'status' | 'totalScore'> {
+  const analysis = mockAnalysisOf(reportId)
+  return { status: analysis.report_status, totalScore: analysis.overall.score }
 }
 
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => buildMockReport(reportId), {
