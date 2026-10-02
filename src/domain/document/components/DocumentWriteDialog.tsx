@@ -1,6 +1,7 @@
 import { IconX } from '@tabler/icons-react'
 import { useEffect, useId, useRef, useState } from 'react'
 
+import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Chip from '@/shared/ui/Chip'
 
@@ -32,7 +33,7 @@ type Props = {
  * 모양이고, 시안이 백엔드에 맞춰 오면 모양만 바꿉니다.
  *
  * - 본문은 자르지 않습니다. `maxLength` 를 걸면 붙여넣은 글이 **말없이 잘립니다.** 넘치면 몇 자 넘었는지
- *   보여주고 저장 버튼을 잠급니다
+ *   보여주고 올리기 버튼을 잠급니다
  * - 적던 내용이 있으면 Esc · X · 취소로 바로 닫지 않고 한 번 묻습니다. 저장 전이라 닫으면 사라집니다
  * - 저장하는 동안은 닫을 수 없습니다. 요청을 끊을 방법이 없어서, 닫혀도 서버에는 저장됩니다
  */
@@ -129,7 +130,7 @@ export default function DocumentWriteDialog({ defaultType, onSaved, onClose }: P
             직접 작성하기
           </p>
           <p className="mt-1 break-keep text-body-sm text-neutral-500">
-            자기소개서나 포트폴리오 내용을 적거나 붙여넣어 보관함에 저장해요.
+            자기소개서나 포트폴리오 내용을 적거나 붙여넣어 보관함에 등록해요.
           </p>
         </div>
         <button
@@ -146,7 +147,11 @@ export default function DocumentWriteDialog({ defaultType, onSaved, onClose }: P
       <div className="flex flex-col gap-5 px-6 py-5">
         <label className="flex flex-col gap-2">
           <span className="flex items-center justify-between text-body-md font-semibold text-neutral-900">
-            제목
+            {/* 제목이 비면 올릴 수 없어서 옵션 설정(A-05)과 같은 필수 배지를 답니다 */}
+            <span className="flex items-center gap-2">
+              제목
+              <Badge tone="danger">필수</Badge>
+            </span>
             <span className="text-body-sm font-normal text-neutral-400">
               {trimmedTitle.length}/{MAX_TITLE_LENGTH}
             </span>
@@ -185,7 +190,7 @@ export default function DocumentWriteDialog({ defaultType, onSaved, onClose }: P
               </label>
             ))}
           </div>
-          <span className="break-keep text-body-sm text-neutral-500">저장한 뒤에는 바꿀 수 없어요.</span>
+          <span className="break-keep text-body-sm text-neutral-500">올린 뒤에는 바꿀 수 없어요.</span>
         </fieldset>
 
         <label className="flex flex-col gap-2">
@@ -241,7 +246,7 @@ export default function DocumentWriteDialog({ defaultType, onSaved, onClose }: P
               취소
             </Button>
             <Button variant="primary" size="sm" onClick={() => void handleSubmit()} disabled={!canSubmit}>
-              {saving ? '저장하는 중…' : '저장하기'}
+              {saving ? '올리는 중…' : '올리기'}
             </Button>
           </>
         )}

@@ -64,8 +64,8 @@ export default function LibraryDocumentsPage() {
   const openWrite = () => openDialog('write')
 
   const handleSaved = (document: DocumentSummary) => {
-    const verb = document.sourceType === 'MARKDOWN' ? '저장했어요' : '올렸어요'
-    setSavedNotice(`‘${document.title}’ 문서를 ${verb}.`)
+    // 파일 업로드든 직접 작성이든 같은 말로 알립니다. 직접 작성 창의 버튼도 "올리기" 입니다.
+    setSavedNotice(`‘${document.title}’ 문서를 올렸어요.`)
     // 방금 올린 문서가 보이도록 거르는 조건을 풉니다. 다른 탭에 있으면 올렸는데 안 보입니다.
     setTab('ALL')
     setQuery('')

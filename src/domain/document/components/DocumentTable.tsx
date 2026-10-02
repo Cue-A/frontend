@@ -86,7 +86,7 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
               )}
               {body.onUpload && (
                 <Button variant="primary" size="sm" onClick={body.onUpload}>
-                  파일 올리기
+                  파일 업로드
                 </Button>
               )}
             </div>

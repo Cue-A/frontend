@@ -132,7 +132,7 @@ export default function DocumentUploadDialog({ defaultType, onUploaded, onClose 
       <div className="flex items-start justify-between gap-4 border-b border-neutral-200 px-6 py-5">
         <div>
           <p id={titleId} className="text-h2 text-neutral-900">
-            문서 올리기
+            파일 업로드
           </p>
           <p className="mt-1 break-keep text-body-sm text-neutral-500">자기소개서나 포트폴리오를 보관함에 등록해요.</p>
         </div>
@@ -269,7 +269,7 @@ export default function DocumentUploadDialog({ defaultType, onUploaded, onClose 
           취소
         </Button>
         <Button variant="primary" size="sm" onClick={() => void handleSubmit()} disabled={!canSubmit}>
-          {uploading ? '올리는 중…' : '올리기'}
+          {uploading ? '업로드 중…' : '업로드'}
         </Button>
       </div>
     </dialog>
