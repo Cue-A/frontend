@@ -133,6 +133,36 @@
    * 글자를 이 색으로 쓰면 안 된다 — 흰색에 가까워서 대비가 안 나온다.
    * ------------------------------------------------------------------- */
   --color-surface-muted: #f9f8ff; /* 카드 안 보조 패널 (Figma 1377:1462) */
+
+  /* ---------------------------------------------------------------------
+   * 배경 장식 원 모션 (AnalyzingPage 전용)
+   *
+   * 규칙적인 왕복(2점 ping-pong)이 아니라 불규칙한 % 지점에 서로 다른 이동값을
+   * 둬서 "랜덤하게 떠다니는" 느낌을 낸다. 두 원의 지속시간도 다르게 둬서(18s·24s)
+   * 서로 박자가 겹치지 않게 한다. --animate-* 로 등록해서 Tailwind 기본
+   * animate-spin 과 같은 방식으로 쓴다 — animate-[...] arbitrary value 없이
+   * animate-blob-drift-1/2 클래스로 쓰고, 주기도 여기 한 곳에서만 관리한다.
+   * (PR #84 리뷰)
+   * ------------------------------------------------------------------- */
+  --animate-blob-drift-1: blob-drift-1 18s ease-in-out infinite;
+  --animate-blob-drift-2: blob-drift-2 24s ease-in-out infinite;
+
+  @keyframes blob-drift-1 {
+    0% { transform: translate(0, 0); }
+    22% { transform: translate(130px, -90px); }
+    47% { transform: translate(-75px, 85px); }
+    68% { transform: translate(95px, 140px); }
+    86% { transform: translate(-110px, -45px); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes blob-drift-2 {
+    0% { transform: translate(0, 0); }
+    18% { transform: translate(-110px, 85px); }
+    39% { transform: translate(100px, -110px); }
+    61% { transform: translate(140px, 65px); }
+    83% { transform: translate(-65px, -130px); }
+    100% { transform: translate(0, 0); }
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -163,6 +193,28 @@
     radial-gradient(58% 60% at 0% 18%, var(--color-wash-mint) 0%, transparent 72%),
     radial-gradient(34% 48% at 41% 22%, var(--color-wash-blush) 0%, transparent 72%),
     radial-gradient(42% 62% at 100% 6%, var(--color-wash-lavender) 0%, transparent 72%);
+}
+
+/*
+ * 스크롤이 긴 화면용 워시 (홈 대시보드 A-04).
+ *
+ * `bg-wash` 는 한 화면 높이짜리 구역(A-01)에 맞춘 값이라 블롭 셋이 모두 위쪽에 있다. 스크롤이 긴 화면에
+ * 그대로 깔면 내려갔을 때 아래쪽은 neutral-50 단색만 남는다. 그래서 같은 세 색을 아래쪽에도 한 번 더 깐다.
+ * (PR #88 리뷰)
+ *
+ * 세로 크기 · 위치는 % 가 아니라 vh 로 준다. % 로 주면 화면이 길어질수록 블롭이 세로로 늘어나서, 위쪽 블롭이
+ * `bg-wash` 와 다른 모양이 된다. vh 로 주면 화면 길이와 상관없이 위 · 아래 모두 한 화면 높이 기준으로 그려진다.
+ * 아래쪽은 위쪽을 좌우로 뒤집어 깔았다 — 같은 색이 같은 쪽에 두 번 쌓이지 않게.
+ */
+@utility bg-wash-tall {
+  background-color: var(--color-neutral-50);
+  background-image:
+    radial-gradient(58% 60vh at 0% 18vh, var(--color-wash-mint) 0%, transparent 72%),
+    radial-gradient(34% 48vh at 41% 22vh, var(--color-wash-blush) 0%, transparent 72%),
+    radial-gradient(42% 62vh at 100% 6vh, var(--color-wash-lavender) 0%, transparent 72%),
+    radial-gradient(42% 62vh at 0% calc(100% - 6vh), var(--color-wash-lavender) 0%, transparent 72%),
+    radial-gradient(34% 48vh at 59% calc(100% - 22vh), var(--color-wash-blush) 0%, transparent 72%),
+    radial-gradient(58% 60vh at 100% calc(100% - 18vh), var(--color-wash-mint) 0%, transparent 72%);
 }
 
 /* ---------------------------------------------------------------------

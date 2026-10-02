@@ -6,6 +6,7 @@ import DeviceCheckPage from '@/domain/interview/components/DeviceCheckPage'
 import InterviewPage from '@/domain/interview/components/InterviewPage'
 import InterviewSessionPreview from '@/domain/interview/components/InterviewSessionPreview'
 import LibraryDocumentsPage from '@/domain/document/components/LibraryDocumentsPage'
+import HomePage from '@/domain/home/components/HomePage'
 import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
@@ -13,6 +14,7 @@ import ReportPage from '@/domain/report/components/ReportPage'
 
 import AppLayout, { type AppLayoutHandle } from './layout/AppLayout'
 import NotFoundPage from './NotFoundPage'
+import RedirectIfSignedIn from './RedirectIfSignedIn'
 import RequireAuth from './RequireAuth'
 import { ROUTES } from './routes'
 
@@ -25,8 +27,18 @@ import { ROUTES } from './routes'
  * 리포트는 C-01 시안에 사이드바가 없고 자체 상단바를 씁니다.
  */
 export const router = createBrowserRouter([
+  // 랜딩은 로그인 여부와 관계없이 처음 들어오면 늘 보여줍니다. 서비스 첫 화면입니다.
   { path: ROUTES.LANDING, element: <LandingPage /> },
-  { path: ROUTES.LOGIN, element: <LoginPage /> },
+  {
+    // 이미 로그인한 사람이 로그인 화면에 오면 홈으로 보냅니다. 랜딩의 "로그인" · "무료로 시작하기" 를
+    // 눌러도 로그인 화면을 거치지 않고 홈으로 갑니다.
+    path: ROUTES.LOGIN,
+    element: (
+      <RedirectIfSignedIn>
+        <LoginPage />
+      </RedirectIfSignedIn>
+    ),
+  },
   { path: ROUTES.KAKAO_CALLBACK, element: <KakaoCallbackPage /> },
   {
     // AUTH-4 보호 라우트 가드. refresh token 이 없으면 로그인 화면으로 보냅니다
@@ -45,13 +57,14 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
           {
-            path: ROUTES.LIBRARY_DOCUMENTS,
-            element: <LibraryDocumentsPage />,
-            // 보관함 패널이 아이콘 레일에 바로 붙어야 해서 본문 여백을 화면이 직접 정합니다.
+            path: ROUTES.HOME,
+            element: <HomePage />,
+            // 시안처럼 화면 전체에 워시 배경을 깔아야 해서 본문 여백을 화면이 직접 정합니다.
             handle: { fullBleed: true } satisfies AppLayoutHandle,
           },
+          { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
+          { path: ROUTES.LIBRARY_DOCUMENTS, element: <LibraryDocumentsPage /> },
         ],
       },
     ],

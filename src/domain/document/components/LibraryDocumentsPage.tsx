@@ -2,6 +2,7 @@ import { IconPencil, IconPlus, IconSearch } from '@tabler/icons-react'
 import { useState } from 'react'
 
 import { toUserMessage } from '@/shared/api/errorMessage'
+import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
 import { useDocuments } from '../hooks/useDocuments'
@@ -14,7 +15,6 @@ import DocumentDeleteDialog from './DocumentDeleteDialog'
 import DocumentTable, { type DocumentTableBody } from './DocumentTable'
 import DocumentUploadDialog from './DocumentUploadDialog'
 import DocumentWriteDialog from './DocumentWriteDialog'
-import LibraryPanel from './LibraryPanel'
 import LibraryTopBar from './LibraryTopBar'
 
 /**
@@ -25,6 +25,11 @@ import LibraryTopBar from './LibraryTopBar'
  *
  * "직접 작성" 은 본문을 적어서 저장합니다. 직접 작성한 문서도 파일 문서처럼 면접에 쓸 수 있습니다
  * (Cue-A/backend#39). 작성 창도 임시 시안입니다 (DocumentWriteDialog 주석 참고).
+ *
+ * 전에는 아이콘 레일 옆에 "내 보관함" 두 번째 패널이 붙어 있었습니다. 하위 항목(자소서 · 포트폴리오 · 연습 기록 ·
+ * 질문 은행)을 사이드바에 마우스를 올리면 열리는 하위 메뉴로 옮기고 패널을 없앴습니다(SideNav). 패널이 사라지면
+ * 본문이 왼쪽으로 쏠려서, 본문을 최대 1248px 로 묶어 가운데에 둡니다. 패널 아래의 "등록한 문서 n / 20" 은
+ * 제목 옆 배지로 옮겼습니다.
  */
 export default function LibraryDocumentsPage() {
   const documents = useDocuments()
@@ -64,8 +69,8 @@ export default function LibraryDocumentsPage() {
   const openWrite = () => openDialog('write')
 
   const handleSaved = (document: DocumentSummary) => {
-    const verb = document.sourceType === 'MARKDOWN' ? '저장했어요' : '올렸어요'
-    setSavedNotice(`‘${document.title}’ 문서를 ${verb}.`)
+    // 파일 업로드든 직접 작성이든 같은 말로 알립니다. 직접 작성 창의 버튼도 "올리기" 입니다.
+    setSavedNotice(`‘${document.title}’ 문서를 올렸어요.`)
     // 방금 올린 문서가 보이도록 거르는 조건을 풉니다. 다른 탭에 있으면 올렸는데 안 보입니다.
     setTab('ALL')
     setQuery('')
@@ -85,16 +90,34 @@ export default function LibraryDocumentsPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <LibraryPanel documentCount={documents.status === 'ready' ? documents.page.totalElements : null} />
-
-      <div className="flex min-w-0 flex-1 flex-col gap-6 px-6 py-6 md:px-12 md:py-8">
+    <>
+      {/* 1248px = 사람인 TO-BE 본문 폭. 넓은 화면에서 표가 끝없이 늘어나지 않고 가운데에 모입니다 */}
+      <div className="mx-auto flex w-full max-w-312 flex-col gap-6">
         <LibraryTopBar />
 
         {/* 넓은 화면에서는 제목 옆에 검색 · 업로드를 둡니다(시안). 설명이 길어져도 버튼을 밀어내지 않게 제목 쪽이 남는 폭을 씁니다. */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 lg:flex-1">
-            <h1 className="text-h1 text-neutral-900">자소서 / 포트폴리오</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-h1 text-neutral-900">자소서 / 포트폴리오</h1>
+              {documents.status === 'ready' && (
+                // 전에 패널에 있던 막대(meter)의 뜻을 배지에도 남깁니다. 글자만 두면 스크린리더가 "15 / 20개" 를
+                // 그냥 글로 읽어서, 20 이 상한이라는 정보가 사라집니다. (PR #88 리뷰)
+                <span
+                  role="meter"
+                  aria-label="등록한 문서 수"
+                  aria-valuemin={0}
+                  aria-valuemax={MAX_DOCUMENTS}
+                  aria-valuenow={documents.page.totalElements}
+                  aria-valuetext={`${MAX_DOCUMENTS}개 중 ${documents.page.totalElements}개`}
+                  className="inline-flex"
+                >
+                  <Badge tone={atLimit ? 'warning' : 'brand'}>
+                    {documents.page.totalElements} / {MAX_DOCUMENTS}개
+                  </Badge>
+                </span>
+              )}
+            </div>
             <p className="mt-2 break-keep text-body-md text-neutral-500">
               자소서를 등록하면 그 내용으로 면접 질문을 만들어 드려요. 등록한 문서와 상태를 여기서 다시 확인할 수 있어요.
             </p>
@@ -193,6 +216,6 @@ export default function LibraryDocumentsPage() {
           onClose={() => setDialog(null)}
         />
       )}
-    </div>
+    </>
   )
 }
