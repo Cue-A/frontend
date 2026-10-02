@@ -125,5 +125,14 @@ export type SessionSetup = {
   deliveryMode: DeliveryMode
 }
 
-/** 면접을 시작하려면 다 채워야 하는 값들입니다. 시안의 "필수" 배지와 같습니다. */
-export const REQUIRED_LABELS = ['직무 입력', '자기소개서 불러오기', '면접관 스타일'] as const
+/**
+ * 면접을 시작하려면 다 채워야 하는 항목의 이름입니다. 시안의 "필수" 배지가 붙는 셋입니다.
+ *
+ * 화면의 항목 이름과 "아직 안 고른 항목" 안내(useSessionSetup)가 **같은 글자**여야 해서 여기 한 곳에 둡니다.
+ * 따로 적으면 이름을 바꿀 때 한쪽만 바뀝니다. (PR #90 리뷰)
+ */
+export const REQUIRED_LABELS = {
+  jobRole: '직무 입력',
+  resume: '자기소개서 불러오기',
+  interviewerStyle: '면접관 스타일',
+} as const

@@ -18,6 +18,7 @@ import {
   MAX_JOB_ROLE_LENGTH,
   NO_TIME_LIMIT,
   QUESTION_COUNT_CHOICES,
+  REQUIRED_LABELS,
   type Company,
 } from '../types/sessionSetup'
 
@@ -107,7 +108,7 @@ export default function SessionSetupPage() {
           {/* 직무는 고르지 않고 직접 적습니다 (types/sessionSetup.ts MAX_JOB_ROLE_LENGTH 주석) */}
           <div className="flex flex-col gap-3">
             <label htmlFor={jobRoleId} className={FIELD_LABEL_CLASS}>
-              직무 입력
+              {REQUIRED_LABELS.jobRole}
               <Badge tone="danger">필수</Badge>
             </label>
             <input
@@ -192,7 +193,7 @@ export default function SessionSetupPage() {
           </div>
 
           <ChipGroup
-            label="면접관 스타일"
+            label={REQUIRED_LABELS.interviewerStyle}
             required
             choices={INTERVIEWER_STYLES}
             value={setup.interviewerStyle}
