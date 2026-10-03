@@ -13,7 +13,7 @@
  * 조회 엔드포인트가 아직 없습니다. 그래서 이 파일은 **분석 결과 부분만** 다룹니다.
  */
 
-import type { Evidence, ScoreMetric, SubMetric } from '../types/report'
+import type { Evidence, RetryAxis, ScoreMetric, SubMetric } from '../types/report'
 
 /** 점수 축. 전달 문서의 "점수 항목" 세 줄입니다. */
 export type AxisKey = 'content' | 'speech' | 'gaze'
@@ -94,11 +94,48 @@ export type ResilienceResponse = {
   comment: string
 }
 
+/**
+ * 문항 하나의 채점 결과입니다. (`ai/report_schemas.py` `QuestionScore`)
+ *
+ * 되묻기는 따로 나오지 않고 원 질문에 합쳐집니다(`had_reask: true`).
+ * 지금 화면이 쓰는 건 `question_number` 와 `comment` 뿐입니다. 나머지는 응답 모양을 그대로 적어둔 것입니다.
+ */
+export type QuestionScoreResponse = {
+  question_id: string
+  /** 1부터 셉니다 */
+  question_number: number
+  category: string | null
+  difficulty: string | null
+  is_replay: boolean
+  is_spare_topic: boolean
+  /** 0~100 */
+  score: number
+  /** 1~5 */
+  display: number
+  /** 문항별 축 점수. 실패 · 미사용 축은 null 입니다 */
+  axes: Record<AxisKey, number | null>
+  transcript: string
+  duration_sec: number
+  word_count: number
+  was_timeout: boolean
+  had_reask: boolean
+  /** 한 줄 코멘트. **생성에 실패하면 null** 이고 나머지 필드는 그대로 옵니다 */
+  comment: string | null
+}
+
 export type AnalysisResult = {
   report_status: 'complete' | 'partial'
+  /** 한 줄 총평. **생성에 실패하면 null** 이고 나머지 필드는 그대로 옵니다 */
+  summary: string | null
   overall: AnalysisOverall
   axes: Record<AxisKey, AxisResponse>
+  questions: QuestionScoreResponse[]
   resilience: ResilienceResponse | null
+  /**
+   * 기업 인재상 코멘트(1~2문장). 기업을 안 고른 면접이면 null 이고, 생성에 실패해도 null 입니다.
+   * AI 는 인재상(`company_profile_override`)이 있을 때만 씁니다.
+   */
+  company_comment: string | null
 }
 
 /** 화면에 쓰는 축 이름입니다. */
@@ -155,6 +192,21 @@ function toUnavailableLabel(axis: AxisResponse): string | null {
   return SKIP_REASON_MESSAGE[axis.reason ?? ''] ?? SKIP_FALLBACK
 }
 
+/**
+ * 실패한 축만 다시 분석할 수 있는 축입니다. 내용은 빠집니다 — 내용이 실패하면 리포트가 아예 없습니다.
+ * (`RetryAxis` 주석 참고)
+ */
+const RETRY_AXES: readonly AxisKey[] = ['speech', 'gaze']
+
+function isRetryAxis(key: AxisKey): key is RetryAxis {
+  return RETRY_AXES.includes(key)
+}
+
+/** 실패한 축이면 다시 분석할 축 이름을, 아니면 null 을 돌려줍니다. 미사용(`skipped`)은 다시 돌려도 같아서 null 입니다 */
+function toRetryAxis(key: AxisKey, axis: AxisResponse): RetryAxis | null {
+  return axis.status === 'failed' && isRetryAxis(key) ? key : null
+}
+
 /** 세부 점수 세 줄을 만듭니다. */
 export function toScoreMetrics(axes: Record<AxisKey, AxisResponse>): ScoreMetric[] {
   return AXIS_ORDER.map((key) => {
@@ -167,9 +219,41 @@ export function toScoreMetrics(axes: Record<AxisKey, AxisResponse>): ScoreMetric
       score: axis.score,
       display: axis.display,
       unavailableLabel: toUnavailableLabel(axis),
+      retryAxis: toRetryAxis(key, axis),
       evidence: axis.evidence.map(toEvidence),
     }
   })
+}
+
+/**
+ * AI 가 쓴 글을 화면에 넣을 값으로 바꿉니다. 비었거나 공백뿐이면 null 입니다.
+ *
+ * 생성 실패는 계약상 null 로 오지만, 빈 문자열이 와도 빈 칸을 그리지 않게 같이 막습니다.
+ */
+function toText(value: string | null | undefined): string | null {
+  const text = value?.trim()
+  return text ? text : null
+}
+
+/** 한 줄 총평. 생성에 실패했으면 null 입니다 */
+export function toVerdict(result: AnalysisResult): string | null {
+  return toText(result.summary)
+}
+
+/**
+ * 문항 번호로 한 줄 코멘트를 찾습니다. 없거나 생성에 실패했으면 null 입니다.
+ *
+ * 화면의 "면접 흐름" 한 줄(`TurnFlow`)을 **문항 번호(`question_number`)** 로 맞춥니다. 흐름 목록 자체는
+ * 백엔드 리포트 조회 응답에서 올 텐데 그 모양이 아직 없어서, 무엇으로 맞출지는 그때 다시 봅니다.
+ */
+export function toQuestionComment(result: AnalysisResult, questionNumber: number): string | null {
+  const question = result.questions.find((item) => item.question_number === questionNumber)
+  return toText(question?.comment)
+}
+
+/** 기업 인재상 코멘트. 기업을 안 골랐거나 생성에 실패했으면 null 입니다 */
+export function toCompanyComment(result: AnalysisResult): string | null {
+  return toText(result.company_comment)
 }
 
 /**
@@ -223,6 +307,9 @@ export function toScoreGateReason(overall: AnalysisOverall): string | null {
  *
  * 어떤 축이 왜 빠졌는지까지 적습니다. "일부 항목이 빠졌다" 만으로는 어느 점수를
  * 덜 믿어야 하는지 알 수 없습니다.
+ *
+ * 실패한 축이 있으면 다시 분석할 곳도 알려줍니다. 버튼은 세부 점수의 그 줄에 있습니다 —
+ * 안내만 보고 지나가면 다시 분석할 수 있다는 걸 모릅니다.
  */
 export function toPartialNotices(result: AnalysisResult): string[] {
   if (!result.overall.partial) return []
@@ -232,7 +319,10 @@ export function toPartialNotices(result: AnalysisResult): string[] {
     return `${AXIS_LABEL[key]}(${toUnavailableLabel(axis)})`
   })
 
+  const canRetry = AXIS_ORDER.some((key) => toRetryAxis(key, result.axes[key]) !== null)
+  const retryHint = canRetry ? ' 아래 세부 점수에서 빠진 항목만 다시 분석할 수 있어요.' : ''
+
   return [
-    `일부 항목이 빠진 결과예요. ${missing.join(' · ')} — 총점은 남은 항목으로만 계산됐습니다.`,
+    `일부 항목이 빠진 결과예요. ${missing.join(' · ')} — 총점은 남은 항목으로만 계산됐습니다.${retryHint}`,
   ]
 }
