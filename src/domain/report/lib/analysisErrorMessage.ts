@@ -16,8 +16,8 @@ export const ANALYSIS_MESSAGES: ErrorMessageOverrides = {
   CONTENT_FAILED: '답변 내용을 분석하지 못했어요. 다시 분석해 주세요.',
   MEDIA_FETCH_FAILED: '답변 녹화를 불러오지 못했어요. 다시 분석해 주세요.',
   STT_FAILED: '답변 녹음을 글로 옮기지 못해 리포트를 만들지 못했어요. 새 면접으로 다시 연습해 주세요.',
-  // 이미 요청한 리포트의 id 를 다시 알아낼 방법이 없습니다. 상태 조회(Cue-A/backend#48)나 리포트 목록이
-  // 생기면 그리로 보내고, 그 전까지는 사실대로 적습니다.
+  // 이 탭에 기억해 둔 reportId 가 없을 때만 납니다(다른 탭 · 기기). 409 에는 reportId 가 없고, 상태 조회
+  // (Cue-A/backend#56)도 reportId 로만 물을 수 있어서 이어 볼 방법이 없습니다. 리포트 목록이 생기면 그리로 보냅니다.
   REPORT_ALREADY_EXISTS:
     '이미 분석을 요청한 면접이에요. 지난 리포트를 모아 보는 화면이 아직 없어서 여기서는 결과를 이어 볼 수 없어요.',
 }

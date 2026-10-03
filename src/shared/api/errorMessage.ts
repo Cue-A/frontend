@@ -3,8 +3,8 @@
  * 서버의 message 는 개발자용이라 그대로 뿌리지 않습니다. (docs/01-conventions.md "에러 처리")
  *
  * 백엔드 `common/exception/ErrorCode.java` 의 코드를 **전부** 매핑했습니다 (이슈 #54 0-1). dev 의 37개에
- * 리포트 등록 PR(Cue-A/backend#49 · #50)이 더하는 셋(`INVALID_ANSWERS` · `SESSION_NOT_COMPLETED` ·
- * `REPORT_ALREADY_EXISTS`)까지 넣었습니다.
+ * 리포트 등록(Cue-A/backend#49 · #50)이 더한 셋(`INVALID_ANSWERS` · `SESSION_NOT_COMPLETED` ·
+ * `REPORT_ALREADY_EXISTS`)과 상태 조회(backend#56)의 `REPORT_NOT_FOUND` 까지 넣었습니다.
  * 백엔드에 코드가 추가되면 여기에도 추가합니다 — 빠지면 콘솔에 남고 공통 문구로 떨어집니다.
  *
  * 문구 규칙
