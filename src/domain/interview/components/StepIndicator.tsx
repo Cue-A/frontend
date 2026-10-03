@@ -1,11 +1,6 @@
 import { IconCheck } from '@tabler/icons-react'
 
-const STEPS = [
-  { title: '옵션설정', subtitle: '직무 · 조건' },
-  { title: '장치 테스트', subtitle: '마이크 · 카메라' },
-  { title: '면접 진행', subtitle: '실전 응답' },
-  { title: '결과 확인', subtitle: '리포트 · 피드백' },
-]
+import { INTERVIEW_STEPS } from '../lib/interviewSteps'
 
 type Props = {
   /** 1부터 셉니다 */
@@ -23,11 +18,11 @@ export default function StepIndicator({ current }: Props) {
   return (
     <nav aria-label="진행 단계">
       <ol className="flex items-start">
-        {STEPS.map((step, index) => {
+        {INTERVIEW_STEPS.map((step, index) => {
           const stepNumber = index + 1
           const isCurrent = stepNumber === current
           const isDone = stepNumber < current
-          const isLast = index === STEPS.length - 1
+          const isLast = index === INTERVIEW_STEPS.length - 1
 
           return (
             <li

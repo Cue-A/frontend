@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ROUTES, toInterview } from '@/app/routes'
 
 import { useDeviceCheck } from '../hooks/useDeviceCheck'
+import { clearSavedSessionSetup } from '../hooks/useSessionSetup'
 import { canStartInterview } from '../lib/canStartInterview'
 import type { DeviceCheckState, DeviceFailureReason, NetworkCheckStatus } from '../types/deviceCheck'
 
@@ -12,7 +13,7 @@ import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
-import StepIndicator from './StepIndicator'
+import InterviewFlowHeader from './InterviewFlowHeader'
 
 const SUMMARY_ROW_LABELS = ['직무', '질문 수', '답변 시간', '면접관'] as const
 
@@ -162,23 +163,16 @@ export default function DeviceCheckPage() {
     // 이 화면의 점검 결과(INT-4)를 면접 진행 화면의 시작 값으로 넘긴다 — 스트림 자체는
     // (여기서 만든 스트림은 라우트를 벗어나며 정리돼서) 재사용 못 하고 그쪽에서 새로
     // 받지만, "이미 점검했다" 는 정보는 넘겨서 'unchecked' 로 잠깐 깜빡이지 않게 한다.
+    // 옵션 설정에서 고른 값은 "← 옵션" 으로 돌아갈 때를 위해 남겨 뒀는데, 면접을 시작하면 쓸 일이 끝나서 지운다.
+    clearSavedSessionSetup()
     navigate(toInterview(sessionId), { state: { initialDeviceStatus: { camera, mic } } })
   }
 
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <div className="flex flex-col gap-6">
-          <p className="text-body text-neutral-500">
-            모의면접<span className="font-semibold text-neutral-900"> / 장치 테스트</span>
-          </p>
-
-          {/* STEP 라벨과 Stepper 는 한 묶음이라 Figma 원본 간격(10px)을 그대로 유지한다. */}
-          <div className="flex flex-col gap-2.5">
-            <span className="text-body-sm font-bold text-primary-500">STEP 2/4</span>
-            <StepIndicator current={2} />
-          </div>
-        </div>
+        {/* 경로 표시 · STEP 라벨 · 단계 표시는 옵션 설정과 같은 모양이라 한 컴포넌트로 그립니다 (이슈 #81) */}
+        <InterviewFlowHeader current={2} />
 
         <div className="flex flex-wrap items-start gap-6">
           {/* Card 는 40px 패딩 프리셋이 없어 가장 가까운 padding="lg"(24px)로 확정했다 (PR #84 리뷰). */}
@@ -382,9 +376,9 @@ export default function DeviceCheckPage() {
             {!canStart && <p className="text-body-sm text-neutral-400">마이크가 있어야 시작할 수 있어요</p>}
 
             {/*
-              "← 옵션"은 옵션설정 값을 복원해서 돌아가는 경로가 아직 없어(useSessionSetup
-              은 SessionSetupPage 로컬 state), 눌러도 항상 빈 옵션설정 화면으로 간다.
-              기존 값 복원이 필요해지면 별도 상태/라우팅 설계가 필요하다.
+              "← 옵션"으로 돌아가면 옵션 설정에서 고른 값이 그대로 채워져 있다. useSessionSetup 이
+              고른 값을 이 탭(sessionStorage)에 남겨 두기 때문이다. 다시 "장치 테스트하러 가기" 를 누르면
+              세션이 새로 만들어진다 — 지금 세션은 쓰이지 않은 채 남는다.
             */}
             <div className="flex items-center gap-3">
               <Button to={ROUTES.SESSION_SETUP} size="lg">

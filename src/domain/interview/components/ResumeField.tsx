@@ -5,7 +5,7 @@ import { formatFileSize } from '@/shared/lib/formatFileSize'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
-import type { SelectedResume } from '../types/sessionSetup'
+import { REQUIRED_LABELS, type SelectedResume } from '../types/sessionSetup'
 
 import ResumePickerDialog from './ResumePickerDialog'
 
@@ -39,7 +39,7 @@ export default function ResumeField({ resume, onChange }: Props) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="flex items-center gap-2 text-body-lg font-semibold text-neutral-900">
-        자기소개서 불러오기
+        {REQUIRED_LABELS.resume}
         <Badge tone="danger">필수</Badge>
       </h2>
 

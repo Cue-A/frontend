@@ -184,7 +184,9 @@ function refreshTokens(): Promise<{ accessToken: string; refreshToken: string }>
  * (PR #60 리뷰)
  */
 function forceLogout(reason: string) {
-  clearTokens()
+  // 사용자가 나가기로 한 게 아니라서, 이 탭에 남겨 둔 임시 값(옵션 설정 등)은 지우지 않습니다.
+  // 다시 로그인하면 이어서 쓸 수 있어야 합니다 (tokenStorage.ts `clearTokens` 주석).
+  clearTokens({ keepDrafts: true })
 
   // 이미 로그인 화면이면 보낼 필요가 없습니다. 지금은 로그인 화면이 보호된
   // API 를 안 불러서 당장 걸리지 않지만, 나중에 생기면 새로고침이 반복되는

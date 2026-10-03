@@ -7,7 +7,6 @@ import { estimateDurationMinutes } from '../lib/estimateDuration'
 import {
   CUSTOM_COMPANY,
   INTERVIEWER_STYLES,
-  JOB_ROLES,
   DELIVERY_MODES,
   type Company,
   type SessionSetup,
@@ -57,7 +56,7 @@ export default function SetupSummary({
   const minutes = estimateDurationMinutes(setup.questionCount, setup.answerSeconds)
 
   const rows = [
-    { label: '직무', value: labelOf(JOB_ROLES, setup.jobRole) },
+    { label: '직무', value: setup.jobRole.trim() || '미입력' },
     { label: '자기소개서', value: setup.resume ? '1개 연결됨' : '미연결' },
     { label: '기업 맞춤 질문', value: companyLabel(setup, companies) },
     { label: '질문 수', value: `${setup.questionCount}문항` },
