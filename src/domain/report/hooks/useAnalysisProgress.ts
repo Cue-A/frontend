@@ -3,7 +3,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
-import { requestReport, type ReportRequestResponse } from '../api/reportRequestApi'
+import {
+  canCheckReportStatus,
+  getReportStatus,
+  requestReport,
+  type ReportRequestResponse,
+  type ReportStatusResponse,
+} from '../api/reportRequestApi'
 import { connectReportSocket } from '../api/reportSocket'
 import { ANALYSIS_MESSAGES, FINAL_REQUEST_ERRORS } from '../lib/analysisErrorMessage'
 import { ANALYSIS_STAGES, toAnalysisStageKey, WAITING_TIPS } from '../types/analysis'
@@ -46,7 +52,7 @@ export type AnalysisProgress = {
  * 등록 응답의 reportId 를 세션 id 로 기억해 둡니다.
  *
  * 새로고침하면 등록을 다시 부르게 되는데, 이미 요청한 면접은 409 `REPORT_ALREADY_EXISTS` 이고 응답에 reportId 가
- * 없습니다. 상태 조회 API 도 아직 없어서(Cue-A/backend#48) 기억해 둔 id 로 소켓에만 다시 붙습니다.
+ * 없습니다. 그래서 기억해 둔 id 로 소켓에 다시 붙고, 상태 조회(Cue-A/backend#56)로 그 사이 진행된 것을 따라잡습니다.
  * 끝나거나 실패하면 지웁니다 — 실패한 리포트는 다시 요청해야 하고, 그때는 등록부터 다시 가야 합니다.
  *
  * 탭 하나에서만 이어지면 되므로 sessionStorage 입니다. 저장이 막힌 브라우저에서는 기억하지 못할 뿐 동작은 같습니다.
@@ -100,8 +106,10 @@ function requestReportOnce(sessionId: string): Promise<ReportRequestResponse> {
  *
  * 1. `POST /api/interviews/{sessionId}/reports` 로 분석을 등록하고 reportId 를 받습니다
  * 2. `/ws/reports/{reportId}` 에 붙어 `progress` 로 단계를 옮깁니다
- * 3. `report` 가 오면 `reportId` 를 채웁니다. 화면이 리포트로 보냅니다
- * 4. `error` 나 등록 실패는 `failure` 로 줍니다
+ * 3. 붙은 직후 상태 조회(`GET /api/reports/{reportId}/status`)를 **한 번** 불러, 붙기 전에 진행되거나 끝난 것을
+ *    따라잡습니다. 소켓은 지난 메시지를 다시 보내주지 않기 때문입니다 (Cue-A/backend#56)
+ * 4. `report` 가 오면(또는 조회가 끝났다고 하면) `reportId` 를 채웁니다. 화면이 리포트로 보냅니다
+ * 5. `error` 나 등록 실패는 `failure` 로 줍니다
  *
  * 단계는 **뒤로 가지 않습니다.** 백엔드가 실패 뒤 스스로 한 번 더 돌리면(`CONTENT_FAILED` · `MEDIA_FETCH_FAILED`)
  * 단계가 처음부터 다시 올 수 있는데, 막대가 줄어들면 고장 난 것처럼 보입니다. 모르는 단계 값도 무시합니다.
@@ -122,39 +130,91 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
     let alive = true
     let disconnect = () => {}
 
-    const listen = (id: string) => {
-      disconnect = connectReportSocket(id, sessionId, {
-        onProgress: ({ stage }) => {
-          const key = toAnalysisStageKey(stage)
-          if (!key) {
-            console.error('알 수 없는 리포트 분석 단계 stage=%s', stage)
+    /** 소켓이 결과(`report` · `error`)를 먼저 줬으면 true. 늦게 도착한 조회 응답은 버립니다 (backend#56 "호출 순서") */
+    let settledBySocket = false
+
+    const fail = (code: string, retryable: boolean) => {
+      forgetReportId(sessionId)
+      console.error('리포트 분석 실패 code=%s retryable=%s', code, retryable)
+      setFailure({ message: toUserMessage(code, ANALYSIS_MESSAGES), retryable })
+    }
+
+    const toStageIndex = (stage: string) => {
+      const key = toAnalysisStageKey(stage)
+      if (!key) {
+        console.error('알 수 없는 리포트 분석 단계 stage=%s', stage)
+        return null
+      }
+      return ANALYSIS_STAGES.findIndex((item) => item.key === key)
+    }
+
+    const applyStatus = (status: ReportStatusResponse) => {
+      if (status.status === 'PROCESSING') {
+        const index = status.stage ? toStageIndex(status.stage) : null
+        if (index !== null) setStageIndex((previous) => Math.max(previous, index))
+        return
+      }
+      if (status.status === 'FAILED') {
+        fail(status.errorCode ?? 'UNKNOWN', status.retryable ?? false)
+        return
+      }
+      forgetReportId(sessionId)
+      setReportId(status.reportId)
+    }
+
+    /**
+     * @param fromSaved 새로고침으로 기억해 둔 id 인지. 그 id 가 404 면 기억이 틀린 것이라(DB 를 비웠다 등) 지우고
+     *   등록부터 다시 갑니다. 방금 등록해서 받은 id 가 404 인 건 서버 문제라 소켓만으로 기다립니다
+     */
+    const catchUp = (id: string, fromSaved: boolean) => {
+      if (!canCheckReportStatus(sessionId, id)) return
+
+      getReportStatus(id)
+        .then((status) => {
+          if (alive && !settledBySocket) applyStatus(status)
+        })
+        .catch((cause: unknown) => {
+          if (!alive || settledBySocket) return
+          const code = cause instanceof ApiError ? cause.code : 'UNKNOWN'
+          if (code === 'REPORT_NOT_FOUND' && fromSaved) {
+            forgetReportId(sessionId)
+            setAttempt((previous) => previous + 1)
             return
           }
-          const index = ANALYSIS_STAGES.findIndex((item) => item.key === key)
-          setStageIndex((previous) => Math.max(previous, index))
+          // 조회는 따라잡기용이라 실패해도 소켓으로 계속 기다립니다.
+          console.warn('리포트 상태 조회 실패 code=%s — 소켓으로 계속 기다립니다', code)
+        })
+    }
+
+    const listen = (id: string, fromSaved: boolean) => {
+      disconnect = connectReportSocket(id, sessionId, {
+        onProgress: ({ stage }) => {
+          const index = toStageIndex(stage)
+          if (index !== null) setStageIndex((previous) => Math.max(previous, index))
         },
         onReport: (push) => {
+          settledBySocket = true
           forgetReportId(sessionId)
           setReportId(push.reportId)
         },
         onError: (push) => {
-          forgetReportId(sessionId)
-          console.error('리포트 분석 실패 code=%s retryable=%s', push.errorCode, push.retryable)
-          setFailure({ message: toUserMessage(push.errorCode, ANALYSIS_MESSAGES), retryable: push.retryable })
+          settledBySocket = true
+          fail(push.errorCode, push.retryable)
         },
       })
+      catchUp(id, fromSaved)
     }
 
     // 다시 분석할 때는 기억해 둔 id 가 이미 지워져 있어서 등록부터 갑니다.
     const saved = readReportId(sessionId)
     if (saved) {
-      listen(saved)
+      listen(saved, true)
     } else {
       requestReportOnce(sessionId)
         .then((response) => {
           if (!alive) return
           rememberReportId(sessionId, response.reportId)
-          listen(response.reportId)
+          listen(response.reportId, false)
         })
         .catch((cause: unknown) => {
           if (!alive) return

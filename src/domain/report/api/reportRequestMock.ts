@@ -21,12 +21,43 @@ import { MOCK_REPORT_IDS } from './reportMock'
  * | `mock-report-unavailable` | 등록이 503 `AI_UNAVAILABLE` (다시 요청 가능) |
  * | `mock-report-fails-once` | 두 단계 뒤 소켓 `error`(`CONTENT_FAILED`, 다시 요청 가능) → 다시 요청하면 끝까지 |
  * | `mock-report-stt-failed` | 두 단계 뒤 소켓 `error`(`STT_FAILED`, 다시 요청 불가) |
+ *
+ * 상태 조회(`GET /api/reports/:reportId/status`)는 등록한 시각부터 흐른 시간으로 같은 흐름을 계산합니다.
+ * 분석 도중 새로고침하면 소켓 목업은 처음부터 다시 흘리지만, 상태 조회가 지금 단계를 먼저 알려줍니다.
  */
 
 const STAGE_MS = 2000
 
-/** 소켓 목업이 어떤 흐름을 돌지 reportId 로 찾습니다. 등록할 때 채웁니다 */
-const scenarios = new Map<string, { sessionId: string; attempt: number }>()
+type Scenario = { sessionId: string; attempt: number; startedAt: number }
+
+/**
+ * 소켓 · 상태 조회 목업이 어떤 흐름을 돌지 reportId 로 찾습니다. 등록할 때 채웁니다.
+ *
+ * 새로고침해도 이어지도록 sessionStorage 에 둡니다. 메모리에만 두면 새로고침하는 순간 목업이 등록을 잊어서
+ * 상태 조회가 404 가 나고, 실제 서버와 다르게 등록부터 다시 돕니다.
+ */
+const SCENARIO_KEY = 'cue-a:mock:report-scenarios'
+
+const scenarios = {
+  get(reportId: string): Scenario | undefined {
+    return readScenarios()[reportId]
+  },
+  set(reportId: string, scenario: Scenario) {
+    try {
+      sessionStorage.setItem(SCENARIO_KEY, JSON.stringify({ ...readScenarios(), [reportId]: scenario }))
+    } catch {
+      // 저장이 막혀도 목업이 새로고침 때 등록을 잊을 뿐입니다.
+    }
+  },
+}
+
+function readScenarios(): Record<string, Scenario> {
+  try {
+    return JSON.parse(sessionStorage.getItem(SCENARIO_KEY) ?? '{}') as Record<string, Scenario>
+  } catch {
+    return {}
+  }
+}
 
 registerMock('POST', '/api/interviews/:sessionId/reports', ({ sessionId }) => {
   if (sessionId === 'mock-report-too-short') {
@@ -43,9 +74,40 @@ registerMock('POST', '/api/interviews/:sessionId/reports', ({ sessionId }) => {
   const reportId = MOCK_REPORT_IDS.latest
   const previous = scenarios.get(reportId)
   const attempt = previous?.sessionId === sessionId ? previous.attempt + 1 : 1
-  scenarios.set(reportId, { sessionId, attempt })
+  scenarios.set(reportId, { sessionId, attempt, startedAt: Date.now() })
 
   return { reportId, sessionId, status: 'PROCESSING', createdAt: new Date().toISOString() }
+})
+
+registerMock('GET', '/api/reports/:reportId/status', ({ reportId }) => {
+  const scenario = scenarios.get(reportId)
+  if (!scenario) throw new ApiError('REPORT_NOT_FOUND', '리포트를 찾을 수 없습니다')
+
+  const failure = toFailure(scenario)
+  const stages = failure ? ANALYSIS_STAGES.slice(0, 2) : ANALYSIS_STAGES
+  const index = Math.floor((Date.now() - scenario.startedAt) / STAGE_MS)
+  const base = {
+    reportId,
+    sessionId: scenario.sessionId,
+    createdAt: new Date(scenario.startedAt).toISOString(),
+    stage: null,
+    progress: null,
+    errorCode: null,
+    message: null,
+    retryable: null,
+    completedAt: null,
+  }
+
+  if (index < stages.length) {
+    return { ...base, status: 'PROCESSING', stage: stages[index].key, progress: (index + 1) / ANALYSIS_STAGES.length }
+  }
+
+  const completedAt = new Date().toISOString()
+  if (failure) {
+    // 실제 서버도 소켓 `error` 와 같은 코드 · 문구 · 다시 요청 가능 여부를 줍니다 (Cue-A/backend#60)
+    return { ...base, status: 'FAILED', ...failure, completedAt }
+  }
+  return { ...base, status: 'PARTIAL', completedAt }
 })
 
 export type ReportSocketHandlers = {
@@ -80,7 +142,7 @@ export function connectMockReportSocket(reportId: string, handlers: ReportSocket
   return () => timers.forEach(clearTimeout)
 }
 
-function toFailure(scenario: { sessionId: string; attempt: number } | undefined): ReportErrorPush | null {
+function toFailure(scenario: Scenario | undefined): ReportErrorPush | null {
   if (scenario?.sessionId === 'mock-report-fails-once' && scenario.attempt === 1) {
     return { errorCode: 'CONTENT_FAILED', message: '답변 내용 분석에 실패했습니다', retryable: true }
   }
