@@ -27,6 +27,7 @@ import type {
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
+import Select from '@/shared/ui/Select'
 
 import InterviewFlowHeader from './InterviewFlowHeader'
 
@@ -185,7 +186,25 @@ export default function DeviceCheckPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
 
-  const { camera, mic, network, lighting, noise, videoStream, micLevel, recheckCamera, recheckMic } = useDeviceCheck()
+  const {
+    camera,
+    mic,
+    network,
+    lighting,
+    noise,
+    videoStream,
+    micLevel,
+    recheckCamera,
+    recheckMic,
+    cameraDevices,
+    micDevices,
+    selectedCameraId,
+    selectedMicId,
+    selectCamera,
+    selectMic,
+    cameraDeviceMissing,
+    micDeviceMissing,
+  } = useDeviceCheck()
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
@@ -256,6 +275,23 @@ export default function DeviceCheckPage() {
                   <Badge tone={STATUS_TONE[camera.status]}>카메라 {STATUS_LABEL[camera.status]}</Badge>
                 </div>
 
+                <Select
+                  options={cameraDevices.map((device) => ({ value: device.deviceId, label: device.label || '이름 없는 카메라' }))}
+                  value={selectedCameraId}
+                  onChange={selectCamera}
+                  placeholder="사용 가능한 카메라가 없어요"
+                  ariaLabel="카메라 선택"
+                />
+
+                {/* 고른 장치가 코드 뽑힘 등으로 목록에서 사라진 경우입니다(이슈 #97). 스트림은
+                    그대로 두고(마지막 프레임이 멈춰 보일 수 있음) 안내만 띄웁니다 — 자동으로
+                    다른 장치로 바꾸지 않습니다. */}
+                {cameraDeviceMissing && (
+                  <p className="text-body-sm text-neutral-500">
+                    선택한 카메라의 연결이 끊겼어요. 장치를 다시 연결하거나 다른 장치를 선택해주세요.
+                  </p>
+                )}
+
                 {camera.status === 'failed' && camera.failureReason && (
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-body-sm text-neutral-500">{FAILURE_MESSAGE[camera.failureReason]('카메라')}</p>
@@ -306,6 +342,20 @@ export default function DeviceCheckPage() {
                     )}
                   </p>
                 </div>
+
+                <Select
+                  options={micDevices.map((device) => ({ value: device.deviceId, label: device.label || '이름 없는 마이크' }))}
+                  value={selectedMicId}
+                  onChange={selectMic}
+                  placeholder="사용 가능한 마이크가 없어요"
+                  ariaLabel="마이크 선택"
+                />
+
+                {micDeviceMissing && (
+                  <p className="text-body-sm text-neutral-500">
+                    선택한 마이크의 연결이 끊겼어요. 장치를 다시 연결하거나 다른 장치를 선택해주세요.
+                  </p>
+                )}
 
                 {mic.status === 'failed' && mic.failureReason && (
                   <div className="flex items-center justify-between gap-4">
