@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { DeviceCheckState, DeviceFailureReason, NetworkCheckStatus } from '../types/deviceCheck'
+import type {
+  DeviceCheckState,
+  DeviceFailureReason,
+  LightingCheckState,
+  NetworkCheckState,
+  NetworkQuality,
+  NoiseCheckState,
+} from '../types/deviceCheck'
 
 const UNCHECKED: DeviceCheckState = { status: 'unchecked', failureReason: null }
 
@@ -55,10 +62,137 @@ function classifyFailure(error: unknown): DeviceFailureReason {
   return 'unknown'
 }
 
+// 조명 임계값(이슈 #83). 캔버스 평균 밝기(0~255) 기준입니다 — 80~170 을 적정 구간으로
+// 보고, 그 아래는 어두움, 위는 역광·직광 등으로 인한 과다노출(밝음)로 판정합니다.
+// 상한은 원래 200 이었는데, 자동노출 때문에 후레쉬를 비춰도 실측 밝기가 200을 못 넘고
+// 190대 초반에서 막혀서(실측 데이터: 평상시 127~140, 후레쉬 166~193) 170으로 낮췄습니다.
+const LIGHTING_DIM_BELOW = 80
+const LIGHTING_BRIGHT_ABOVE = 170
+
+function classifyLighting(brightness: number): LightingCheckState['level'] {
+  if (brightness < LIGHTING_DIM_BELOW) return 'dim'
+  if (brightness > LIGHTING_BRIGHT_ABOVE) return 'bright'
+  return 'good'
+}
+
+const LIGHTING_SAMPLE_INTERVAL_MS = 1000
+// 분석 비용을 줄이려고 작게 줄여서 그립니다 — 판정에 색상 디테일은 필요 없습니다.
+const LIGHTING_SAMPLE_SIZE = 32
+// 프레임 전체를 재면 옷·배경 벽지 색이 평균을 끌어내려, 얼굴이 밝아도 "어두움"으로
+// 오판정될 수 있다 (이슈 #83 리뷰). 카메라 구도상 얼굴이 보통 중앙에 오는 걸 가정하고,
+// 가로·세로 각각 중앙 50% 만 잘라서 잰다.
+const LIGHTING_CENTER_CROP_RATIO = 0.5
+
+/**
+ * 카메라 스트림 프레임을 주기적으로 작은 캔버스에 그려 평균 밝기를 잽니다.
+ * `videoStream` 을 화면에 그리는 `<video>` 와는 별개로, 분석 전용 비표시(off-DOM)
+ * `<video>` 를 하나 더 만들어 씁니다 — 화면의 `<video>` 는 DeviceCheckPage 가 소유하고
+ * 있어서 훅이 거길 건드리면 "카메라·마이크 접근은 훅에서만" 원칙이 깨집니다.
+ */
+function startLightingMeter(stream: MediaStream, onSample: (state: LightingCheckState) => void): () => void {
+  const video = document.createElement('video')
+  video.muted = true
+  video.playsInline = true
+  video.srcObject = stream
+  video.play().catch(() => {})
+
+  const canvas = document.createElement('canvas')
+  canvas.width = LIGHTING_SAMPLE_SIZE
+  canvas.height = LIGHTING_SAMPLE_SIZE
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+
+  const sample = () => {
+    if (!context || video.readyState < video.HAVE_CURRENT_DATA) return
+    if (video.videoWidth === 0 || video.videoHeight === 0) return
+
+    const cropWidth = video.videoWidth * LIGHTING_CENTER_CROP_RATIO
+    const cropHeight = video.videoHeight * LIGHTING_CENTER_CROP_RATIO
+    const sourceX = (video.videoWidth - cropWidth) / 2
+    const sourceY = (video.videoHeight - cropHeight) / 2
+
+    context.drawImage(video, sourceX, sourceY, cropWidth, cropHeight, 0, 0, LIGHTING_SAMPLE_SIZE, LIGHTING_SAMPLE_SIZE)
+    const { data } = context.getImageData(0, 0, LIGHTING_SAMPLE_SIZE, LIGHTING_SAMPLE_SIZE)
+
+    let sum = 0
+    let pixelCount = 0
+    for (let i = 0; i < data.length; i += 4) {
+      // ITU-R BT.601 휘도 가중치
+      sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+      pixelCount += 1
+    }
+    const brightness = sum / pixelCount
+    onSample({ level: classifyLighting(brightness), brightness })
+  }
+
+  const intervalId = window.setInterval(sample, LIGHTING_SAMPLE_INTERVAL_MS)
+  sample()
+
+  return () => {
+    window.clearInterval(intervalId)
+    video.pause()
+    video.srcObject = null
+  }
+}
+
+// 소음 임계값. dBFS 근사치 기준입니다 — 더 클수록(0에 가까울수록) 시끄럽습니다.
+// 노이즈 억제를 끈 뒤 실측해보니 타이핑·생활소음만으로도 -39~-51dB 가 나와서(이슈 #83),
+// -45 였던 기준이 그 범위 한가운데를 갈라 들쭉날쭉했다. 관찰된 최대치(-39)보다 여유를 두고
+// -30 으로 올렸다 — 진짜 시끄러운 상황(대화·TV 등) 데이터로 추가 검증 필요.
+const NOISE_WARNING_THRESHOLD_DB = -30
+const NOISE_CALIBRATION_MS = 1500
+const MIN_RMS = 1e-6
+
+function rmsToDecibels(rms: number): number {
+  return 20 * Math.log10(Math.max(rms, MIN_RMS))
+}
+
+function classifyNoise(decibels: number): NoiseCheckState['level'] {
+  return decibels >= NOISE_WARNING_THRESHOLD_DB ? 'noisy' : 'good'
+}
+
+// 네트워크 임계값(이슈 #83 확인 완료). Network Information API 의 downlink(Mbps)·rtt(ms) 기준입니다.
+const NETWORK_GOOD_DOWNLINK_MBPS = 10
+const NETWORK_GOOD_RTT_MS = 200
+
+/** 표준에 아직 없는 실험적 API라 타입을 직접 좁혀 씁니다. 지원 브라우저(Chrome·Edge 등)만 값이 옵니다. */
+type NetworkInformationLike = {
+  downlink?: number
+  rtt?: number
+  addEventListener?: (type: 'change', listener: () => void) => void
+  removeEventListener?: (type: 'change', listener: () => void) => void
+}
+
+function getConnection(): NetworkInformationLike | null {
+  return (navigator as Navigator & { connection?: NetworkInformationLike }).connection ?? null
+}
+
+function classifyNetworkQuality(downlinkMbps: number, rttMs: number): NetworkQuality {
+  return downlinkMbps >= NETWORK_GOOD_DOWNLINK_MBPS && rttMs <= NETWORK_GOOD_RTT_MS ? 'good' : 'unstable'
+}
+
+/**
+ * 미지원 브라우저는 수치가 없어 품질을 판정할 수 없습니다 — "불안정"으로 비관적으로
+ * 단정하지 않고, 연결만 됐으면 `good`(이슈 #83: onLine 폴백)으로 둡니다.
+ */
+function readNetworkState(online: boolean): NetworkCheckState {
+  if (!online) return { status: 'offline', downlinkMbps: null, rttMs: null }
+
+  const connection = getConnection()
+  if (!connection || connection.downlink === undefined || connection.rtt === undefined) {
+    return { status: 'good', downlinkMbps: null, rttMs: null }
+  }
+
+  const downlinkMbps = connection.downlink
+  const rttMs = connection.rtt
+  return { status: classifyNetworkQuality(downlinkMbps, rttMs), downlinkMbps, rttMs }
+}
+
 export type UseDeviceCheckResult = {
   camera: DeviceCheckState
   mic: DeviceCheckState
-  network: NetworkCheckStatus
+  network: NetworkCheckState
+  lighting: LightingCheckState
+  noise: NoiseCheckState
   videoStream: MediaStream | null
   /** 0(무음) ~ 1(최대) 범위로 정규화된 마이크 입력 레벨 */
   micLevel: number
@@ -73,7 +207,9 @@ export type UseDeviceCheckResult = {
 export function useDeviceCheck(): UseDeviceCheckResult {
   const [camera, setCamera] = useState<DeviceCheckState>(UNCHECKED)
   const [mic, setMic] = useState<DeviceCheckState>(UNCHECKED)
-  const [network, setNetwork] = useState<NetworkCheckStatus>(() => (navigator.onLine ? 'available' : 'failed'))
+  const [network, setNetwork] = useState<NetworkCheckState>(() => readNetworkState(navigator.onLine))
+  const [lighting, setLighting] = useState<LightingCheckState>({ level: null, brightness: null })
+  const [noise, setNoise] = useState<NoiseCheckState>({ level: null, decibels: null })
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
   const [micLevel, setMicLevel] = useState(0)
 
@@ -81,6 +217,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   const audioStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const stopLightingMeterRef = useRef<(() => void) | null>(null)
   // 요청을 보낼 때마다 하나씩 늘려서, 응답이 왔을 때 "지금도 유효한 요청인지" 를 봅니다.
   // 카메라·마이크가 각각 따로 재점검되므로 카운터도 따로 둡니다 — 하나로 묶으면
   // 마이크만 재점검해도 카메라의 진행 중인 요청까지 낡은 것으로 취급됩니다.
@@ -89,6 +226,9 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   const removeResumeListenersRef = useRef<(() => void) | null>(null)
 
   const stopCamera = useCallback(() => {
+    stopLightingMeterRef.current?.()
+    stopLightingMeterRef.current = null
+    setLighting({ level: null, brightness: null })
     videoStreamRef.current?.getTracks().forEach((track) => track.stop())
     videoStreamRef.current = null
     setVideoStream(null)
@@ -108,6 +248,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     audioStreamRef.current?.getTracks().forEach((track) => track.stop())
     audioStreamRef.current = null
     setMicLevel(0)
+    setNoise({ level: null, decibels: null })
   }, [])
 
   const startMicMeter = useCallback((stream: MediaStream) => {
@@ -126,6 +267,13 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     const NOISE_FLOOR = 0.01
     const GAIN = 6
 
+    // 주변소음 판정(이슈 #83)용 보정 구간입니다. 시작 시점부터 NOISE_CALIBRATION_MS 동안의
+    // RMS 평균을 "말하기 전" 노이즈 플로어로 보고, 끝나면 한 번만 dB 로 환산해 고정합니다.
+    // 계속 갱신하면 사용자가 말할 때마다 RMS 가 올라가 "시끄러움"으로 잘못 뜹니다.
+    const calibrationStartedAt = performance.now()
+    const calibrationSamples: number[] = []
+    let calibrated = false
+
     const tick = () => {
       analyser.getByteTimeDomainData(buffer)
 
@@ -136,6 +284,16 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       }
       const rms = Math.sqrt(sumSquares / buffer.length)
       const level = rms <= NOISE_FLOOR ? 0 : Math.min(1, (rms - NOISE_FLOOR) * GAIN)
+
+      if (!calibrated) {
+        calibrationSamples.push(rms)
+        if (performance.now() - calibrationStartedAt >= NOISE_CALIBRATION_MS) {
+          calibrated = true
+          const averageRms = calibrationSamples.reduce((sum, sample) => sum + sample, 0) / calibrationSamples.length
+          const decibels = Math.round(rmsToDecibels(averageRms))
+          setNoise({ level: classifyNoise(decibels), decibels })
+        }
+      }
 
       setMicLevel(level)
       animationFrameRef.current = requestAnimationFrame(tick)
@@ -168,6 +326,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       videoStreamRef.current = stream
       setVideoStream(stream)
       setCamera({ status: 'available', failureReason: null })
+      stopLightingMeterRef.current = startLightingMeter(stream, setLighting)
     } catch (error) {
       const failureReason = classifyFailure(error)
       if (requestId === cameraRequestIdRef.current) {
@@ -181,7 +340,13 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     const requestId = ++micRequestIdRef.current
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // 주변소음 판정(이슈 #83)엔 노이즈 억제가 걸리지 않은 원음이 필요하다. `audio: true`
+      // 만 주면 브라우저가 기본으로 noiseSuppression·echoCancellation·autoGainControl 을
+      // 켜서, 실제론 시끄러워도 억제된(깨끗해진) 신호만 분석기에 들어와 "양호"로 잘못
+      // 판정된다 (실제 테스트로 확인됨). 세 옵션을 꺼서 원음을 그대로 받는다.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { noiseSuppression: false, echoCancellation: false, autoGainControl: false },
+      })
 
       if (requestId !== micRequestIdRef.current) {
         // startMicMeter 를 부르기 전에 걸러서, 낡은 요청을 위한 AudioContext 자체를
@@ -215,14 +380,20 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   }, [stopMic, acquireMic])
 
   useEffect(() => {
-    const handleOnline = () => setNetwork('available')
-    const handleOffline = () => setNetwork('failed')
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
+    const updateNetwork = () => setNetwork(readNetworkState(navigator.onLine))
+
+    window.addEventListener('online', updateNetwork)
+    window.addEventListener('offline', updateNetwork)
+
+    // Network Information API 지원 브라우저는 onLine 이 그대로인 채 품질만 바뀔 수
+    // 있어서(예: wifi 에서 LTE 로 전환), online/offline 이벤트만으론 못 잡습니다.
+    const connection = getConnection()
+    connection?.addEventListener?.('change', updateNetwork)
 
     return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', updateNetwork)
+      window.removeEventListener('offline', updateNetwork)
+      connection?.removeEventListener?.('change', updateNetwork)
     }
   }, [])
 
@@ -245,6 +416,8 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     camera,
     mic,
     network,
+    lighting,
+    noise,
     videoStream,
     micLevel,
     recheckCamera,
