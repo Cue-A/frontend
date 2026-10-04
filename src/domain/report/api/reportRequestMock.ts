@@ -85,7 +85,8 @@ registerMock('GET', '/api/reports/:reportId/status', ({ reportId }) => {
 
   const failure = toFailure(scenario)
   const stages = failure ? ANALYSIS_STAGES.slice(0, 2) : ANALYSIS_STAGES
-  const index = Math.floor((Date.now() - scenario.startedAt) / STAGE_MS)
+  // 등록과 조회 사이에 시계가 뒤로 맞춰지면 음수가 됩니다. 0 으로 막지 않으면 `stages[-1]` 이 없어서 던집니다.
+  const index = Math.max(0, Math.floor((Date.now() - scenario.startedAt) / STAGE_MS))
   const base = {
     reportId,
     sessionId: scenario.sessionId,

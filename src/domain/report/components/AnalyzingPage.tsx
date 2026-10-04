@@ -64,7 +64,7 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
 export default function AnalyzingPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
-  const { stageIndex, reportId, failure, isTimedOut, tip, retry } = useAnalysisProgress(sessionId)
+  const { stageIndex, stageKnown, reportId, failure, isTimedOut, tip, retry } = useAnalysisProgress(sessionId)
 
   useEffect(() => {
     if (!reportId) return
@@ -73,8 +73,14 @@ export default function AnalyzingPage() {
     navigate(toReport(reportId), { replace: true })
   }, [reportId, navigate])
 
+  // 실패했는데 단계를 받은 적이 없으면 어디서 멈췄는지 모릅니다. 떠나 있는 동안 실패한 경우(상태 조회는 실패한
+  // 리포트의 단계를 주지 않습니다)와 등록이 거절된 경우입니다. 그때는 "1/5 단계에서 멈춤" 처럼 모르는 것을 아는
+  // 것처럼 적지 않고, 막대와 점도 채우지 않습니다. 줄은 지우지 않고 문구만 바꿉니다 — 지우면 세로 가운데 정렬이라
+  // 화면 전체가 움직입니다. (PR #100 리뷰)
+  const stageUnknown = failure !== null && !stageKnown
+
   const current = ANALYSIS_STAGES[stageIndex]
-  const percent = Math.round(((stageIndex + 1) / ANALYSIS_STAGES.length) * 100)
+  const percent = stageUnknown ? 0 : Math.round(((stageIndex + 1) / ANALYSIS_STAGES.length) * 100)
 
   return (
     // isolate: 아래 배경 원 2개는 absolute + -z-10 로 콘텐츠 뒤에 깔린다. main 이 relative
@@ -139,8 +145,13 @@ export default function AnalyzingPage() {
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={ANALYSIS_STAGES.length}
-          aria-valuenow={stageIndex + 1}
-          aria-valuetext={`${ANALYSIS_STAGES.length}단계 중 ${stageIndex + 1}단계 · ${current.label}${failure ? ' · 멈춤' : ''}`}
+          // 단계를 모르면 값을 주지 않습니다. 값이 없는 progressbar 는 "얼마나 됐는지 알 수 없음" 으로 읽힙니다.
+          aria-valuenow={stageUnknown ? undefined : stageIndex + 1}
+          aria-valuetext={
+            stageUnknown
+              ? '멈춤 · 진행 단계를 확인할 수 없어요'
+              : `${ANALYSIS_STAGES.length}단계 중 ${stageIndex + 1}단계 · ${current.label}${failure ? ' · 멈춤' : ''}`
+          }
           className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-neutral-200"
         >
           {/* 너비는 계산값이라 인라인 style 을 씁니다 (docs/01-conventions.md "스타일" 절) */}
@@ -151,12 +162,19 @@ export default function AnalyzingPage() {
         </div>
 
         <p className="text-body-sm font-semibold text-neutral-900 tabular-nums">
-          {stageIndex + 1}/{ANALYSIS_STAGES.length} 단계{failure ? '에서 멈춤' : ' 진행 중'} · {current.label}
+          {stageUnknown ? (
+            '진행 단계를 확인할 수 없어요'
+          ) : (
+            <>
+              {stageIndex + 1}/{ANALYSIS_STAGES.length} 단계{failure ? '에서 멈춤' : ' 진행 중'} · {current.label}
+            </>
+          )}
         </p>
 
         <ol className="flex flex-wrap justify-center gap-6">
           {ANALYSIS_STAGES.map((stage, index) => {
-            const state = index < stageIndex ? 'done' : index === stageIndex ? 'current' : 'upcoming'
+            const state =
+              stageUnknown || index > stageIndex ? 'upcoming' : index < stageIndex ? 'done' : 'current'
 
             return (
               <li

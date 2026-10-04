@@ -123,8 +123,8 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
   - 메시지: `progress`(`stage` · `progress`) · `report`(`reportId` · `status` · `scoreTotal`) · `error`(`errorCode` · `message` · `retryable`)
   - 단계 이름: AI 단계를 대문자로 (`TRANSCRIBING` → `ANALYZING_SPEECH` → `ANALYZING_GAZE` → `ANALYZING_CONTENT` → `COMPOSING`)
   - 소요 시간 상한: 10분. 넘으면 백엔드가 `AI_TIMEOUT` 으로 끝냅니다
-  - 늦게 붙은 경우: 소켓에 붙은 직후 `GET /api/reports/{reportId}/status` 를 한 번 불러 따라잡습니다. 소켓이 결과를
-    먼저 주면 조회 응답은 버립니다 (backend#56 "호출 순서"). 새로고침하면 sessionStorage 에 기억한 reportId 로
+  - 늦게 붙은 경우: 소켓에 붙은 직후 `GET /api/reports/{reportId}/status` 를 한 번 불러 따라잡습니다. 결과(완료 · 실패)는
+    소켓과 조회 중 먼저 준 쪽을 따르고 뒤에 온 것은 버립니다 (backend#56 "호출 순서"). 새로고침하면 sessionStorage 에 기억한 reportId 로
     같은 순서를 밟습니다
 - 남은 것
   - **다른 탭 · 기기에서 연 경우.** 기억해 둔 reportId 가 없으면 등록이 409 `REPORT_ALREADY_EXISTS` 이고, 상태 조회도

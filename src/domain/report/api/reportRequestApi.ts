@@ -86,13 +86,18 @@ export function getReportStatus(reportId: string) {
  * 둘이 갈리면 **실제 reportId 로 목업 상태를 묻는** 반쪽 상태가 됩니다 — 목업은 그 id 를 몰라서 404 를 주고,
  * 화면은 기억한 id 가 틀렸다고 오해합니다. 그래서 둘이 같은 쪽(둘 다 실제 · 둘 다 목업)일 때만 부르고,
  * 아니면 콘솔에 설정을 알려주고 소켓만으로 기다립니다(상태 조회가 생기기 전과 같은 동작).
+ * 알림은 **한 번만** 남깁니다. 화면에 들어올 때 · 다시 분석할 때 · 새로고침할 때마다 불려서, 매번 찍으면 콘솔이
+ * 덮입니다 (`shared/api/mock.ts` 의 `announceMissing` 과 같은 이유).
  *
  * 실제로 붙일 때는 `VITE_REAL_APIS` 에 `interviews` 와 `reports` 를 같이 켭니다. 리포트 **상세** 조회는
  * 백엔드에 아직 없어서 `reports` 를 켜도 목업이 답합니다(`missingInBackend`, #78).
  */
+let warnedSplitDomains = false
+
 export function canCheckReportStatus(sessionId: string, reportId: string): boolean {
   const same = isRealApi(reportRequestPath(sessionId)) === isRealApi(reportStatusPath(reportId))
-  if (!same) {
+  if (!same && !warnedSplitDomains) {
+    warnedSplitDomains = true
     console.warn(
       '리포트 상태 조회를 건너뜁니다 — 분석 등록(interviews)과 상태 조회(reports)가 한쪽만 실제 서버입니다. VITE_REAL_APIS 에 둘을 같이 켜주세요.',
     )
