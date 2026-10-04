@@ -7,7 +7,11 @@ export type SessionSocketHandlers = {
   onSessionEnd: (sessionEnd: SessionEndPush) => void
 }
 
-const TOTAL_QUESTIONS = 2
+/**
+ * 문항 수. 주질문 2개 + 꼬리질문 1개다. 되묻기(REASK)는 세지 않는다.
+ * 실제 서버의 `questionTotal` 은 3 · 6 · 9 중 하나라 그중 가장 작은 값에 맞췄다.
+ */
+const TOTAL_QUESTIONS = 3
 
 type Turn = {
   question: Question
@@ -28,10 +32,15 @@ function buildQuestion(
 }
 
 /**
- * 실제 WS 메시지 스키마(question/progress/error/session_end)를 그대로 흉내내는 5턴
+ * 실제 WS 메시지 스키마(question/progress/error/session_end)를 그대로 흉내내는 4턴
  * 시나리오입니다. QUESTION 2개 중 1번엔 REASK(STT 실패 재시도), 2번엔 FOLLOWUP이
  * 붙는다. advanceTurn() 이 매번 progress 스테이지들을 흘려보낸 뒤 다음 질문 또는
  * session_end 를 내보낸다.
+ *
+ * `questionNumber` 는 백엔드 계약을 따른다 (Cue-A/backend docs/10-ai-client.md "응답 타입").
+ * 주질문 · 꼬리질문은 번호가 올라가고, 되묻기만 올라가지 않는다. 그래서 진행률이
+ * 1/3 → 1/3(되묻기) → 2/3 → 3/3(꼬리질문) 으로 보인다. 전에는 꼬리질문이 앞 질문과 같은
+ * 번호(2)를 써서 "질문 2 / 2" 에 머물렀다. (이슈 #99)
  */
 const TURNS: Turn[] = [
   {
@@ -70,7 +79,8 @@ const TURNS: Turn[] = [
     question: buildQuestion({
       questionId: 'mock-q2-followup',
       questionType: 'FOLLOWUP',
-      questionNumber: 2,
+      // 꼬리질문도 한 문항으로 센다. 앞 질문(2) 다음 번호다.
+      questionNumber: 3,
       text: '방금 답변에서 언급한 갈등 상황을 조금 더 구체적으로 설명해 주시겠어요?',
     }),
     progressStages: ['TRANSCRIBING', 'GENERATING'],
