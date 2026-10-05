@@ -24,6 +24,7 @@ import { MOCK_REPORT_IDS } from './reportMock'
  *
  * 상태 조회(`GET /api/reports/:reportId/status`)는 등록한 시각부터 흐른 시간으로 같은 흐름을 계산합니다.
  * 분석 도중 새로고침하면 소켓 목업은 처음부터 다시 흘리지만, 상태 조회가 지금 단계를 먼저 알려줍니다.
+ * 등록하지 않은 reportId 는 상태 조회가 404 `REPORT_NOT_FOUND` 이고 소켓은 아무것도 보내지 않습니다 (실제 서버와 같음).
  */
 
 const STAGE_MS = 2000
@@ -120,6 +121,12 @@ export type ReportSocketHandlers = {
 /** 실제 소켓과 같은 순서로 메시지를 흘립니다. 반환값은 정리 함수입니다 */
 export function connectMockReportSocket(reportId: string, handlers: ReportSocketHandlers): () => void {
   const scenario = scenarios.get(reportId)
+  if (!scenario) {
+    // 실제 서버는 등록된 리포트에만 폴러를 돌려 메시지를 보내므로("WS 메시지는 붙어 있는 연결에만 갑니다",
+    // backend docs/13-report.md) 모르는 id 에는 아무것도 오지 않습니다. 같은 id 의 상태 조회 목업은 404 입니다.
+    console.warn('[목업] 등록되지 않은 리포트 소켓입니다 — 실제 서버처럼 아무것도 보내지 않습니다 reportId=%s', reportId)
+    return () => {}
+  }
   const failure = toFailure(scenario)
   const timers: ReturnType<typeof setTimeout>[] = []
 
@@ -143,11 +150,11 @@ export function connectMockReportSocket(reportId: string, handlers: ReportSocket
   return () => timers.forEach(clearTimeout)
 }
 
-function toFailure(scenario: Scenario | undefined): ReportErrorPush | null {
-  if (scenario?.sessionId === 'mock-report-fails-once' && scenario.attempt === 1) {
+function toFailure(scenario: Scenario): ReportErrorPush | null {
+  if (scenario.sessionId === 'mock-report-fails-once' && scenario.attempt === 1) {
     return { errorCode: 'CONTENT_FAILED', message: '답변 내용 분석에 실패했습니다', retryable: true }
   }
-  if (scenario?.sessionId === 'mock-report-stt-failed') {
+  if (scenario.sessionId === 'mock-report-stt-failed') {
     return { errorCode: 'STT_FAILED', message: '음성 인식에 실패했습니다', retryable: false }
   }
   return null

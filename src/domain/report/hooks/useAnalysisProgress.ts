@@ -160,6 +160,9 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
      * - 소켓이 먼저면, 늦게 도착한 조회 응답은 더 오래된 상태일 수 있어 버립니다 (backend#56 "호출 순서")
      * - 조회가 먼저면, 뒤따라온 소켓 메시지를 버립니다. 안 버리면 이미 띄운 실패 안내의 단계가 움직이거나 결과가
      *   한 번 더 반영됩니다 (PR #100 리뷰)
+     * - 기억한 id 가 404 라 등록부터 다시 갈 때도 올립니다. `restart()` 는 다음 렌더에서야 이 effect 를 정리하므로,
+     *   그 사이 지난 소켓 메시지가 404 난 id 로 완료시키거나 방금 되돌린 단계를 다시 올리지 않게 합니다. 소켓도 그
+     *   자리에서 끊습니다 (PR #100 리뷰)
      */
     let settled = false
 
@@ -221,6 +224,10 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
           if (!alive || settled) return
           const code = cause instanceof ApiError ? cause.code : 'UNKNOWN'
           if (code === 'REPORT_NOT_FOUND' && fromSaved) {
+            // 정리가 돌기 전에 지난 소켓이 흘리는 메시지를 버리고 바로 끊습니다. `settled` 는 effect 마다 새로 만들어서
+            // 다시 시작한 시도는 false 로 시작합니다 (attempt 가 의존성에 있음).
+            settled = true
+            disconnect()
             forgetReportId(sessionId)
             restart()
             return
