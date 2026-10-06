@@ -36,18 +36,25 @@ type Scenario = { sessionId: string; attempt: number; startedAt: number }
  *
  * 새로고침해도 이어지도록 sessionStorage 에 둡니다. 메모리에만 두면 새로고침하는 순간 목업이 등록을 잊어서
  * 상태 조회가 404 가 나고, 실제 서버와 다르게 등록부터 다시 돕니다.
+ *
+ * 메모리에도 같이 둡니다. sessionStorage 쓰기가 막힌 브라우저에서는 등록이 남지 않는데, 소켓 목업은 등록 기록이
+ * 없으면 아무것도 보내지 않아서(`connectMockReportSocket`) 방금 등록한 분석이 끝나지 않습니다. 메모리에 있으면
+ * 이 화면이 떠 있는 동안은 이어지고, 새로고침 때 잊을 뿐입니다.
  */
 const SCENARIO_KEY = 'cue-a:mock:report-scenarios'
 
+const memory = new Map<string, Scenario>()
+
 const scenarios = {
   get(reportId: string): Scenario | undefined {
-    return readScenarios()[reportId]
+    return memory.get(reportId) ?? readScenarios()[reportId]
   },
   set(reportId: string, scenario: Scenario) {
+    memory.set(reportId, scenario)
     try {
       sessionStorage.setItem(SCENARIO_KEY, JSON.stringify({ ...readScenarios(), [reportId]: scenario }))
     } catch {
-      // 저장이 막혀도 목업이 새로고침 때 등록을 잊을 뿐입니다.
+      // 저장이 막혀도 메모리에는 있어서, 목업이 새로고침 때 등록을 잊을 뿐입니다.
     }
   },
 }
