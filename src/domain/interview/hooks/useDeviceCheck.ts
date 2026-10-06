@@ -68,9 +68,20 @@ export type MediaDeviceOption = {
   label: string
 }
 
+// Chrome이 "현재 기본 장치"를 가리키는 합성(synthetic) 항목에 쓰는 예약된 deviceId다.
+// 실제 장치를 흉내만 낼 뿐 그 장치 고유의 deviceId 를 가진 실제 항목이 목록에 따로
+// 있어서(PR #103 리뷰, 실기기 콘솔로 확인: 'default' 항목의 label이 "기본값 - AirPods"
+// 였고, 같은 groupId를 가진 'AirPods' 항목이 별도로 존재했다), 걸러도 장치 자체가
+// 목록에서 사라지지 않는다. 'communications'는 Windows의 통화용 기본 장치에 쓰이는
+// 같은 성격의 예약 id라 실기기로 확인은 못 했지만 같이 걸러둔다.
+const SYNTHETIC_DEFAULT_DEVICE_IDS = new Set(['default', 'communications'])
+
 function toDeviceOptions(devices: MediaDeviceInfo[], kind: MediaDeviceKind): MediaDeviceOption[] {
   return devices
-    .filter((device) => device.kind === kind)
+    // 권한을 안 준 장치 종류는 Chrome이 deviceId·label이 빈 문자열인 항목 하나로
+    // 돌려준다(PR #103 리뷰) — 그대로 두면 "이름 없는 카메라/마이크"가 실제로 고를 수
+    // 있는 장치처럼 계속 노출된다.
+    .filter((device) => device.kind === kind && device.deviceId !== '' && !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId))
     .map((device) => ({ deviceId: device.deviceId, label: device.label }))
 }
 
@@ -266,6 +277,10 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   const [micLevel, setMicLevel] = useState(0)
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceOption[]>([])
   const [micDevices, setMicDevices] = useState<MediaDeviceOption[]>([])
+  // enumerateDevices 를 한 번이라도 돌렸는지. 카메라·마이크가 1대뿐인 환경에서 그
+  // 장치를 뽑으면 목록이 정상적으로 0개가 되는데, cameraDevices.length 만 보면 "아직
+  // 못 받아왔다"와 구분이 안 돼 missing 판정이 영영 안 걸렸다(PR #103 리뷰).
+  const [hasFetchedDevices, setHasFetchedDevices] = useState(false)
   // 실제로 잡힌 스트림의 트랙 설정에서 읽은 값입니다(이슈 #97) — enumerateDevices 목록의
   // 첫 번째를 임의로 "선택됨"으로 보지 않고, 브라우저가 실제로 연 장치를 그대로 반영합니다.
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null)
@@ -290,6 +305,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       const devices = await navigator.mediaDevices.enumerateDevices()
       setCameraDevices(toDeviceOptions(devices, 'videoinput'))
       setMicDevices(toDeviceOptions(devices, 'audioinput'))
+      setHasFetchedDevices(true)
     } catch (error) {
       console.error('장치 목록 조회 실패', error)
     }
@@ -593,11 +609,13 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     }
   }, [acquireCamera, acquireMic, stopCamera, stopMic])
 
-  // 목록이 아직 비어 있는(권한 전 · 첫 enumerate 전) 동안은 "사라짐"으로 오판하지 않습니다.
+  // 목록을 한 번도 못 받아온(권한 전 · 첫 enumerate 전) 동안은 "사라짐"으로 오판하지
+  // 않습니다. 장치가 1대뿐인 환경에서 그걸 뽑으면 목록이 정상적으로 0개가 되므로,
+  // cameraDevices.length 가 아니라 hasFetchedDevices 로 "받아온 적이 있는지"를 봅니다.
   const cameraDeviceMissing =
-    selectedCameraId !== null && cameraDevices.length > 0 && !cameraDevices.some((device) => device.deviceId === selectedCameraId)
+    selectedCameraId !== null && hasFetchedDevices && !cameraDevices.some((device) => device.deviceId === selectedCameraId)
   const micDeviceMissing =
-    selectedMicId !== null && micDevices.length > 0 && !micDevices.some((device) => device.deviceId === selectedMicId)
+    selectedMicId !== null && hasFetchedDevices && !micDevices.some((device) => device.deviceId === selectedMicId)
 
   return {
     camera,

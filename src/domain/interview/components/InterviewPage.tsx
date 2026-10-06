@@ -57,6 +57,16 @@ function readInitialDeviceStatus(state: unknown): { camera: MediaTrackState; mic
   return value as { camera: MediaTrackState; mic: MediaTrackState }
 }
 
+/** 장치 테스트 화면(DeviceCheckPage)에서 고른 카메라·마이크 deviceId (이슈 #97). */
+function readInitialDeviceIds(state: unknown): { cameraId: string | null; micId: string | null } | undefined {
+  if (typeof state !== 'object' || state === null || !('initialDeviceIds' in state)) return undefined
+
+  const value = (state as { initialDeviceIds?: unknown }).initialDeviceIds
+  if (typeof value !== 'object' || value === null || !('cameraId' in value) || !('micId' in value)) return undefined
+
+  return value as { cameraId: string | null; micId: string | null }
+}
+
 type ConnectedProps = {
   sessionId: string
   options: InterviewSessionOptions
@@ -71,9 +81,10 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const initialDeviceStatus = readInitialDeviceStatus(location.state)
+  const initialDeviceIds = readInitialDeviceIds(location.state)
   const [isExitRequested, setIsExitRequested] = useState(false)
 
-  const { camera, mic, videoStream, audioRecordingStream, videoRecordingStream } = useMediaStream(initialDeviceStatus)
+  const { camera, mic, videoStream, audioRecordingStream, videoRecordingStream } = useMediaStream(initialDeviceStatus, initialDeviceIds)
   const { uploadStatus, startRecording, stopAndUpload } = useAnswerRecording(sessionId, audioRecordingStream, videoRecordingStream)
 
   // 녹화 업로드가 끝나야 실제 제출을 부를 수 있어서(아래 pendingSubmit effect 주석
