@@ -49,10 +49,12 @@ export type DocumentDetailResponse = {
 /**
  * 문서 수정(`PATCH /api/documents/{documentId}`)의 응답에서 **화면이 읽는 부분**입니다.
  *
- * API 명세(Notion "문서 제목 수정")의 응답은 `{ documentId, title, indexStatus, updatedAt }` 입니다. 등록 응답
+ * API 명세(Notion "문서 제목 수정")의 응답은 `{ documentId, title, updatedAt }` 입니다. 등록 응답
  * (`DocumentResponse`)과 달리 종류 · 파일명 · 등록일이 없어서 목록의 한 줄을 이 응답으로 갈아 끼울 수 없습니다.
- * 그래서 바뀐 제목만 읽고 목록은 다시 부릅니다. `indexStatus` 는 다른 문서 응답에서 이미 빠진 값이라
- * (Cue-A/backend#58) 읽지 않습니다.
+ * 그래서 바뀐 제목만 읽고 목록은 다시 부릅니다.
+ *
+ * 명세 예시에 적혀 있는 `indexStatus` 는 **필요 없는 값으로 백엔드와 확인했습니다.** 다른 문서 응답에서도 이미
+ * 빠졌습니다 (Cue-A/backend#58).
  */
 export type DocumentUpdateResponse = {
   documentId: string

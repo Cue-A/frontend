@@ -199,7 +199,8 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 문서 API 에는 등록 · 목록 · 상세 · 삭제만 있습니다 (Cue-A/backend `DocumentController`).
 
 - 명세에서 정해진 것: `PATCH /api/documents/{documentId}`, 본문 `{ title?, content? }`(제목 최대 100자, `content` 는
-  직접 작성 문서만 — 파일 문서면 400 `CONTENT_NOT_EDITABLE`), 응답 `{ documentId, title, indexStatus, updatedAt }`.
+  직접 작성 문서만 — 파일 문서면 400 `CONTENT_NOT_EDITABLE`), 응답 `{ documentId, title, updatedAt }`.
+  명세 예시의 `indexStatus` 는 필요 없는 값으로 백엔드와 확인했습니다 (다른 문서 응답에서도 빠졌습니다 — Cue-A/backend#58).
 - **임시 결정: 제목만 바꾸는 흐름(행의 연필 버튼 → 제목 수정 창)을 만들고 목업이 답하게 둡니다.** 화면은 `title` 만
   보내고 응답에서도 바뀐 제목만 읽습니다. 원본 파일명 · 본문 · 종류는 바꾸지 않습니다.
 - **문서를 실제 서버에 붙인 동안은 수정 버튼을 내지 않습니다.** 이 API 만 목업이 답하게(`missingInBackend`) 두면
@@ -208,7 +209,6 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 명세가 지금 백엔드 코드와 다른 곳 (백엔드 확인 필요)
   - 응답 봉투. 명세 예시는 `code`(성공 시 `"SUCCESS"`) · `message` 인데, 공용 응답(`Result`)은 `errorCode` · `message`
     이고 성공하면 둘 다 null 입니다. 화면은 `errorCode` 를 읽습니다
-  - `indexStatus`. 다른 문서 응답에서는 빠졌습니다 (Cue-A/backend#58). 화면은 읽지 않습니다
   - `documentId` 예시가 `doc_…` 인데 실제는 UUID 입니다
 - 명세에 없어서 등록 · 상세와 같다고 본 것 (백엔드 확인 필요)
   - 빈 제목 · 100자 초과는 `INVALID_REQUEST`, 100자는 앞뒤 공백을 뺀 길이

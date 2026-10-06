@@ -136,7 +136,8 @@ export function deleteDocument(documentId: string) {
  * - 본문은 `{ title?, content? }` 입니다. **화면은 `title` 만 보냅니다.** `content` 는 직접 작성 문서만 바꿀 수 있고,
  *   파일 문서에 보내면 400 `CONTENT_NOT_EDITABLE` 입니다 — 본문 수정 화면이 생기면 그때 씁니다
  * - 제목은 최대 100자
- * - 응답은 `{ documentId, title, indexStatus, updatedAt }` — 바뀐 제목만 읽습니다 (`DocumentUpdateResponse`)
+ * - 응답은 `{ documentId, title, updatedAt }` — 바뀐 제목만 읽습니다 (`DocumentUpdateResponse`). 명세 예시의
+ *   `indexStatus` 는 필요 없는 값으로 백엔드와 확인했습니다
  *
  * 명세에 없어서 **등록 · 상세와 같다고 본 것** (백엔드 확인 필요)
  * - 빈 제목 · 100자 초과는 `INVALID_REQUEST`, 100자는 앞뒤 공백을 뺀 길이
