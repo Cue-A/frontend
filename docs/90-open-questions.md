@@ -193,6 +193,27 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 걸리는 작업: `domain/user/api/userApi.ts` 의 `withdraw`, `domain/user/components/WithdrawPage.tsx` ·
   `WithdrawConfirmDialog.tsx`, `domain/user/lib/withdrawReasons.ts`.
 
+### Q15. 🟡 문서 제목 수정 API 가 없습니다
+
+보관함(C-02) 시안에 "조회/수정" 이 있는데, 백엔드 문서 API 에는 등록 · 목록 · 상세 · 삭제만 있고 수정이 없습니다
+(Cue-A/backend `DocumentController`).
+
+- **임시 결정: 제목만 바꾸는 흐름(행의 연필 버튼 → 제목 수정 창)을 만들고, API 는
+  `PATCH /api/documents/{documentId}` (본문 `{ title }`, 응답은 등록과 같은 `DocumentResponse`) 로 가정해 목업이
+  답하게 둡니다.** 제목 규칙은 등록과 같게 두었습니다(필수 · 앞뒤 공백을 뺀 100자). 원본 파일명 · 본문 · 종류는
+  바꾸지 않습니다.
+- **문서를 실제 서버에 붙인 동안은 수정 버튼을 내지 않습니다.** 이 API 만 목업이 답하게(`missingInBackend`) 두면
+  목업 저장소가 실제 문서 id 를 몰라서 "없는 문서" 라고 답하기 때문입니다 (`canRenameDocument`).
+- 남은 결정 (백엔드)
+  - 경로 · 메서드 · 응답. 정해지면 `updateDocumentTitle` 과 목업을 맞추고 `canRenameDocument` 를 지웁니다
+  - 제목 규칙이 등록과 같은지, 분당 호출 제한이 있는지
+  - 본문(직접 작성) · 종류까지 수정하게 할지. 지금 화면은 제목만입니다
+- 남은 결정 (기획): 제목 수정 창 시안. 지금은 지우기 확인 창과 같은 모양으로 임시로 그렸습니다.
+- 알아둘 것: 옵션 설정(A-05)에 골라 둔 자기소개서는 고른 시점의 제목을 들고 있어서, 보관함에서 제목을 바꿔도
+  다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
+- 걸리는 작업: `domain/document/api/documentApi.ts` 의 `updateDocumentTitle` · `canRenameDocument`,
+  `domain/document/hooks/useRenameDocument.ts`, `domain/document/components/DocumentRenameDialog.tsx`.
+
 ---
 
 ## 그 외

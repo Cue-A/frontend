@@ -1,4 +1,4 @@
-import { IconChevronLeft, IconChevronRight, IconTrash } from '@tabler/icons-react'
+import { IconChevronLeft, IconChevronRight, IconPencil, IconTrash } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
 import Button from '@/shared/ui/Button'
@@ -22,9 +22,15 @@ type Props = {
   /** 지금 여는 중인 문서. 그 행의 조회 버튼을 잠급니다. */
   openingId: string | null
   onOpen: (document: DocumentSummary) => void
+  /** 제목 수정 창을 엽니다. 없으면 수정 버튼을 내지 않습니다 (수정 API 를 쓸 수 없을 때) */
+  onRename?: (document: DocumentSummary) => void
   /** 지우기 확인 창을 엽니다. 실제로 지우는 건 확인 창입니다 */
   onDelete: (document: DocumentSummary) => void
 }
+
+/** 행 끝의 아이콘 버튼(제목 수정 · 지우기) 모양입니다. */
+const ICON_BUTTON =
+  'flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-neutral-900'
 
 /** 좁은 화면에서는 좌우 여백을 줄여 파일 칸에 폭을 남깁니다. */
 const CELL = 'px-4 py-4 md:px-6'
@@ -51,7 +57,13 @@ function Notice({ children }: { children: ReactNode }) {
   )
 }
 
-function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: Props['onOpen'], onDelete: Props['onDelete']) {
+function renderBody(
+  body: DocumentTableBody,
+  openingId: string | null,
+  onOpen: Props['onOpen'],
+  onRename: Props['onRename'],
+  onDelete: Props['onDelete'],
+) {
   switch (body.kind) {
     case 'loading':
       return (
@@ -123,12 +135,13 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
                   {opening ? '여는 중…' : '조회'}
                   <span className="sr-only"> — {document.title}</span>
                 </Button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(document)}
-                  title="지우기"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
-                >
+                {onRename && (
+                  <button type="button" onClick={() => onRename(document)} title="제목 수정" className={ICON_BUTTON}>
+                    <IconPencil size={18} stroke={2} aria-hidden />
+                    <span className="sr-only">제목 수정 — {document.title}</span>
+                  </button>
+                )}
+                <button type="button" onClick={() => onDelete(document)} title="지우기" className={ICON_BUTTON}>
                   <IconTrash size={18} stroke={2} aria-hidden />
                   <span className="sr-only">지우기 — {document.title}</span>
                 </button>
@@ -143,17 +156,20 @@ function renderBody(body: DocumentTableBody, openingId: string | null, onOpen: P
 /**
  * 보관함 목록입니다. (C-02)
  *
- * 시안의 "조회/수정" 은 **"조회"** 만 둡니다 — 수정 API 가 없습니다. 행 끝의 ⋮ 메뉴(삭제 등)는
- * 지금 들어갈 항목이 삭제 하나뿐이라 메뉴 대신 **지우기 아이콘 버튼**을 바로 둡니다(Cue-A/backend#40).
- * 한 번 더 눌러 메뉴를 여는 수고가 없고, 표가 `overflow-hidden` 이라 아래쪽 행의 메뉴가 잘리는 문제도
- * 없습니다. 수정이 생기면 그때 메뉴로 모읍니다. (이슈 #59)
+ * 시안의 "조회/수정" 버튼은 **"조회"** 로 두고, 수정은 **제목만** 바꿀 수 있어 따로 뺐습니다. 행 끝의 ⋮ 메뉴
+ * 대신 **제목 수정 · 지우기 아이콘 버튼**을 바로 둡니다(지우기는 Cue-A/backend#40). 항목이 둘뿐이라 한 번 더 눌러
+ * 메뉴를 여는 수고가 없고, 표가 `overflow-hidden` 이라 아래쪽 행의 메뉴가 잘리는 문제도 없습니다. 항목이 더
+ * 늘면 그때 메뉴로 모읍니다. (이슈 #59)
+ *
+ * 제목 수정 버튼은 `onRename` 을 받았을 때만 냅니다. 수정 API 가 백엔드에 아직 없어서, 문서를 실제 서버에 붙인
+ * 동안은 화면이 `onRename` 을 주지 않습니다 (useRenameDocument 의 `CAN_RENAME_DOCUMENT`).
  *
  * "상태" 칸(완료 · 분석 중 · 실패)은 뺐습니다. 문서의 준비 상태가 백엔드 응답에서 빠져서(Cue-A/backend#58)
  * 모든 행에 똑같은 "완료" 만 남기 때문입니다. 등록한 문서는 곧바로 면접에 쓸 수 있습니다.
  *
  * 문서는 사용자당 20개까지라 한 페이지에 전부 옵니다. 페이지 버튼은 시안대로 두되 늘 비활성입니다.
  */
-export default function DocumentTable({ body, openingId, onOpen, onDelete }: Props) {
+export default function DocumentTable({ body, openingId, onOpen, onRename, onDelete }: Props) {
   const count = body.kind === 'rows' ? body.documents.length : 0
 
   return (
@@ -167,12 +183,13 @@ export default function DocumentTable({ body, openingId, onOpen, onDelete }: Pro
             <th scope="col" className="hidden w-48 px-6 py-3 text-right font-semibold md:table-cell">
               등록일 · 용량
             </th>
-            <th scope="col" className="w-32 px-4 py-3 text-right font-semibold md:w-40 md:px-6">
+            {/* 조회 + 아이콘 버튼 둘(제목 수정 · 지우기)이 한 줄에 들어가는 폭입니다. 좁으면 파일 칸 위로 넘칩니다 */}
+            <th scope="col" className="w-44 px-4 py-3 text-right font-semibold md:w-48 md:px-6">
               작업
             </th>
           </tr>
         </thead>
-        <tbody>{renderBody(body, openingId, onOpen, onDelete)}</tbody>
+        <tbody>{renderBody(body, openingId, onOpen, onRename, onDelete)}</tbody>
       </table>
 
       <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">

@@ -1,4 +1,5 @@
 import { api } from '@/shared/api/apiClient'
+import { isRealApi } from '@/shared/api/mock'
 
 import type { CreateDocumentInput, DocumentListQuery } from '../types/document'
 
@@ -121,4 +122,33 @@ export async function getDocument(documentId: string) {
  */
 export function deleteDocument(documentId: string) {
   return api.delete<void>(`/api/documents/${encodeURIComponent(documentId)}`)
+}
+
+/**
+ * 문서 제목 수정. `PATCH /api/documents/{documentId}` (본문 `{ title }`)
+ *
+ * ⚠️ **임시 계약입니다.** 백엔드에 이 API 가 아직 없습니다 — `DocumentController` 에는 등록 · 목록 · 상세 · 삭제만
+ * 있습니다. 상세 · 삭제와 같은 자원 주소에 PATCH 로 보내고, 응답은 등록과 같은 `DocumentResponse` 로 가정했습니다.
+ * 백엔드가 만들면 이 함수와 목업, `canRenameDocument` 만 맞추면 됩니다. (docs/90-open-questions.md Q15)
+ *
+ * 가정한 규칙 — 등록의 제목 규칙을 그대로 따랐습니다.
+ * - 제목: 필수, 앞뒤 공백을 뺀 100자 (`INVALID_REQUEST`)
+ * - **제목만 바뀝니다.** 원본 파일명(`fileName`) · 본문 · 종류는 그대로입니다
+ * - 없는 문서 · 남의 문서 · 지운 문서는 `DOCUMENT_NOT_FOUND`(404)
+ */
+export async function updateDocumentTitle(documentId: string, title: string) {
+  const response = await api.patch<DocumentResponse>(`/api/documents/${encodeURIComponent(documentId)}`, { title })
+  return toDocumentSummary(response)
+}
+
+/**
+ * 제목 수정을 쓸 수 있는지 봅니다. **문서가 목업일 때만** true 입니다.
+ *
+ * 수정 API 가 백엔드에 없어서, 문서를 실제 서버에 붙이면(`VITE_REAL_APIS=documents` 또는 `VITE_USE_MOCK=false`)
+ * 보낼 곳이 없습니다. 이 API 만 목업이 답하게(`missingInBackend`) 두지도 않았습니다 — 목업 저장소는 실제 서버의
+ * 문서 id 를 몰라서 "없는 문서" 라고 답하고, 화면은 멀쩡한 문서를 지워졌다고 안내하게 됩니다. 그래서 그때는
+ * 화면이 수정 버튼을 내지 않습니다. 백엔드에 API 가 생기면 이 함수를 지웁니다.
+ */
+export function canRenameDocument(): boolean {
+  return !isRealApi('/api/documents')
 }

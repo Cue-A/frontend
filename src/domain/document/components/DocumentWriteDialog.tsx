@@ -6,11 +6,8 @@ import Button from '@/shared/ui/Button'
 import Chip from '@/shared/ui/Chip'
 
 import { useWriteDocument } from '../hooks/useWriteDocument'
-import { DOCUMENT_TYPE_LABEL } from '../lib/documentDisplay'
+import { DOCUMENT_TYPE_LABEL, MAX_DOCUMENT_TITLE_LENGTH } from '../lib/documentDisplay'
 import type { DocumentSummary, DocumentType } from '../types/document'
-
-/** 백엔드 `DocumentRegisterService.MAX_TITLE_LENGTH` 와 같습니다 */
-const MAX_TITLE_LENGTH = 100
 
 /** 백엔드 `DocumentRegisterService.MAX_MARKDOWN_LENGTH` 와 같습니다. 글자 수(자바 `String.length`) 기준입니다 */
 const MAX_CONTENT_LENGTH = 20_000
@@ -153,7 +150,7 @@ export default function DocumentWriteDialog({ defaultType, onSaved, onClose }: P
               <Badge tone="danger">필수</Badge>
             </span>
             <span className="text-body-sm font-normal text-neutral-400">
-              {trimmedTitle.length}/{MAX_TITLE_LENGTH}
+              {trimmedTitle.length}/{MAX_DOCUMENT_TITLE_LENGTH}
             </span>
           </span>
           <input
@@ -163,7 +160,7 @@ export default function DocumentWriteDialog({ defaultType, onSaved, onClose }: P
               clearError()
               setTitle(event.target.value)
             }}
-            maxLength={MAX_TITLE_LENGTH}
+            maxLength={MAX_DOCUMENT_TITLE_LENGTH}
             ref={titleInputRef}
             disabled={saving}
             placeholder="예) 카카오 프론트엔드 자기소개서"

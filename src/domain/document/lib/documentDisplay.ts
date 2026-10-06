@@ -18,6 +18,12 @@ import type { DocumentSummary, DocumentType } from '../types/document'
 export const MAX_DOCUMENTS = 20
 
 /**
+ * 제목 상한(글자 수). 백엔드 `DocumentRegisterService.MAX_TITLE_LENGTH` 와 같습니다. 앞뒤 공백을 뺀 길이로 셉니다.
+ * 올리기 · 직접 작성 · 제목 수정 창이 같이 씁니다.
+ */
+export const MAX_DOCUMENT_TITLE_LENGTH = 100
+
+/**
  * 전에 있던 "분석 실패" 탭은 뺐습니다. 문서의 준비 상태(`indexStatus`)가 백엔드 응답에서 빠져서
  * (Cue-A/backend#58) 실패한 문서라는 게 없습니다 — 등록한 문서는 곧바로 면접에 쓸 수 있습니다.
  */
