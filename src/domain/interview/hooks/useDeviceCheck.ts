@@ -276,6 +276,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     removeResumeListenersRef.current?.()
     removeResumeListenersRef.current = null
     if (audioContextRef.current) {
+      audioContextRef.current.onstatechange = null
       audioContextRef.current.close().catch(() => {})
       audioContextRef.current = null
     }
@@ -308,9 +309,38 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     // AudioContext 가 'suspended' 로 시작하면(resumeOnNextUserGesture) 그동안은 분석기에
     // 무음만 들어와, 경과 시간을 그대로 재면 그 무음 구간이 "조용함" 으로 고정될 수
     // 있다 (PR #102 리뷰). 'running' 이 된 뒤부터만 경과 시간을 잽니다.
+    const meterStartedAt = performance.now()
     let calibrationStartedAt: number | null = null
     const calibrationSamples: number[] = []
     let calibrated = false
+
+    // 위 타이밍 수정이 새로 만드는 두 경계 상황을 마무리합니다 (PR #102 뒷정리 코드리뷰):
+    //
+    // 1) 제스처 없이 들어온 뒤(새로고침·직접 진입 등) 끝까지 제스처가 한 번도 없으면
+    //    state 가 계속 'suspended' 에 머물러 calibrationStartedAt 이 null 로 남고, 보정이
+    //    영원히 끝나지 않는다. meterStartedAt 기준 데드라인을 넘기면 그때까지 모인
+    //    샘플(하나도 없으면 그 순간의 rms)로 그냥 마감한다.
+    // 2) 보정 도중 AudioContext 가 다시 'suspended' 로 빠지면(탭 백그라운드 등)
+    //    calibrationStartedAt 이 과거 시점에 멈춰 있어, 복귀 즉시 몇 개 안 되는 샘플만으로
+    //    데드라인을 넘긴 것처럼 보여 너무 일찍 마감된다. 'running' 이 아니게 되는 순간
+    //    calibrationStartedAt 을 리셋해 다음 'running' 구간에서 다시 NOISE_CALIBRATION_MS
+    //    만큼 잰다 — 이미 모은 샘플은 버리지 않고 이어서 평균한다.
+    const CALIBRATION_FALLBACK_DEADLINE_MS = NOISE_CALIBRATION_MS * 4
+
+    // stopMic 에서 close() 직전에 null 로 비워 해제합니다 — 이 훅의 다른 리스너
+    // (removeResumeListenersRef) 와 같은 "달면 반드시 떼는" 관례를 따릅니다.
+    audioContext.onstatechange = () => {
+      if (!calibrated && audioContext.state !== 'running') {
+        calibrationStartedAt = null
+      }
+    }
+
+    const finalizeCalibration = (samples: number[]) => {
+      calibrated = true
+      const averageRms = samples.reduce((sum, sample) => sum + sample, 0) / samples.length
+      const decibels = Math.round(rmsToDecibels(averageRms))
+      setNoise({ level: classifyNoise(decibels), decibels })
+    }
 
     const tick = () => {
       analyser.getByteTimeDomainData(buffer)
@@ -323,16 +353,17 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       const rms = Math.sqrt(sumSquares / buffer.length)
       const level = rms <= NOISE_FLOOR ? 0 : Math.min(1, (rms - NOISE_FLOOR) * GAIN)
 
-      if (!calibrated && audioContext.state === 'running') {
-        if (calibrationStartedAt === null) {
-          calibrationStartedAt = performance.now()
-        }
-        calibrationSamples.push(rms)
-        if (performance.now() - calibrationStartedAt >= NOISE_CALIBRATION_MS) {
-          calibrated = true
-          const averageRms = calibrationSamples.reduce((sum, sample) => sum + sample, 0) / calibrationSamples.length
-          const decibels = Math.round(rmsToDecibels(averageRms))
-          setNoise({ level: classifyNoise(decibels), decibels })
+      if (!calibrated) {
+        if (audioContext.state === 'running') {
+          if (calibrationStartedAt === null) {
+            calibrationStartedAt = performance.now()
+          }
+          calibrationSamples.push(rms)
+          if (performance.now() - calibrationStartedAt >= NOISE_CALIBRATION_MS) {
+            finalizeCalibration(calibrationSamples)
+          }
+        } else if (performance.now() - meterStartedAt >= CALIBRATION_FALLBACK_DEADLINE_MS) {
+          finalizeCalibration(calibrationSamples.length > 0 ? calibrationSamples : [rms])
         }
       }
 
