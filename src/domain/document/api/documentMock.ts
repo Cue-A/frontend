@@ -3,7 +3,12 @@ import { registerMock } from '@/shared/api/mock'
 
 import type { DocumentSourceType, DocumentType } from '../types/document'
 
-import type { DocumentDetailResponse, DocumentListResponse, DocumentResponse } from './documentResponse'
+import type {
+  DocumentDetailResponse,
+  DocumentListResponse,
+  DocumentResponse,
+  DocumentUpdateResponse,
+} from './documentResponse'
 
 /**
  * 문서 API 목업입니다. 검증 순서와 에러 코드는 백엔드
@@ -312,14 +317,18 @@ registerMock('GET', '/api/documents/:documentId', ({ documentId }): DocumentDeta
 /**
  * 문서 제목 수정 목업.
  *
- * ⚠️ 백엔드에 아직 없는 API 라 계약을 가정했습니다 (`documentApi.ts` 의 `updateDocumentTitle`). 제목 검사는 등록과
- * 같은 규칙이고, 본문 검사가 문서 찾기보다 먼저입니다(스프링은 요청 본문부터 검사합니다). 제목과 `updatedAt` 만
- * 바꾸고 원본 파일명 · 본문 · 종류는 그대로 둡니다.
+ * API 명세(Notion "문서 제목 수정")를 따랐습니다. ⚠️ 백엔드는 아직 시작 전입니다 (`documentApi.ts` 의
+ * `updateDocumentTitle`). 화면이 `title` 만 보내므로 목업도 `title` 만 받습니다 — 명세의 `content`(직접 작성 본문
+ * 수정)는 다루지 않습니다. 제목 검사는 명세에 없어 등록과 같은 규칙으로 두었고, 요청 본문 검사가 문서 찾기보다
+ * 먼저입니다(스프링은 요청 본문부터 검사합니다). 제목과 `updatedAt` 만 바꾸고 원본 파일명 · 본문 · 종류는 그대로 둡니다.
+ *
+ * 응답은 명세의 `{ documentId, title, indexStatus, updatedAt }` 에서 `indexStatus` 를 뺀 모양입니다. 그 값은 다른
+ * 문서 응답에서 이미 빠졌고(Cue-A/backend#58) 화면도 읽지 않습니다.
  *
  * `missingInBackend` 는 달지 않았습니다. 문서를 실제 서버에 붙였을 때 이 API 만 목업이 답하면, 실제 문서 id 를
  * 모르는 이 저장소가 "없는 문서" 라고 답하기 때문입니다 (`canRenameDocument`).
  */
-registerMock('PATCH', '/api/documents/:documentId', ({ documentId }, body) => {
+registerMock('PATCH', '/api/documents/:documentId', ({ documentId }, body): DocumentUpdateResponse & { updatedAt: string } => {
   const requested = typeof body === 'object' && body !== null ? (body as { title?: unknown }).title : undefined
   const title = validateTitle(typeof requested === 'string' ? requested : null)
 
@@ -330,7 +339,7 @@ registerMock('PATCH', '/api/documents/:documentId', ({ documentId }, body) => {
 
   document.title = title
   document.updatedAt = nowIso()
-  return toResponse(document)
+  return { documentId: document.documentId, title: document.title, updatedAt: document.updatedAt }
 })
 
 /**

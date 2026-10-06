@@ -4,13 +4,13 @@ import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
 import { canRenameDocument, updateDocumentTitle } from '../api/documentApi'
-import type { DocumentSummary } from '../types/document'
-
-export type RenameResult = { kind: 'renamed'; document: DocumentSummary } | { kind: 'gone' } | { kind: 'failed' }
+export type RenameResult = { kind: 'renamed'; title: string } | { kind: 'gone' } | { kind: 'failed' }
 
 export type UseRenameDocumentResult = {
   /**
-   * `renamed` 바꿨음(바뀐 문서) · `gone` 이미 없음 · `failed` 그 밖의 실패(`error` 에 문구).
+   * `renamed` 바꿨음(서버가 저장한 제목) · `gone` 이미 없음 · `failed` 그 밖의 실패(`error` 에 문구).
+   *
+   * 수정 응답에는 제목만 쓸 만한 값이라(종류 · 파일명 · 등록일이 없습니다) 문서 전체가 아니라 제목을 돌려줍니다.
    *
    * 다른 탭에서 지운 문서는 `DOCUMENT_NOT_FOUND` 로 옵니다. 지우기와 마찬가지로 실패가 아니라 `gone` 으로
    * 돌려주고, 화면은 목록을 새로 부릅니다 (useDeleteDocument).
@@ -30,7 +30,7 @@ export const CAN_RENAME_DOCUMENT = canRenameDocument()
 /**
  * 보관함 문서의 제목을 바꿉니다. (C-02)
  *
- * ⚠️ 백엔드에 수정 API 가 아직 없어서 계약을 가정했고, 지금은 목업에서만 동작합니다
+ * ⚠️ API 명세는 있지만 백엔드가 아직 시작 전이라, 지금은 목업에서만 동작합니다
  * (`documentApi.ts` 의 `updateDocumentTitle`, docs/90-open-questions.md Q15).
  */
 export function useRenameDocument(): UseRenameDocumentResult {
@@ -42,7 +42,8 @@ export function useRenameDocument(): UseRenameDocumentResult {
     setError(null)
 
     try {
-      return { kind: 'renamed', document: await updateDocumentTitle(documentId, title) }
+      const updated = await updateDocumentTitle(documentId, title)
+      return { kind: 'renamed', title: updated.title }
     } catch (cause) {
       const code = cause instanceof ApiError ? cause.code : 'UNKNOWN'
       if (code === 'DOCUMENT_NOT_FOUND') return { kind: 'gone' }

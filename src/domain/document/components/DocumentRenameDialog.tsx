@@ -8,7 +8,7 @@ import type { DocumentSummary } from '../types/document'
 
 type Props = {
   document: DocumentSummary
-  /** 바꿨을 때. 바뀐 문서가 옵니다 */
+  /** 바꿨을 때. 제목만 새 값으로 바뀐 문서가 옵니다 */
   onRenamed: (document: DocumentSummary) => void
   /** 이미 없는 문서였을 때(다른 탭에서 지운 경우 등). 목록을 새로 불러야 합니다 */
   onGone: (message: string) => void
@@ -73,7 +73,8 @@ export default function DocumentRenameDialog({ document, onRenamed, onGone, onCl
     const result = await rename(document.documentId, trimmedTitle)
     if (result.kind === 'failed') return
 
-    if (result.kind === 'renamed') onRenamed(result.document)
+    // 수정 응답은 제목만 돌려줍니다. 나머지는 열 때 받은 문서 그대로입니다 (화면은 이어서 목록을 다시 부릅니다).
+    if (result.kind === 'renamed') onRenamed({ ...document, title: result.title })
     else onGone('이미 지워진 문서예요. 목록을 새로 불러왔어요.')
     dialogRef.current?.close()
   }
