@@ -77,7 +77,7 @@ function envCheckDisplay(
   if (key === 'lighting') {
     if (lighting.level === null) return PLACEHOLDER_DISPLAY
     if (lighting.level === 'good') {
-      return { value: '얼굴이 또렷하게 보여요', valueTone: 'normal', badgeTone: 'success', badgeLabel: '양호' }
+      return { value: '밝기가 적당해요', valueTone: 'normal', badgeTone: 'success', badgeLabel: '양호' }
     }
     if (lighting.level === 'bright') {
       return { value: '너무 밝아요. 조명을 조금 낮춰주세요', valueTone: 'normal', badgeTone: 'warning', badgeLabel: '밝음' }
@@ -87,9 +87,11 @@ function envCheckDisplay(
 
   if (key === 'noise') {
     if (noise.level === null || noise.decibels === null) return PLACEHOLDER_DISPLAY
+    // dB 수치는 기기마다 기준이 달라 사용자에게 의미가 전달되지 않고, 오히려 판정의
+    // 신뢰도를 깎을 수 있어 보여주지 않는다 (PR #102 리뷰).
     return noise.level === 'good'
-      ? { value: `${noise.decibels}dB · 조용해요`, valueTone: 'normal', badgeTone: 'success', badgeLabel: '양호' }
-      : { value: `${noise.decibels}dB · 대화 소리가 섞여요`, valueTone: 'normal', badgeTone: 'warning', badgeLabel: '시끄러움' }
+      ? { value: '조용해요', valueTone: 'normal', badgeTone: 'success', badgeLabel: '양호' }
+      : { value: '주변이 시끄러워요', valueTone: 'normal', badgeTone: 'warning', badgeLabel: '시끄러움' }
   }
 
   if (key === 'network') {
@@ -295,8 +297,19 @@ export default function DeviceCheckPage() {
                       className="h-full rounded-full bg-primary-500"
                     />
                   </div>
+                  {/* 소음 보정이 끝나기 전엔 말하지 말라고 안내한다 — 보정 구간에 목소리가
+                      섞이면 노이즈 플로어가 올라가 조용한 방에서도 "시끄러움"으로 잘못
+                      고정될 수 있다 (PR #102 리뷰). */}
                   <p className="text-body-sm text-neutral-500">
-                    <span aria-hidden="true">🎤</span> "안녕하세요, 테스트 중입니다"라고 말해보세요
+                    {mic.status === 'available' && noise.level === null ? (
+                      <>
+                        <span aria-hidden="true">🔈</span> 주변 소음을 측정하고 있어요. 잠시만 기다려주세요
+                      </>
+                    ) : (
+                      <>
+                        <span aria-hidden="true">🎤</span> "안녕하세요, 테스트 중입니다"라고 말해보세요
+                      </>
+                    )}
                   </p>
                 </div>
 
@@ -414,11 +427,19 @@ export default function DeviceCheckPage() {
 
             {/* 주변소음이 "시끄러움"일 때만 뜬다 (이슈 #83, 시안 참고). 다른 환경 체크
                 항목(조명·네트워크)은 행의 배지로 충분하다고 보고 배너를 따로 안 둔다 —
-                소음만 "지금 바로 할 수 있는 행동(이동)"이 있어서 더 눈에 띄어야 한다. */}
+                소음만 "지금 바로 할 수 있는 행동(이동)"이 있어서 더 눈에 띄어야 한다.
+                소음 보정은 마이크 연결 시점에 한 번만 고정되어(useDeviceCheck), 이동한
+                뒤에도 배지가 저절로 안 바뀐다 — recheckMic 으로 마이크를 다시 잡으면
+                보정도 같이 다시 돈다 (PR #102 리뷰). */}
             {noise.level === 'noisy' && (
               <div className="flex items-start gap-2 rounded-sm bg-badge-warning-bg/60 p-3 text-body-sm text-badge-warning-text">
                 <IconAlertTriangle size={16} stroke={2} className="mt-0.5 shrink-0" aria-hidden />
-                <p>주변 소음이 감지됐어요. 조용한 곳으로 이동하면 인식률이 올라가요.</p>
+                <div className="flex flex-1 items-center justify-between gap-3">
+                  <p>주변 소음이 감지됐어요. 조용한 곳으로 이동한 뒤 다시 측정해보세요.</p>
+                  <Button size="sm" onClick={recheckMic} className="shrink-0">
+                    다시 측정
+                  </Button>
+                </div>
               </div>
             )}
 

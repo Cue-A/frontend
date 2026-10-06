@@ -88,12 +88,26 @@ const LIGHTING_CENTER_CROP_RATIO = 0.5
  * `videoStream` 을 화면에 그리는 `<video>` 와는 별개로, 분석 전용 비표시(off-DOM)
  * `<video>` 를 하나 더 만들어 씁니다 — 화면의 `<video>` 는 DeviceCheckPage 가 소유하고
  * 있어서 훅이 거길 건드리면 "카메라·마이크 접근은 훅에서만" 원칙이 깨집니다.
+ *
+ * DOM 에 붙이지 않은 `<video>` 는 Safari/WebKit 에서 디코딩이 지연되거나 멈춰 `readyState`
+ * 가 `HAVE_CURRENT_DATA` 에 못 미칠 수 있다 (PR #102 리뷰). 화면엔 안 보여야 하므로
+ * `display:none` 대신 레이아웃 밖으로 밀어내는 방식으로 `document.body` 에 붙인다 —
+ * `display:none` 도 일부 브라우저에서 디코딩을 멈출 수 있어 피한다.
  */
 function startLightingMeter(stream: MediaStream, onSample: (state: LightingCheckState) => void): () => void {
   const video = document.createElement('video')
   video.muted = true
   video.playsInline = true
+  video.setAttribute('aria-hidden', 'true')
+  video.style.position = 'fixed'
+  video.style.top = '0'
+  video.style.left = '0'
+  video.style.width = '1px'
+  video.style.height = '1px'
+  video.style.opacity = '0'
+  video.style.pointerEvents = 'none'
   video.srcObject = stream
+  document.body.appendChild(video)
   video.play().catch(() => {})
 
   const canvas = document.createElement('canvas')
@@ -131,6 +145,7 @@ function startLightingMeter(stream: MediaStream, onSample: (state: LightingCheck
     window.clearInterval(intervalId)
     video.pause()
     video.srcObject = null
+    video.remove()
   }
 }
 
@@ -150,7 +165,26 @@ function classifyNoise(decibels: number): NoiseCheckState['level'] {
   return decibels >= NOISE_WARNING_THRESHOLD_DB ? 'noisy' : 'good'
 }
 
-// 네트워크 임계값(이슈 #83 확인 완료). Network Information API 의 downlink(Mbps)·rtt(ms) 기준입니다.
+// 네트워크 임계값. 여전히 임시값입니다 — PR #102 에서 실측했지만 기준을 못 정하고
+// 팀 논의로 넘겼습니다. Network Information API 의 downlink(Mbps)·rtt(ms) 기준입니다.
+//
+// 실측 결과: 개인 핫스팟(LTE)에서 downlink 가 정확히 10.0 으로 나와, Chrome 이
+// downlink 를 최대 10 으로 캡해 보고한다는 제보(MDN content 이슈 #18277)와 일치했습니다.
+// ">= 10" 은 사실상 "브라우저가 보고 가능한 상한에 닿았을 때만 양호" 였던 셈이라,
+// 캡에 안 걸리면서도 충분히 쓸만한 보통 네트워크가 "불안정"으로 묶일 수 있습니다.
+//
+// 그런데 "몇 Mbps 가 적당한가" 는 이 화면만 봐서는 못 정합니다 — 면접 진행 화면은
+// 실시간 화상/음성 스트리밍을 하지 않습니다(WebRTC 없음, 웹소켓은 질문·진행률 JSON만
+// 내려받음). 녹화는 전부 로컬에서 하고 답변마다 한 번씩 presigned URL 로 업로드할
+// 뿐이라, 화상통화급 대역폭 기준(Zoom·Meet 등)은 이 앱 트래픽과 안 맞습니다. 게다가
+// `downlink` 는 다운로드 추정치라 정작 중요한 업로드 속도는 애초에 이 값으로 못 잽니다.
+// 기준을 낮춘다면 "업로드가 과하게 느려 멈추지 않을 정도" 가 목표가 되어야 하는데,
+// 그 기준을 세울 실측 데이터(답변 영상 업로드 소요 시간 등)가 아직 없습니다.
+//
+// 참고: 네트워크를 바꾼 직후엔 downlink 추정치가 바로 안 갱신되고 이전 값이 한동안
+// 남아있을 수 있습니다(실측으로 확인) — 페이지가 떠 있는 동안의 'change' 이벤트는
+// 구독하지만(아래 useEffect), 탭을 새로고침하지 않은 채 운영체제 수준에서만 네트워크를
+// 바꾸면 브라우저의 재추정이 늦게 따라올 수 있습니다.
 const NETWORK_GOOD_DOWNLINK_MBPS = 10
 const NETWORK_GOOD_RTT_MS = 200
 
@@ -267,10 +301,14 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     const NOISE_FLOOR = 0.01
     const GAIN = 6
 
-    // 주변소음 판정(이슈 #83)용 보정 구간입니다. 시작 시점부터 NOISE_CALIBRATION_MS 동안의
-    // RMS 평균을 "말하기 전" 노이즈 플로어로 보고, 끝나면 한 번만 dB 로 환산해 고정합니다.
+    // 주변소음 판정(이슈 #83)용 보정 구간입니다. "말하기 전" 구간의 RMS 평균을 노이즈
+    // 플로어로 보고, NOISE_CALIBRATION_MS 가 지나면 한 번만 dB 로 환산해 고정합니다.
     // 계속 갱신하면 사용자가 말할 때마다 RMS 가 올라가 "시끄러움"으로 잘못 뜹니다.
-    const calibrationStartedAt = performance.now()
+    //
+    // AudioContext 가 'suspended' 로 시작하면(resumeOnNextUserGesture) 그동안은 분석기에
+    // 무음만 들어와, 경과 시간을 그대로 재면 그 무음 구간이 "조용함" 으로 고정될 수
+    // 있다 (PR #102 리뷰). 'running' 이 된 뒤부터만 경과 시간을 잽니다.
+    let calibrationStartedAt: number | null = null
     const calibrationSamples: number[] = []
     let calibrated = false
 
@@ -285,7 +323,10 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       const rms = Math.sqrt(sumSquares / buffer.length)
       const level = rms <= NOISE_FLOOR ? 0 : Math.min(1, (rms - NOISE_FLOOR) * GAIN)
 
-      if (!calibrated) {
+      if (!calibrated && audioContext.state === 'running') {
+        if (calibrationStartedAt === null) {
+          calibrationStartedAt = performance.now()
+        }
         calibrationSamples.push(rms)
         if (performance.now() - calibrationStartedAt >= NOISE_CALIBRATION_MS) {
           calibrated = true
@@ -344,6 +385,10 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       // 만 주면 브라우저가 기본으로 noiseSuppression·echoCancellation·autoGainControl 을
       // 켜서, 실제론 시끄러워도 억제된(깨끗해진) 신호만 분석기에 들어와 "양호"로 잘못
       // 판정된다 (실제 테스트로 확인됨). 세 옵션을 꺼서 원음을 그대로 받는다.
+      //
+      // 이 설정은 면접 진행 화면(useMediaStream)의 실제 녹음 스트림과는 다르다 — 그쪽은
+      // `audio: true` 로 세 옵션이 기본값(켜짐)인 채로 녹음한다. 즉 여기서 재는 "조용함/
+      // 시끄러움" 은 녹음에 실제로 들어갈 노이즈 억제된 신호 기준이 아니다 (PR #102 리뷰).
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { noiseSuppression: false, echoCancellation: false, autoGainControl: false },
       })
