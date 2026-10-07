@@ -3,7 +3,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
-import { requestReport, type ReportRequestResponse } from '../api/reportRequestApi'
+import {
+  canCheckReportStatus,
+  getReportStatus,
+  requestReport,
+  type ReportRequestResponse,
+  type ReportStatusResponse,
+} from '../api/reportRequestApi'
 import { connectReportSocket } from '../api/reportSocket'
 import { ANALYSIS_MESSAGES, FINAL_REQUEST_ERRORS } from '../lib/analysisErrorMessage'
 import { ANALYSIS_STAGES, toAnalysisStageKey, WAITING_TIPS } from '../types/analysis'
@@ -31,6 +37,14 @@ export type AnalysisFailure = {
 export type AnalysisProgress = {
   /** 0부터 셉니다. ANALYSIS_STAGES 의 몇 번째인지 */
   stageIndex: number
+  /**
+   * 이번 시도에서 단계를 한 번이라도 받았으면 true 입니다(소켓 `progress` 또는 상태 조회의 `stage`).
+   *
+   * false 인 채 `failure` 가 오는 경우가 있습니다. 떠나 있는 동안 실패하면 상태 조회가 실패한 리포트의 단계를 주지
+   * 않고(`FAILED` 는 `stage` 가 null), 등록이 거절되면 분석이 시작도 안 했습니다. 그때 `stageIndex` 는 처음 값 0 일
+   * 뿐이라, 화면이 "1단계에서 멈춤" 이라고 적으면 모르는 것을 아는 것처럼 말하게 됩니다. (PR #100 리뷰)
+   */
+  stageKnown: boolean
   /** 끝났으면 리포트 id. 리포트 화면으로 보낼 때 씁니다 */
   reportId: string | null
   /** 분석이 실패했으면 이유 */
@@ -46,7 +60,7 @@ export type AnalysisProgress = {
  * 등록 응답의 reportId 를 세션 id 로 기억해 둡니다.
  *
  * 새로고침하면 등록을 다시 부르게 되는데, 이미 요청한 면접은 409 `REPORT_ALREADY_EXISTS` 이고 응답에 reportId 가
- * 없습니다. 상태 조회 API 도 아직 없어서(Cue-A/backend#48) 기억해 둔 id 로 소켓에만 다시 붙습니다.
+ * 없습니다. 그래서 기억해 둔 id 로 소켓에 다시 붙고, 상태 조회(Cue-A/backend#56)로 그 사이 진행된 것을 따라잡습니다.
  * 끝나거나 실패하면 지웁니다 — 실패한 리포트는 다시 요청해야 하고, 그때는 등록부터 다시 가야 합니다.
  *
  * 탭 하나에서만 이어지면 되므로 sessionStorage 입니다. 저장이 막힌 브라우저에서는 기억하지 못할 뿐 동작은 같습니다.
@@ -100,14 +114,20 @@ function requestReportOnce(sessionId: string): Promise<ReportRequestResponse> {
  *
  * 1. `POST /api/interviews/{sessionId}/reports` 로 분석을 등록하고 reportId 를 받습니다
  * 2. `/ws/reports/{reportId}` 에 붙어 `progress` 로 단계를 옮깁니다
- * 3. `report` 가 오면 `reportId` 를 채웁니다. 화면이 리포트로 보냅니다
- * 4. `error` 나 등록 실패는 `failure` 로 줍니다
+ * 3. 붙은 직후 상태 조회(`GET /api/reports/{reportId}/status`)를 **한 번** 불러, 붙기 전에 진행되거나 끝난 것을
+ *    따라잡습니다. 소켓은 지난 메시지를 다시 보내주지 않기 때문입니다 (Cue-A/backend#56)
+ * 4. `report` 가 오면(또는 조회가 끝났다고 하면) `reportId` 를 채웁니다. 화면이 리포트로 보냅니다
+ * 5. `error` 나 등록 실패는 `failure` 로 줍니다
  *
  * 단계는 **뒤로 가지 않습니다.** 백엔드가 실패 뒤 스스로 한 번 더 돌리면(`CONTENT_FAILED` · `MEDIA_FETCH_FAILED`)
  * 단계가 처음부터 다시 올 수 있는데, 막대가 줄어들면 고장 난 것처럼 보입니다. 모르는 단계 값도 무시합니다.
+ *
+ * 결과(완료 · 실패)는 **한 시도에 한 번만** 반영합니다. 소켓과 상태 조회 중 먼저 온 쪽을 따르고, 뒤에 온 것은
+ * 진행 알림까지 버립니다. 이미 보여준 화면이 뒤집히지 않게 하려는 것입니다.
  */
 export function useAnalysisProgress(sessionId: string | undefined): AnalysisProgress {
   const [stageIndex, setStageIndex] = useState(0)
+  const [stageKnown, setStageKnown] = useState(false)
   const [reportId, setReportId] = useState<string | null>(null)
   const [failure, setFailure] = useState<AnalysisFailure | null>(null)
   /** "다시 분석하기" 를 누를 때마다 올립니다. 등록 · 소켓 · 기다림 상한이 모두 이 값으로 새로 시작합니다 */
@@ -116,45 +136,132 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
   const [timedOutAttempt, setTimedOutAttempt] = useState<number | null>(null)
   const [tipIndex, setTipIndex] = useState(0)
 
+  /**
+   * 등록부터 다시 갑니다. 지난 시도의 실패 · 단계를 지우고 시도 번호를 올립니다.
+   *
+   * "다시 분석하기" 와 기억한 id 가 404 일 때의 자동 복구가 **같이** 씁니다. 따로 두었을 때 자동 복구 쪽이 단계를
+   * 되돌리지 않아, 지난 시도에서 올라간 단계가 새 시도에 남을 수 있었습니다. (PR #100 리뷰)
+   */
+  const restart = useCallback(() => {
+    setFailure(null)
+    setStageIndex(0)
+    setStageKnown(false)
+    setAttempt((previous) => previous + 1)
+  }, [])
+
   useEffect(() => {
     if (!sessionId) return
 
     let alive = true
     let disconnect = () => {}
 
-    const listen = (id: string) => {
-      disconnect = connectReportSocket(id, sessionId, {
-        onProgress: ({ stage }) => {
-          const key = toAnalysisStageKey(stage)
-          if (!key) {
-            console.error('알 수 없는 리포트 분석 단계 stage=%s', stage)
+    /**
+     * 이번 시도의 결과(완료 · 실패)를 이미 반영했으면 true 입니다. 소켓과 상태 조회 중 먼저 온 쪽이 올립니다.
+     * - 소켓이 먼저면, 늦게 도착한 조회 응답은 더 오래된 상태일 수 있어 버립니다 (backend#56 "호출 순서")
+     * - 조회가 먼저면, 뒤따라온 소켓 메시지를 버립니다. 안 버리면 이미 띄운 실패 안내의 단계가 움직이거나 결과가
+     *   한 번 더 반영됩니다 (PR #100 리뷰)
+     * - 기억한 id 가 404 라 등록부터 다시 갈 때도 올립니다. `restart()` 는 다음 렌더에서야 이 effect 를 정리하므로,
+     *   그 사이 지난 소켓 메시지가 404 난 id 로 완료시키거나 방금 되돌린 단계를 다시 올리지 않게 합니다. 소켓도 그
+     *   자리에서 끊습니다 (PR #100 리뷰)
+     */
+    let settled = false
+
+    const complete = (id: string) => {
+      settled = true
+      forgetReportId(sessionId)
+      setReportId(id)
+    }
+
+    const fail = (code: string, retryable: boolean) => {
+      settled = true
+      forgetReportId(sessionId)
+      console.error('리포트 분석 실패 code=%s retryable=%s', code, retryable)
+      setFailure({ message: toUserMessage(code, ANALYSIS_MESSAGES), retryable })
+    }
+
+    const advance = (stage: string) => {
+      const key = toAnalysisStageKey(stage)
+      if (!key) {
+        console.error('알 수 없는 리포트 분석 단계 stage=%s', stage)
+        return
+      }
+      const index = ANALYSIS_STAGES.findIndex((item) => item.key === key)
+      setStageIndex((previous) => Math.max(previous, index))
+      setStageKnown(true)
+    }
+
+    const applyStatus = (status: ReportStatusResponse) => {
+      switch (status.status) {
+        case 'PROCESSING':
+          if (status.stage) advance(status.stage)
+          return
+        case 'FAILED':
+          fail(status.errorCode ?? 'UNKNOWN', status.retryable ?? false)
+          return
+        case 'COMPLETED':
+        case 'PARTIAL':
+          complete(status.reportId)
+          return
+        default:
+          // 타입에 없는 값입니다. apiClient 는 응답을 검사하지 않고 타입만 입히므로 여기서 막습니다. 완료로 보면
+          // 준비되지 않은 리포트로 넘어가니, 모르는 단계 값처럼 무시하고 소켓으로 계속 기다립니다. (PR #100 리뷰)
+          console.error('알 수 없는 리포트 상태 status=%s — 소켓으로 계속 기다립니다', status.status satisfies never)
+      }
+    }
+
+    /**
+     * @param fromSaved 새로고침으로 기억해 둔 id 인지. 그 id 가 404 면 기억이 틀린 것이라(DB 를 비웠다 등) 지우고
+     *   등록부터 다시 갑니다. 방금 등록해서 받은 id 가 404 인 건 서버 문제라 소켓만으로 기다립니다
+     */
+    const catchUp = (id: string, fromSaved: boolean) => {
+      if (!canCheckReportStatus(sessionId, id)) return
+
+      getReportStatus(id)
+        .then((status) => {
+          if (alive && !settled) applyStatus(status)
+        })
+        .catch((cause: unknown) => {
+          if (!alive || settled) return
+          const code = cause instanceof ApiError ? cause.code : 'UNKNOWN'
+          if (code === 'REPORT_NOT_FOUND' && fromSaved) {
+            // 정리가 돌기 전에 지난 소켓이 흘리는 메시지를 버리고 바로 끊습니다. `settled` 는 effect 마다 새로 만들어서
+            // 다시 시작한 시도는 false 로 시작합니다 (attempt 가 의존성에 있음).
+            settled = true
+            disconnect()
+            forgetReportId(sessionId)
+            restart()
             return
           }
-          const index = ANALYSIS_STAGES.findIndex((item) => item.key === key)
-          setStageIndex((previous) => Math.max(previous, index))
+          // 조회는 따라잡기용이라 실패해도 소켓으로 계속 기다립니다.
+          console.warn('리포트 상태 조회 실패 code=%s — 소켓으로 계속 기다립니다', code)
+        })
+    }
+
+    const listen = (id: string, fromSaved: boolean) => {
+      disconnect = connectReportSocket(id, sessionId, {
+        onProgress: ({ stage }) => {
+          if (!settled) advance(stage)
         },
         onReport: (push) => {
-          forgetReportId(sessionId)
-          setReportId(push.reportId)
+          if (!settled) complete(push.reportId)
         },
         onError: (push) => {
-          forgetReportId(sessionId)
-          console.error('리포트 분석 실패 code=%s retryable=%s', push.errorCode, push.retryable)
-          setFailure({ message: toUserMessage(push.errorCode, ANALYSIS_MESSAGES), retryable: push.retryable })
+          if (!settled) fail(push.errorCode, push.retryable)
         },
       })
+      catchUp(id, fromSaved)
     }
 
     // 다시 분석할 때는 기억해 둔 id 가 이미 지워져 있어서 등록부터 갑니다.
     const saved = readReportId(sessionId)
     if (saved) {
-      listen(saved)
+      listen(saved, true)
     } else {
       requestReportOnce(sessionId)
         .then((response) => {
           if (!alive) return
           rememberReportId(sessionId, response.reportId)
-          listen(response.reportId)
+          listen(response.reportId, false)
         })
         .catch((cause: unknown) => {
           if (!alive) return
@@ -174,7 +281,7 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
       disconnect()
       window.clearTimeout(timeout)
     }
-  }, [sessionId, attempt])
+  }, [sessionId, attempt, restart])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -184,19 +291,14 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
     return () => window.clearInterval(timer)
   }, [])
 
-  const retry = useCallback(() => {
-    setFailure(null)
-    setStageIndex(0)
-    setAttempt((previous) => previous + 1)
-  }, [])
-
   return {
     stageIndex,
+    stageKnown,
     reportId,
     failure,
     // 끝났거나 실패했으면 늦었다고 하지 않습니다. 각자 자기 화면이 있습니다.
     isTimedOut: timedOutAttempt === attempt && reportId === null && failure === null,
     tip: WAITING_TIPS[tipIndex],
-    retry,
+    retry: restart,
   }
 }

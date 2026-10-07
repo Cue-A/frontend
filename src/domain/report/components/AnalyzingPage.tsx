@@ -64,7 +64,7 @@ function StageDot({ state }: { state: 'done' | 'current' | 'upcoming' }) {
 export default function AnalyzingPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
-  const { stageIndex, reportId, failure, isTimedOut, tip, retry } = useAnalysisProgress(sessionId)
+  const { stageIndex, stageKnown, reportId, failure, isTimedOut, tip, retry } = useAnalysisProgress(sessionId)
 
   useEffect(() => {
     if (!reportId) return
@@ -73,8 +73,14 @@ export default function AnalyzingPage() {
     navigate(toReport(reportId), { replace: true })
   }, [reportId, navigate])
 
+  // 실패했는데 단계를 받은 적이 없으면 어디서 멈췄는지 모릅니다. 떠나 있는 동안 실패한 경우(상태 조회는 실패한
+  // 리포트의 단계를 주지 않습니다)와 등록이 거절된 경우입니다. 그때는 "1/5 단계에서 멈춤" 처럼 모르는 것을 아는
+  // 것처럼 적지 않고, 막대와 점도 채우지 않습니다. 줄은 지우지 않고 문구만 바꿉니다 — 지우면 세로 가운데 정렬이라
+  // 화면 전체가 움직입니다. (PR #100 리뷰)
+  const stageUnknown = failure !== null && !stageKnown
+
   const current = ANALYSIS_STAGES[stageIndex]
-  const percent = Math.round(((stageIndex + 1) / ANALYSIS_STAGES.length) * 100)
+  const percent = stageUnknown ? 0 : Math.round(((stageIndex + 1) / ANALYSIS_STAGES.length) * 100)
 
   return (
     // isolate: 아래 배경 원 2개는 absolute + -z-10 로 콘텐츠 뒤에 깔린다. main 이 relative
@@ -139,8 +145,13 @@ export default function AnalyzingPage() {
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={ANALYSIS_STAGES.length}
-          aria-valuenow={stageIndex + 1}
-          aria-valuetext={`${ANALYSIS_STAGES.length}단계 중 ${stageIndex + 1}단계 · ${current.label}${failure ? ' · 멈춤' : ''}`}
+          // 단계를 모르면 값을 주지 않습니다. 값이 없는 progressbar 는 "얼마나 됐는지 알 수 없음" 으로 읽힙니다.
+          aria-valuenow={stageUnknown ? undefined : stageIndex + 1}
+          aria-valuetext={
+            stageUnknown
+              ? '멈춤 · 진행 단계를 확인할 수 없어요'
+              : `${ANALYSIS_STAGES.length}단계 중 ${stageIndex + 1}단계 · ${current.label}${failure ? ' · 멈춤' : ''}`
+          }
           className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-neutral-200"
         >
           {/* 너비는 계산값이라 인라인 style 을 씁니다 (docs/01-conventions.md "스타일" 절) */}
@@ -151,12 +162,19 @@ export default function AnalyzingPage() {
         </div>
 
         <p className="text-body-sm font-semibold text-neutral-900 tabular-nums">
-          {stageIndex + 1}/{ANALYSIS_STAGES.length} 단계{failure ? '에서 멈춤' : ' 진행 중'} · {current.label}
+          {stageUnknown ? (
+            '진행 단계를 확인할 수 없어요'
+          ) : (
+            <>
+              {stageIndex + 1}/{ANALYSIS_STAGES.length} 단계{failure ? '에서 멈춤' : ' 진행 중'} · {current.label}
+            </>
+          )}
         </p>
 
         <ol className="flex flex-wrap justify-center gap-6">
           {ANALYSIS_STAGES.map((stage, index) => {
-            const state = index < stageIndex ? 'done' : index === stageIndex ? 'current' : 'upcoming'
+            const state =
+              stageUnknown || index > stageIndex ? 'upcoming' : index < stageIndex ? 'done' : 'current'
 
             return (
               <li
@@ -202,7 +220,8 @@ export default function AnalyzingPage() {
  * 화면을 통째로 바꾸지 않고 시안의 분석 중 화면은 그대로 둔 채 팁 자리에 안내와 버튼을 넣습니다.
  * 백엔드는 10분이 지나면 스스로 `AI_TIMEOUT` 을 보내므로 보통은 이 안내 전에 실패 안내가 뜹니다. 이 안내가 뜨는 건
  * 그 메시지를 놓친 경우(연결 끊김 등)라 분석이 끝났는지 알 수 없습니다. 그래서 "실패했어요" 가 아니라
- * "오래 걸리고 있어요" 로 적습니다. 상태 조회 API(Cue-A/backend#48)가 생기면 여기서 확인할 수 있습니다.
+ * "오래 걸리고 있어요" 로 적습니다. "다시 기다리기" 는 새로고침이라, 기억해 둔 reportId 로 소켓에 다시 붙고 상태 조회
+ * (Cue-A/backend#56)로 그 사이 끝났는지부터 확인합니다.
  *
  * 버튼은 "다시 기다리기" 하나입니다. 빠져나갈 길은 화면 왼쪽 위의 "홈으로"(PR #65)가
  * 타임아웃과 관계없이 늘 보여주므로, 여기에 같은 버튼을 또 두면 한 화면에 두 개가 됩니다. (PR #68 리뷰)

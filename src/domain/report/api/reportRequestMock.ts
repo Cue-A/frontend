@@ -21,12 +21,51 @@ import { MOCK_REPORT_IDS } from './reportMock'
  * | `mock-report-unavailable` | 등록이 503 `AI_UNAVAILABLE` (다시 요청 가능) |
  * | `mock-report-fails-once` | 두 단계 뒤 소켓 `error`(`CONTENT_FAILED`, 다시 요청 가능) → 다시 요청하면 끝까지 |
  * | `mock-report-stt-failed` | 두 단계 뒤 소켓 `error`(`STT_FAILED`, 다시 요청 불가) |
+ *
+ * 상태 조회(`GET /api/reports/:reportId/status`)는 등록한 시각부터 흐른 시간으로 같은 흐름을 계산합니다.
+ * 분석 도중 새로고침하면 소켓 목업은 처음부터 다시 흘리지만, 상태 조회가 지금 단계를 먼저 알려줍니다.
+ * 등록하지 않은 reportId 는 상태 조회가 404 `REPORT_NOT_FOUND` 이고 소켓은 아무것도 보내지 않습니다 (실제 서버와 같음).
  */
 
 const STAGE_MS = 2000
 
-/** 소켓 목업이 어떤 흐름을 돌지 reportId 로 찾습니다. 등록할 때 채웁니다 */
-const scenarios = new Map<string, { sessionId: string; attempt: number }>()
+type Scenario = { sessionId: string; attempt: number; startedAt: number }
+
+/**
+ * 소켓 · 상태 조회 목업이 어떤 흐름을 돌지 reportId 로 찾습니다. 등록할 때 채웁니다.
+ *
+ * 새로고침해도 이어지도록 sessionStorage 에 둡니다. 메모리에만 두면 새로고침하는 순간 목업이 등록을 잊어서
+ * 상태 조회가 404 가 나고, 실제 서버와 다르게 등록부터 다시 돕니다.
+ *
+ * 메모리에도 같이 둡니다. sessionStorage 쓰기가 막힌 브라우저에서는 등록이 남지 않는데, 소켓 목업은 등록 기록이
+ * 없으면 아무것도 보내지 않아서(`connectMockReportSocket`) 방금 등록한 분석이 끝나지 않습니다. 메모리에 있으면
+ * 이 화면이 떠 있는 동안은 이어지고, 새로고침 때 잊을 뿐입니다.
+ */
+const SCENARIO_KEY = 'cue-a:mock:report-scenarios'
+
+const memory = new Map<string, Scenario>()
+
+const scenarios = {
+  get(reportId: string): Scenario | undefined {
+    return memory.get(reportId) ?? readScenarios()[reportId]
+  },
+  set(reportId: string, scenario: Scenario) {
+    memory.set(reportId, scenario)
+    try {
+      sessionStorage.setItem(SCENARIO_KEY, JSON.stringify({ ...readScenarios(), [reportId]: scenario }))
+    } catch {
+      // 저장이 막혀도 메모리에는 있어서, 목업이 새로고침 때 등록을 잊을 뿐입니다.
+    }
+  },
+}
+
+function readScenarios(): Record<string, Scenario> {
+  try {
+    return JSON.parse(sessionStorage.getItem(SCENARIO_KEY) ?? '{}') as Record<string, Scenario>
+  } catch {
+    return {}
+  }
+}
 
 registerMock('POST', '/api/interviews/:sessionId/reports', ({ sessionId }) => {
   if (sessionId === 'mock-report-too-short') {
@@ -43,9 +82,41 @@ registerMock('POST', '/api/interviews/:sessionId/reports', ({ sessionId }) => {
   const reportId = MOCK_REPORT_IDS.latest
   const previous = scenarios.get(reportId)
   const attempt = previous?.sessionId === sessionId ? previous.attempt + 1 : 1
-  scenarios.set(reportId, { sessionId, attempt })
+  scenarios.set(reportId, { sessionId, attempt, startedAt: Date.now() })
 
   return { reportId, sessionId, status: 'PROCESSING', createdAt: new Date().toISOString() }
+})
+
+registerMock('GET', '/api/reports/:reportId/status', ({ reportId }) => {
+  const scenario = scenarios.get(reportId)
+  if (!scenario) throw new ApiError('REPORT_NOT_FOUND', '리포트를 찾을 수 없습니다')
+
+  const failure = toFailure(scenario)
+  const stages = failure ? ANALYSIS_STAGES.slice(0, 2) : ANALYSIS_STAGES
+  // 등록과 조회 사이에 시계가 뒤로 맞춰지면 음수가 됩니다. 0 으로 막지 않으면 `stages[-1]` 이 없어서 던집니다.
+  const index = Math.max(0, Math.floor((Date.now() - scenario.startedAt) / STAGE_MS))
+  const base = {
+    reportId,
+    sessionId: scenario.sessionId,
+    createdAt: new Date(scenario.startedAt).toISOString(),
+    stage: null,
+    progress: null,
+    errorCode: null,
+    message: null,
+    retryable: null,
+    completedAt: null,
+  }
+
+  if (index < stages.length) {
+    return { ...base, status: 'PROCESSING', stage: stages[index].key, progress: (index + 1) / ANALYSIS_STAGES.length }
+  }
+
+  const completedAt = new Date().toISOString()
+  if (failure) {
+    // 실제 서버도 소켓 `error` 와 같은 코드 · 문구 · 다시 요청 가능 여부를 줍니다 (Cue-A/backend#60)
+    return { ...base, status: 'FAILED', ...failure, completedAt }
+  }
+  return { ...base, status: 'PARTIAL', completedAt }
 })
 
 export type ReportSocketHandlers = {
@@ -57,6 +128,12 @@ export type ReportSocketHandlers = {
 /** 실제 소켓과 같은 순서로 메시지를 흘립니다. 반환값은 정리 함수입니다 */
 export function connectMockReportSocket(reportId: string, handlers: ReportSocketHandlers): () => void {
   const scenario = scenarios.get(reportId)
+  if (!scenario) {
+    // 실제 서버는 등록된 리포트에만 폴러를 돌려 메시지를 보내므로("WS 메시지는 붙어 있는 연결에만 갑니다",
+    // backend docs/13-report.md) 모르는 id 에는 아무것도 오지 않습니다. 같은 id 의 상태 조회 목업은 404 입니다.
+    console.warn('[목업] 등록되지 않은 리포트 소켓입니다 — 실제 서버처럼 아무것도 보내지 않습니다 reportId=%s', reportId)
+    return () => {}
+  }
   const failure = toFailure(scenario)
   const timers: ReturnType<typeof setTimeout>[] = []
 
@@ -80,11 +157,11 @@ export function connectMockReportSocket(reportId: string, handlers: ReportSocket
   return () => timers.forEach(clearTimeout)
 }
 
-function toFailure(scenario: { sessionId: string; attempt: number } | undefined): ReportErrorPush | null {
-  if (scenario?.sessionId === 'mock-report-fails-once' && scenario.attempt === 1) {
+function toFailure(scenario: Scenario): ReportErrorPush | null {
+  if (scenario.sessionId === 'mock-report-fails-once' && scenario.attempt === 1) {
     return { errorCode: 'CONTENT_FAILED', message: '답변 내용 분석에 실패했습니다', retryable: true }
   }
-  if (scenario?.sessionId === 'mock-report-stt-failed') {
+  if (scenario.sessionId === 'mock-report-stt-failed') {
     return { errorCode: 'STT_FAILED', message: '음성 인식에 실패했습니다', retryable: false }
   }
   return null

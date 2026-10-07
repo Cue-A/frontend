@@ -242,7 +242,8 @@ function SessionPage() {
 **리포트 생성 대기는 면접과 소켓이 다릅니다.** 분석을 등록(`POST /api/interviews/{sessionId}/reports`)한 뒤
 받은 reportId 로 `/ws/reports/{reportId}` 에 붙습니다. 단계는 다섯 개(`TRANSCRIBING` · `ANALYZING_SPEECH` ·
 `ANALYZING_GAZE` · `ANALYZING_CONTENT` · `COMPOSING`)이고, 타임아웃은 **10분**입니다. (Cue-A/backend#50)
-남은 공백(상태 조회 API 등)은 `docs/90-open-questions.md` Q6b 를 보세요.
+소켓은 지난 메시지를 다시 보내주지 않으므로, **붙은 직후 상태 조회를 한 번** 불러 따라잡습니다 (backend#56).
+남은 공백은 `docs/90-open-questions.md` Q6b 를 보세요.
 
 ## 스타일
 

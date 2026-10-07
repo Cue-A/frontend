@@ -115,18 +115,20 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
 
 ### Q6b. 🟡 리포트 생성 대기 화면
 
-Cue-A/backend#50 (리포트 분석 작업 등록, 아직 열린 PR)으로 대부분 정해졌습니다. 프론트는 그 계약에 맞춰 붙였습니다.
+분석 등록(Cue-A/backend#49 · #50)과 상태 조회(Cue-A/backend#56 · #60)로 대부분 정해졌습니다. 모두 dev 에 들어 있습니다.
+프론트는 그 계약에 맞춰 붙였습니다.
 
 - 정해진 것
   - 통로: `POST /api/interviews/{sessionId}/reports` → 202 `{ reportId, … }` → WebSocket `/ws/reports/{reportId}`
   - 메시지: `progress`(`stage` · `progress`) · `report`(`reportId` · `status` · `scoreTotal`) · `error`(`errorCode` · `message` · `retryable`)
   - 단계 이름: AI 단계를 대문자로 (`TRANSCRIBING` → `ANALYZING_SPEECH` → `ANALYZING_GAZE` → `ANALYZING_CONTENT` → `COMPOSING`)
   - 소요 시간 상한: 10분. 넘으면 백엔드가 `AI_TIMEOUT` 으로 끝냅니다
+  - 늦게 붙은 경우: 소켓에 붙은 직후 `GET /api/reports/{reportId}/status` 를 한 번 불러 따라잡습니다. 결과(완료 · 실패)는
+    소켓과 조회 중 먼저 준 쪽을 따르고 뒤에 온 것은 버립니다 (backend#56 "호출 순서"). 새로고침하면 sessionStorage 에 기억한 reportId 로
+    같은 순서를 밟습니다
 - 남은 것
-  - **상태 조회 API** (Cue-A/backend#48). 소켓은 붙는 순간 현재 상태를 주지 않아서, 새로고침 사이에 끝난 리포트를
-    알 수 없습니다. 지금은 등록 응답의 reportId 를 sessionStorage 에 기억해 두고 소켓에만 다시 붙습니다
-  - **다른 탭 · 기기에서 연 경우.** 기억해 둔 reportId 가 없으면 등록이 409 `REPORT_ALREADY_EXISTS` 이고
-    reportId 를 알 길이 없습니다. 상태 조회나 리포트 목록이 생기면 풀립니다
+  - **다른 탭 · 기기에서 연 경우.** 기억해 둔 reportId 가 없으면 등록이 409 `REPORT_ALREADY_EXISTS` 이고, 상태 조회도
+    reportId 로만 물을 수 있어서 이어 볼 길이 없습니다. 리포트 목록이 생기면 풀립니다
   - **리포트 조회 API.** 분석이 끝나 리포트 화면으로 넘어가도 조회 API 가 없어서 실제 모드에서는 화면이 뜨지 않습니다
 - 걸리는 작업: 리포트 화면, 분석 중 화면.
 
