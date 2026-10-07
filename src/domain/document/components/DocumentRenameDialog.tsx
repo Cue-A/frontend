@@ -25,8 +25,14 @@ type Props = {
  * - 창을 열면 제목 칸에 포커스가 가고 지금 제목이 전부 선택돼 있습니다. 바로 새 제목을 칠 수 있습니다
  * - Enter 로 저장합니다(폼 제출). 제목이 비었거나 그대로면 저장 버튼이 잠기고, 이유를 아래에 글로 적습니다
  *   (docs/01-conventions.md "비활성 버튼의 이유는 글로 적습니다")
+ * - **한글 조합 중의 Enter 는 저장으로 넘기지 않습니다.** 글자를 확정하려던 Enter 로 창이 닫히지 않게 합니다
  * - 저장하는 동안은 닫을 수 없습니다. Esc 를 연달아 누르는 경우까지 막는 이유는 DocumentUploadDialog 와 같습니다
- * - 실패하면 창을 닫지 않고 이유를 보여줍니다. 적던 제목이 남아 있어 다시 누를 수 있습니다
+ * - 저장하는 동안 제목 칸은 `disabled` 가 아니라 `readOnly` 입니다. `disabled` 로 바꾸면 포커스가 칸 밖으로
+ *   빠져서, 실패한 뒤 키보드만으로는 다시 고칠 수 없습니다
+ * - 실패하면 창을 닫지 않고 이유를 보여주고, 포커스를 제목 칸으로 돌립니다. 제목을 다시 고치기 시작하면 실패
+ *   문구를 지웁니다 (DocumentWriteDialog 와 같은 방식)
+ *
+ * (조합 Enter · 포커스 · 실패 문구는 PR #105 리뷰)
  */
 export default function DocumentRenameDialog({ document, onRenamed, onGone, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
@@ -34,7 +40,7 @@ export default function DocumentRenameDialog({ document, onRenamed, onGone, onCl
   const headingId = useId()
   const hintId = useId()
   const [title, setTitle] = useState(document.title)
-  const { rename, renaming, error } = useRenameDocument()
+  const { rename, renaming, error, clearError } = useRenameDocument()
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -71,7 +77,11 @@ export default function DocumentRenameDialog({ document, onRenamed, onGone, onCl
     if (!canSubmit) return
 
     const result = await rename(document.documentId, trimmedTitle)
-    if (result.kind === 'failed') return
+    if (result.kind === 'failed') {
+      // 저장 버튼을 눌러서 온 경우 포커스가 버튼에 있다가(저장 중 잠김) 빠집니다. 고칠 자리로 돌려놓습니다.
+      inputRef.current?.focus()
+      return
+    }
 
     // 수정 응답은 제목만 돌려줍니다. 나머지는 열 때 받은 문서 그대로입니다 (화면은 이어서 목록을 다시 부릅니다).
     if (result.kind === 'renamed') onRenamed({ ...document, title: result.title })
@@ -106,11 +116,22 @@ export default function DocumentRenameDialog({ document, onRenamed, onGone, onCl
               ref={inputRef}
               type="text"
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                clearError()
+                setTitle(event.target.value)
+              }}
+              onKeyDown={(event) => {
+                // 조합 중인 글자를 확정하는 Enter 입니다. 그대로 두면 폼이 제출돼 창이 닫힙니다.
+                // Safari 는 조합이 끝난 뒤에 keydown 을 보내 `isComposing` 이 false 라서, 조합 입력에만 오는
+                // keyCode 229 도 같이 봅니다.
+                if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) {
+                  event.preventDefault()
+                }
+              }}
               maxLength={MAX_DOCUMENT_TITLE_LENGTH}
-              disabled={renaming}
+              readOnly={renaming}
               aria-describedby={hintId}
-              className="rounded-sm border border-neutral-200 bg-neutral-0 px-3 py-2 text-body-md text-neutral-900 focus:border-primary-500 focus:outline-none disabled:bg-neutral-50"
+              className="rounded-sm border border-neutral-200 bg-neutral-0 px-3 py-2 text-body-md text-neutral-900 focus:border-primary-500 focus:outline-none read-only:bg-neutral-50"
             />
           </label>
 

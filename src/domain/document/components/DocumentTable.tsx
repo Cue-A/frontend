@@ -162,7 +162,7 @@ function renderBody(
  * 늘면 그때 메뉴로 모읍니다. (이슈 #59)
  *
  * 제목 수정 버튼은 `onRename` 을 받았을 때만 냅니다. 수정 API 가 백엔드에 아직 없어서, 문서를 실제 서버에 붙인
- * 동안은 화면이 `onRename` 을 주지 않습니다 (useRenameDocument 의 `CAN_RENAME_DOCUMENT`).
+ * 동안은 화면이 `onRename` 을 주지 않습니다 (`documentApi.ts` 의 `CAN_RENAME_DOCUMENT`).
  *
  * "상태" 칸(완료 · 분석 중 · 실패)은 뺐습니다. 문서의 준비 상태가 백엔드 응답에서 빠져서(Cue-A/backend#58)
  * 모든 행에 똑같은 "완료" 만 남기 때문입니다. 등록한 문서는 곧바로 면접에 쓸 수 있습니다.

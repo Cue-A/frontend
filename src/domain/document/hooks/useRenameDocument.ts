@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
-import { canRenameDocument, updateDocumentTitle } from '../api/documentApi'
+import { updateDocumentTitle } from '../api/documentApi'
 export type RenameResult = { kind: 'renamed'; title: string } | { kind: 'gone' } | { kind: 'failed' }
 
 export type UseRenameDocumentResult = {
@@ -19,13 +19,9 @@ export type UseRenameDocumentResult = {
   renaming: boolean
   /** 사용자에게 그대로 보여줄 문구 */
   error: string | null
+  /** 실패 문구를 지웁니다. 제목을 다시 고치기 시작하면 부릅니다 (useWriteDocument 와 같은 방식) */
+  clearError: () => void
 }
-
-/**
- * 제목 수정을 화면에 낼 수 있는지. 문서를 실제 서버에 붙인 동안은 false 입니다 — 수정 API 가 백엔드에 아직
- * 없습니다 (`documentApi.ts` 의 `canRenameDocument`). 환경 변수로 정해져서 실행 중에 바뀌지 않습니다.
- */
-export const CAN_RENAME_DOCUMENT = canRenameDocument()
 
 /**
  * 보관함 문서의 제목을 바꿉니다. (C-02)
@@ -57,5 +53,7 @@ export function useRenameDocument(): UseRenameDocumentResult {
     }
   }, [])
 
-  return { rename, renaming, error }
+  const clearError = useCallback(() => setError(null), [])
+
+  return { rename, renaming, error, clearError }
 }

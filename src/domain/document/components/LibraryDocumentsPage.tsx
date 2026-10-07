@@ -5,9 +5,9 @@ import { toUserMessage } from '@/shared/api/errorMessage'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
+import { CAN_RENAME_DOCUMENT } from '../api/documentApi'
 import { useDocuments } from '../hooks/useDocuments'
 import { useOpenDocument } from '../hooks/useOpenDocument'
-import { CAN_RENAME_DOCUMENT } from '../hooks/useRenameDocument'
 import { DOCUMENT_TABS, filterDocuments, MAX_DOCUMENTS, type DocumentTab } from '../lib/documentDisplay'
 import type { DocumentSummary } from '../types/document'
 

@@ -47,7 +47,7 @@ export type DocumentDetailResponse = {
 }
 
 /**
- * 문서 수정(`PATCH /api/documents/{documentId}`)의 응답에서 **화면이 읽는 부분**입니다.
+ * 문서 수정(`PATCH /api/documents/{documentId}`)의 응답입니다.
  *
  * API 명세(Notion "문서 제목 수정")의 응답은 `{ documentId, title, updatedAt }` 입니다. 등록 응답
  * (`DocumentResponse`)과 달리 종류 · 파일명 · 등록일이 없어서 목록의 한 줄을 이 응답으로 갈아 끼울 수 없습니다.
@@ -59,6 +59,8 @@ export type DocumentDetailResponse = {
 export type DocumentUpdateResponse = {
   documentId: string
   title: string
+  /** ISO 8601. 명세에 있는 값이라 타입에 두지만 화면은 쓰지 않습니다 — 목록을 다시 불러서 맞춥니다 */
+  updatedAt: string
 }
 
 export function toDocumentSummary(response: DocumentResponse): DocumentSummary {

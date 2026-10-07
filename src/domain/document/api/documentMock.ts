@@ -326,9 +326,9 @@ registerMock('GET', '/api/documents/:documentId', ({ documentId }): DocumentDeta
  * 확인해서 넣지 않았습니다.
  *
  * `missingInBackend` 는 달지 않았습니다. 문서를 실제 서버에 붙였을 때 이 API 만 목업이 답하면, 실제 문서 id 를
- * 모르는 이 저장소가 "없는 문서" 라고 답하기 때문입니다 (`canRenameDocument`).
+ * 모르는 이 저장소가 "없는 문서" 라고 답하기 때문입니다 (`CAN_RENAME_DOCUMENT`).
  */
-registerMock('PATCH', '/api/documents/:documentId', ({ documentId }, body): DocumentUpdateResponse & { updatedAt: string } => {
+registerMock('PATCH', '/api/documents/:documentId', ({ documentId }, body): DocumentUpdateResponse => {
   const requested = typeof body === 'object' && body !== null ? (body as { title?: unknown }).title : undefined
   const title = validateTitle(typeof requested === 'string' ? requested : null)
 

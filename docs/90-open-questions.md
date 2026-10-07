@@ -204,8 +204,8 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - **임시 결정: 제목만 바꾸는 흐름(행의 연필 버튼 → 제목 수정 창)을 만들고 목업이 답하게 둡니다.** 화면은 `title` 만
   보내고 응답에서도 바뀐 제목만 읽습니다. 원본 파일명 · 본문 · 종류는 바꾸지 않습니다.
 - **문서를 실제 서버에 붙인 동안은 수정 버튼을 내지 않습니다.** 이 API 만 목업이 답하게(`missingInBackend`) 두면
-  목업 저장소가 실제 문서 id 를 몰라서 "없는 문서" 라고 답하기 때문입니다 (`canRenameDocument`). 백엔드에 올라오면
-  `canRenameDocument` 를 지웁니다.
+  목업 저장소가 실제 문서 id 를 몰라서 "없는 문서" 라고 답하기 때문입니다 (`CAN_RENAME_DOCUMENT`). 백엔드에 올라오면
+  `CAN_RENAME_DOCUMENT` 를 지웁니다.
 - 명세가 지금 백엔드 코드와 다른 곳 (백엔드 확인 필요)
   - 응답 봉투. 명세 예시는 `code`(성공 시 `"SUCCESS"`) · `message` 인데, 공용 응답(`Result`)은 `errorCode` · `message`
     이고 성공하면 둘 다 null 입니다. 화면은 `errorCode` 를 읽습니다
@@ -218,7 +218,7 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 남은 결정 (기획): 제목 수정 창 시안. 지금은 지우기 확인 창과 같은 모양으로 임시로 그렸습니다.
 - 알아둘 것: 옵션 설정(A-05)에 골라 둔 자기소개서는 고른 시점의 제목을 들고 있어서, 보관함에서 제목을 바꿔도
   다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
-- 걸리는 작업: `domain/document/api/documentApi.ts` 의 `updateDocumentTitle` · `canRenameDocument`,
+- 걸리는 작업: `domain/document/api/documentApi.ts` 의 `updateDocumentTitle` · `CAN_RENAME_DOCUMENT`,
   `domain/document/hooks/useRenameDocument.ts`, `domain/document/components/DocumentRenameDialog.tsx`.
 
 ---
