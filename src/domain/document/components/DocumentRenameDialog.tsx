@@ -25,7 +25,9 @@ type Props = {
  * - 창을 열면 제목 칸에 포커스가 가고 지금 제목이 전부 선택돼 있습니다. 바로 새 제목을 칠 수 있습니다
  * - Enter 로 저장합니다(폼 제출). 제목이 비었거나 그대로면 저장 버튼이 잠기고, 이유를 아래에 글로 적습니다
  *   (docs/01-conventions.md "비활성 버튼의 이유는 글로 적습니다")
- * - **한글 조합 중의 Enter 는 저장으로 넘기지 않습니다.** 글자를 확정하려던 Enter 로 창이 닫히지 않게 합니다
+ * - 한글 조합 중에 온 Enter keydown 은 저장으로 넘기지 않습니다. **Enter 를 두 번 누르게 하는 장치가 아닙니다.**
+ *   Windows Chrome 한글 입력기는 글자를 확정한 뒤 일반 Enter 를 다시 보내서, 밑줄이 남은 글자에서 Enter 를 한 번
+ *   눌러도 확정된 제목으로 저장됩니다 (다른 입력 칸과 같은 동작. 측정한 이벤트 순서는 PR #105)
  * - 저장하는 동안은 닫을 수 없습니다. Esc 를 연달아 누르는 경우까지 막는 이유는 DocumentUploadDialog 와 같습니다
  * - 저장하는 동안 제목 칸은 `disabled` 가 아니라 `readOnly` 입니다. `disabled` 로 바꾸면 포커스가 칸 밖으로
  *   빠져서, 실패한 뒤 키보드만으로는 다시 고칠 수 없습니다
@@ -121,9 +123,11 @@ export default function DocumentRenameDialog({ document, onRenamed, onGone, onCl
                 setTitle(event.target.value)
               }}
               onKeyDown={(event) => {
-                // 조합 중인 글자를 확정하는 Enter 입니다. 그대로 두면 폼이 제출돼 창이 닫힙니다.
-                // Safari 는 조합이 끝난 뒤에 keydown 을 보내 `isComposing` 이 false 라서, 조합 입력에만 오는
-                // keyCode 229 도 같이 봅니다.
+                // 조합 표시를 단 채로 온 Enter 는 폼 제출로 넘기지 않습니다.
+                // Windows Chrome 에서는 이 조건에 걸리는 키가 없습니다 — 조합 중 Enter 는 key 가 'Process' 로 오고,
+                // 제출은 입력기가 글자를 확정한 뒤 다시 보내는 일반 Enter(keyCode 13)가 일으킵니다.
+                // key 가 'Enter' 인 채로 조합 표시가 붙어 오는 환경을 위한 방어이고, macOS · Safari 에서는 확인하지
+                // 못했습니다. Safari 는 `isComposing` 이 false 로 온다고 알려져 있어 keyCode 229 도 같이 봅니다.
                 if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) {
                   event.preventDefault()
                 }
