@@ -76,13 +76,51 @@ export type MediaDeviceOption = {
 // 같은 성격의 예약 id라 실기기로 확인은 못 했지만 같이 걸러둔다.
 const SYNTHETIC_DEFAULT_DEVICE_IDS = new Set(['default', 'communications'])
 
+/** kind 가 같고 groupId 가 같은 "진짜"(합성 id 가 아닌) 장치가 목록에 따로 있는지. */
+function hasRealCounterpart(devices: MediaDeviceInfo[], kind: MediaDeviceKind, groupId: string): boolean {
+  return devices.some(
+    (device) =>
+      device.kind === kind && device.groupId === groupId && device.deviceId !== '' && !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId),
+  )
+}
+
 function toDeviceOptions(devices: MediaDeviceInfo[], kind: MediaDeviceKind): MediaDeviceOption[] {
   return devices
     // 권한을 안 준 장치 종류는 Chrome이 deviceId·label이 빈 문자열인 항목 하나로
     // 돌려준다(PR #103 리뷰) — 그대로 두면 "이름 없는 카메라/마이크"가 실제로 고를 수
     // 있는 장치처럼 계속 노출된다.
-    .filter((device) => device.kind === kind && device.deviceId !== '' && !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId))
+    .filter((device) => device.kind === kind && device.deviceId !== '')
+    // 합성 id(deviceId: 'default'/'communications')는 같은 groupId 의 실제 장치가 목록에
+    // 따로 있을 때만 "중복"이라 거른다 — 못 찾으면 이 항목이 그 장치의 유일한 표현이라
+    // 남겨야 한다(PR #103 리뷰, heejoo11). 무조건 걸러내면 그 장치 자체가 목록에서
+    // 사라진다.
+    .filter((device) => !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId) || !hasRealCounterpart(devices, kind, device.groupId))
     .map((device) => ({ deviceId: device.deviceId, label: device.label }))
+}
+
+/**
+ * 기본 장치로 그냥 getUserMedia 를 부르면(deviceId 지정 없이) `getSettings().deviceId`
+ * 가 실제 장치 id 가 아니라 `'default'` 같은 합성 id 로 올 수 있다(PR #103 리뷰, 실기기
+ * 확인: 기본 마이크로 열면 `default` 가 그대로 옴). 같은 groupId 를 가진 실제 장치 id 를
+ * 목록에서 찾아 대신 쓴다 — 그대로 두면 toDeviceOptions 가 중복으로 보고 걸러낸 합성
+ * id 가 selectedCameraId/selectedMicId 에 남아, 선택값이 목록에 없는 것으로 보여
+ * cameraDeviceMissing/micDeviceMissing 이 첫 진입부터 true 가 된다("연결이 끊긴
+ * 마이크"가 정상 상태에서 뜨는 버그). 실제 장치를 못 찾으면 합성 id 를 그대로 둔다 —
+ * 그 경우 toDeviceOptions 도 같은 이유로 그 항목을 목록에 남겨두므로 선택값과 옵션
+ * 목록이 계속 맞는다.
+ */
+function resolveSyntheticId(devices: MediaDeviceInfo[], kind: MediaDeviceKind, id: string | null): string | null {
+  if (id === null || !SYNTHETIC_DEFAULT_DEVICE_IDS.has(id)) return id
+  const synthetic = devices.find((device) => device.kind === kind && device.deviceId === id)
+  if (!synthetic) return id
+  const real = devices.find(
+    (device) =>
+      device.kind === kind &&
+      device.groupId === synthetic.groupId &&
+      device.deviceId !== '' &&
+      !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId),
+  )
+  return real?.deviceId ?? id
 }
 
 // 조명 임계값(이슈 #83). 캔버스 평균 밝기(0~255) 기준입니다 — 80~170 을 적정 구간으로
@@ -300,14 +338,20 @@ export function useDeviceCheck(): UseDeviceCheckResult {
 
   // 권한을 주기 전엔 label 이 빈 문자열이라(이슈 #97), camera·mic 중 하나라도 허용된
   // 뒤부터 부릅니다 — 그 전엔 목록이 있어도 쓸모가 없어 비워둡니다.
-  const refreshDeviceLists = useCallback(async () => {
+  //
+  // acquireCamera/acquireMic 가 방금 받은 스트림의 deviceId(합성 id 일 수 있음)를
+  // resolveSyntheticId 로 바꿀 때도 같은 enumerateDevices 스냅샷이 필요해서, 원본
+  // devices 배열을 반환한다 — 실패하면 null.
+  const refreshDeviceLists = useCallback(async (): Promise<MediaDeviceInfo[] | null> => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices()
       setCameraDevices(toDeviceOptions(devices, 'videoinput'))
       setMicDevices(toDeviceOptions(devices, 'audioinput'))
       setHasFetchedDevices(true)
+      return devices
     } catch (error) {
       console.error('장치 목록 조회 실패', error)
+      return null
     }
   }, [])
 
@@ -475,8 +519,16 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       stopLightingMeterRef.current = startLightingMeter(stream, setLighting)
       // 요청한 deviceId 가 아니라 브라우저가 실제로 연 장치를 따릅니다 — 처음 마운트 시
       // deviceId 없이 불러 브라우저 기본값이 뭔지 아직 모를 때도 이 값으로 알 수 있습니다.
-      setSelectedCameraId(stream.getVideoTracks()[0]?.getSettings().deviceId ?? null)
-      void refreshDeviceLists()
+      // 기본 장치로 열면 이 값이 'default' 같은 합성 id 로 올 수 있어(PR #103 리뷰),
+      // 같은 enumerateDevices 스냅샷으로 실제 장치 id 로 바꿔둔다.
+      const settingsCameraId = stream.getVideoTracks()[0]?.getSettings().deviceId ?? null
+      const devices = await refreshDeviceLists()
+      // refreshDeviceLists 를 기다리는 사이 재점검/장치 변경으로 더 최신 요청이 시작됐을
+      // 수 있다 — 그 경우 이 낡은 요청의 resolve 결과로 selectedCameraId 를 덮어쓰지
+      // 않는다.
+      if (requestId === cameraRequestIdRef.current) {
+        setSelectedCameraId(devices ? resolveSyntheticId(devices, 'videoinput', settingsCameraId) : settingsCameraId)
+      }
     } catch (error) {
       const failureReason = classifyFailure(error)
       if (requestId === cameraRequestIdRef.current) {
@@ -517,8 +569,15 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       audioStreamRef.current = stream
       setMic({ status: 'available', failureReason: null })
       startMicMeter(stream)
-      setSelectedMicId(stream.getAudioTracks()[0]?.getSettings().deviceId ?? null)
-      void refreshDeviceLists()
+      // 기본 마이크로 열면 이 값이 'default' 같은 합성 id 로 올 수 있어(PR #103 리뷰,
+      // 실기기 확인됨) 카메라와 같은 이유로 resolveSyntheticId 를 거친다.
+      const settingsMicId = stream.getAudioTracks()[0]?.getSettings().deviceId ?? null
+      const devices = await refreshDeviceLists()
+      // 카메라와 같은 이유(refreshDeviceLists 대기 중 더 최신 요청이 시작될 수 있음)로
+      // requestId 를 다시 확인한다.
+      if (requestId === micRequestIdRef.current) {
+        setSelectedMicId(devices ? resolveSyntheticId(devices, 'audioinput', settingsMicId) : settingsMicId)
+      }
     } catch (error) {
       const failureReason = classifyFailure(error)
       if (requestId === micRequestIdRef.current) {
