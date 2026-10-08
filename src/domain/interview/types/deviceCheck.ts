@@ -49,9 +49,11 @@ export type NoiseCheckState = {
 
 /**
  * 네트워크 상태입니다. `offline` 은 `navigator.onLine`/online·offline 이벤트 기준이고,
- * `good`/`unstable` 은 Network Information API(`navigator.connection`)의 downlink·rtt
- * 기준 품질 판정입니다 (이슈 #83). 미지원 브라우저는 온라인이기만 하면 `good` 으로 두고
- * (판정할 수치가 없어 비관적으로 "불안정"이라 하지 않습니다) downlinkMbps·rttMs 를 null 로 둡니다.
+ * `good`/`unstable` 은 Network Information API(`navigator.connection`)의 effectiveType
+ * 기준 품질 판정입니다 (이슈 #83, PR #102 리뷰 — downlink·rtt 직접 비교에서 변경). 미지원
+ * 브라우저는 온라인이기만 하면 `good` 으로 두고(판정할 수치가 없어 비관적으로 "불안정"이라
+ * 하지 않습니다) downlinkMbps·rttMs 를 null 로 둡니다. downlinkMbps·rttMs 는 더 이상 판정에
+ * 쓰이지 않고, 있으면 화면에 참고 수치로만 보여줍니다.
  */
 export type NetworkQuality = 'good' | 'unstable'
 export type NetworkCheckStatus = 'offline' | NetworkQuality

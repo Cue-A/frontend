@@ -165,31 +165,26 @@ function classifyNoise(decibels: number): NoiseCheckState['level'] {
   return decibels >= NOISE_WARNING_THRESHOLD_DB ? 'noisy' : 'good'
 }
 
-// 네트워크 임계값. 여전히 임시값입니다 — PR #102 에서 실측했지만 기준을 못 정하고
-// 팀 논의로 넘겼습니다. Network Information API 의 downlink(Mbps)·rtt(ms) 기준입니다.
+// 네트워크 품질 판정(PR #102 리뷰 반영, heejoo11 제안). downlink(Mbps)·rtt(ms) 수치를
+// 직접 비교하는 대신 Network Information API 의 effectiveType 을 씁니다 — 브라우저가
+// RTT·대역폭을 이미 4g/3g/2g/slow-2g 로 분류해서 주는 값이라(WHATWG 표준이 정의한
+// 버킷: 대략 rtt<270ms·downlink>700Kbps 면 4g), "몇 Mbps 가 적당한가"를 우리가 임의로
+// 정할 필요가 없습니다.
 //
-// 실측 결과: 개인 핫스팟(LTE)에서 downlink 가 정확히 10.0 으로 나와, Chrome 이
-// downlink 를 최대 10 으로 캡해 보고한다는 제보(MDN content 이슈 #18277)와 일치했습니다.
-// ">= 10" 은 사실상 "브라우저가 보고 가능한 상한에 닿았을 때만 양호" 였던 셈이라,
-// 캡에 안 걸리면서도 충분히 쓸만한 보통 네트워크가 "불안정"으로 묶일 수 있습니다.
+// 이전엔 downlink·rtt 를 직접 비교했는데(>= 10Mbps && <= 200ms), 실측해보니 LTE
+// 핫스팟처럼 실제로 빠른 회선도 Chrome 이 downlink 를 최대 10 으로 캡해 보고해서(제보:
+// MDN content 이슈 #18277 — 사용자 경험담, 공식 확인은 아님) "브라우저가 보고 가능한
+// 상한에 닿았을 때만 양호" 가 되는 문제가 있었습니다. heejoo11 이 에뮬레이션으로 재확인:
+// 20Mbps 를 걸어도 downlink 는 10 으로 캡됐고, 1.15Mbps(학교 wifi 실측)·5Mbps 둘 다
+// effectiveType 은 `4g` 로 나와 캡과 무관하게 "양호"로 분류할 수 있음을 확인했습니다.
 //
-// 그런데 "몇 Mbps 가 적당한가" 는 이 화면만 봐서는 못 정합니다 — 면접 진행 화면은
-// 실시간 화상/음성 스트리밍을 하지 않습니다(WebRTC 없음, 웹소켓은 질문·진행률 JSON만
-// 내려받음). 녹화는 전부 로컬에서 하고 답변마다 한 번씩 presigned URL 로 업로드할
-// 뿐이라, 화상통화급 대역폭 기준(Zoom·Meet 등)은 이 앱 트래픽과 안 맞습니다. 게다가
-// `downlink` 는 다운로드 추정치라 정작 중요한 업로드 속도는 애초에 이 값으로 못 잽니다.
-// 기준을 낮춘다면 "업로드가 과하게 느려 멈추지 않을 정도" 가 목표가 되어야 하는데,
-// 그 기준을 세울 실측 데이터(답변 영상 업로드 소요 시간 등)가 아직 없습니다.
-//
-// 참고: 네트워크를 바꾼 직후엔 downlink 추정치가 바로 안 갱신되고 이전 값이 한동안
-// 남아있을 수 있습니다(실측으로 확인) — 페이지가 떠 있는 동안의 'change' 이벤트는
-// 구독하지만(아래 useEffect), 탭을 새로고침하지 않은 채 운영체제 수준에서만 네트워크를
-// 바꾸면 브라우저의 재추정이 늦게 따라올 수 있습니다.
-const NETWORK_GOOD_DOWNLINK_MBPS = 10
-const NETWORK_GOOD_RTT_MS = 200
-
+// 참고로 면접 진행 화면은 실시간 화상/음성 스트리밍을 하지 않습니다(WebRTC 없음,
+// 웹소켓은 질문·진행률 JSON만 내려받고 녹화는 로컬 후 답변마다 한 번씩 업로드) — 그래서
+// 애초에 화상통화급 대역폭 기준(Zoom·Meet 등)이 이 화면엔 안 맞았습니다. effectiveType
+// 기준(`4g`)은 "일반적인 웹 사용에 충분한 수준"이라 이 화면의 가벼운 트래픽에 더 맞습니다.
 /** 표준에 아직 없는 실험적 API라 타입을 직접 좁혀 씁니다. 지원 브라우저(Chrome·Edge 등)만 값이 옵니다. */
 type NetworkInformationLike = {
+  effectiveType?: string
   downlink?: number
   rtt?: number
   addEventListener?: (type: 'change', listener: () => void) => void
@@ -200,25 +195,27 @@ function getConnection(): NetworkInformationLike | null {
   return (navigator as Navigator & { connection?: NetworkInformationLike }).connection ?? null
 }
 
-function classifyNetworkQuality(downlinkMbps: number, rttMs: number): NetworkQuality {
-  return downlinkMbps >= NETWORK_GOOD_DOWNLINK_MBPS && rttMs <= NETWORK_GOOD_RTT_MS ? 'good' : 'unstable'
+/**
+ * effectiveType 이 없는 브라우저는 품질을 판정할 수 없습니다 — "불안정"으로 비관적으로
+ * 단정하지 않고 `good`으로 둡니다(이슈 #83: onLine 폴백과 같은 방침).
+ */
+function classifyNetworkQuality(effectiveType: string | undefined): NetworkQuality {
+  return effectiveType === undefined || effectiveType === '4g' ? 'good' : 'unstable'
 }
 
-/**
- * 미지원 브라우저는 수치가 없어 품질을 판정할 수 없습니다 — "불안정"으로 비관적으로
- * 단정하지 않고, 연결만 됐으면 `good`(이슈 #83: onLine 폴백)으로 둡니다.
- */
 function readNetworkState(online: boolean): NetworkCheckState {
   if (!online) return { status: 'offline', downlinkMbps: null, rttMs: null }
 
   const connection = getConnection()
-  if (!connection || connection.downlink === undefined || connection.rtt === undefined) {
+  if (!connection) {
     return { status: 'good', downlinkMbps: null, rttMs: null }
   }
 
-  const downlinkMbps = connection.downlink
-  const rttMs = connection.rtt
-  return { status: classifyNetworkQuality(downlinkMbps, rttMs), downlinkMbps, rttMs }
+  // downlink·rtt 는 더 이상 판정에 안 쓰지만, 행에 참고 수치로 보여주는 용도로는
+  // 여전히 쓴다(DeviceCheckPage) — 값이 있으면 그대로 담고 없으면 null 로 둔다.
+  const downlinkMbps = connection.downlink ?? null
+  const rttMs = connection.rtt ?? null
+  return { status: classifyNetworkQuality(connection.effectiveType), downlinkMbps, rttMs }
 }
 
 export type UseDeviceCheckResult = {
@@ -313,30 +310,50 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     let calibrationStartedAt: number | null = null
     const calibrationSamples: number[] = []
     let calibrated = false
+    // 폴백(데드라인 초과)으로 마감했는지 표시합니다. 폴백 마감은 suspended 상태의 무음을
+    // 근거로 한 "잠정값" 이라, 이후 실제로 running 이 되면 처음부터 다시 재야 합니다 —
+    // 그렇지 않으면 진짜 시끄러운 방에서도 "양호"로 세션 끝까지 고정됩니다 (PR #102 리뷰).
+    let calibratedViaFallback = false
 
-    // 위 타이밍 수정이 새로 만드는 두 경계 상황을 마무리합니다 (PR #102 뒷정리 코드리뷰):
+    // 위 타이밍 수정이 새로 만드는 경계 상황들을 마무리합니다 (PR #102 뒷정리 코드리뷰):
     //
     // 1) 제스처 없이 들어온 뒤(새로고침·직접 진입 등) 끝까지 제스처가 한 번도 없으면
     //    state 가 계속 'suspended' 에 머물러 calibrationStartedAt 이 null 로 남고, 보정이
     //    영원히 끝나지 않는다. meterStartedAt 기준 데드라인을 넘기면 그때까지 모인
-    //    샘플(하나도 없으면 그 순간의 rms)로 그냥 마감한다.
+    //    샘플(하나도 없으면 그 순간의 rms)로 그냥 마감한다(= 폴백 마감).
     // 2) 보정 도중 AudioContext 가 다시 'suspended' 로 빠지면(탭 백그라운드 등)
     //    calibrationStartedAt 이 과거 시점에 멈춰 있어, 복귀 즉시 몇 개 안 되는 샘플만으로
     //    데드라인을 넘긴 것처럼 보여 너무 일찍 마감된다. 'running' 이 아니게 되는 순간
     //    calibrationStartedAt 을 리셋해 다음 'running' 구간에서 다시 NOISE_CALIBRATION_MS
     //    만큼 잰다 — 이미 모은 샘플은 버리지 않고 이어서 평균한다.
+    // 3) 폴백 마감 뒤에 뒤늦게 running 이 되면(예: 사용자가 나중에 아무 키나 누름), 잠정값을
+    //    그대로 둔 채 끝내지 않고 처음부터 다시 보정한다.
     const CALIBRATION_FALLBACK_DEADLINE_MS = NOISE_CALIBRATION_MS * 4
 
     // stopMic 에서 close() 직전에 null 로 비워 해제합니다 — 이 훅의 다른 리스너
     // (removeResumeListenersRef) 와 같은 "달면 반드시 떼는" 관례를 따릅니다.
     audioContext.onstatechange = () => {
+      if (audioContext.state === 'running' && calibratedViaFallback) {
+        calibrated = false
+        calibratedViaFallback = false
+        calibrationStartedAt = null
+        calibrationSamples.length = 0
+        // 재보정이 시작됐다고 화면에도 알립니다 — 안 알리면 noise.level 이 폴백 때
+        // 잠긴 값(good/noisy)에 그대로 머물러, DeviceCheckPage 의 안내 문구가 "측정
+        // 중이니 기다려주세요"로 안 돌아가고 "말해보세요"인 채로 남습니다. 그러면
+        // 재보정 구간에 사용자가 말을 하게 되어 choitjddn0311 의 원래 지적(보정 중
+        // 목소리가 노이즈 플로어에 섞이는 문제)이 이 경로에서 재현됩니다.
+        setNoise({ level: null, decibels: null })
+        return
+      }
       if (!calibrated && audioContext.state !== 'running') {
         calibrationStartedAt = null
       }
     }
 
-    const finalizeCalibration = (samples: number[]) => {
+    const finalizeCalibration = (samples: number[], viaFallback: boolean) => {
       calibrated = true
+      calibratedViaFallback = viaFallback
       const averageRms = samples.reduce((sum, sample) => sum + sample, 0) / samples.length
       const decibels = Math.round(rmsToDecibels(averageRms))
       setNoise({ level: classifyNoise(decibels), decibels })
@@ -360,10 +377,10 @@ export function useDeviceCheck(): UseDeviceCheckResult {
           }
           calibrationSamples.push(rms)
           if (performance.now() - calibrationStartedAt >= NOISE_CALIBRATION_MS) {
-            finalizeCalibration(calibrationSamples)
+            finalizeCalibration(calibrationSamples, false)
           }
         } else if (performance.now() - meterStartedAt >= CALIBRATION_FALLBACK_DEADLINE_MS) {
-          finalizeCalibration(calibrationSamples.length > 0 ? calibrationSamples : [rms])
+          finalizeCalibration(calibrationSamples.length > 0 ? calibrationSamples : [rms], true)
         }
       }
 
