@@ -6,12 +6,9 @@ import Button from '@/shared/ui/Button'
 import Chip from '@/shared/ui/Chip'
 
 import { useUploadDocument } from '../hooks/useUploadDocument'
-import { DOCUMENT_TYPE_LABEL } from '../lib/documentDisplay'
+import { DOCUMENT_TYPE_LABEL, MAX_DOCUMENT_TITLE_LENGTH } from '../lib/documentDisplay'
 import { ALLOWED_DOCUMENT_EXTENSIONS, DOCUMENT_FILE_ACCEPT, MAX_DOCUMENT_FILE_BYTES, validateDocumentFile } from '../lib/validateDocumentFile'
 import type { DocumentSummary, DocumentType } from '../types/document'
-
-/** 백엔드 `DocumentRegisterService.MAX_TITLE_LENGTH` 와 같습니다 */
-const MAX_TITLE_LENGTH = 100
 
 const DOCUMENT_TYPES: DocumentType[] = ['RESUME', 'PORTFOLIO']
 
@@ -25,7 +22,7 @@ type Props = {
 
 /** `자소서_최종.pdf` → `자소서_최종`. 보관함 목록에서 문서를 구분하는 이름이라 확장자는 뺍니다 */
 function titleFromFileName(name: string) {
-  return name.replace(/\.[^.]+$/, '').trim().slice(0, MAX_TITLE_LENGTH)
+  return name.replace(/\.[^.]+$/, '').trim().slice(0, MAX_DOCUMENT_TITLE_LENGTH)
 }
 
 function extensionLabel(name: string) {
@@ -104,7 +101,7 @@ export default function DocumentUploadDialog({ defaultType, onUploaded, onClose 
 
   const trimmedTitle = title.trim()
   const titleError = file && !trimmedTitle ? '제목을 적어주세요.' : null
-  const canSubmit = file !== null && trimmedTitle.length > 0 && trimmedTitle.length <= MAX_TITLE_LENGTH && !uploading
+  const canSubmit = file !== null && trimmedTitle.length > 0 && trimmedTitle.length <= MAX_DOCUMENT_TITLE_LENGTH && !uploading
 
   const handleSubmit = async () => {
     if (!file || !canSubmit) return
@@ -220,14 +217,14 @@ export default function DocumentUploadDialog({ defaultType, onUploaded, onClose 
           <span className="flex items-center justify-between text-body-md font-semibold text-neutral-900">
             제목
             <span className="text-body-sm font-normal text-neutral-400">
-              {trimmedTitle.length}/{MAX_TITLE_LENGTH}
+              {trimmedTitle.length}/{MAX_DOCUMENT_TITLE_LENGTH}
             </span>
           </span>
           <input
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            maxLength={MAX_TITLE_LENGTH}
+            maxLength={MAX_DOCUMENT_TITLE_LENGTH}
             disabled={!file || uploading}
             placeholder="파일을 고르면 파일명이 들어가요"
             className="rounded-sm border border-neutral-200 bg-neutral-0 px-3 py-2 text-body-md text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none disabled:bg-neutral-50"

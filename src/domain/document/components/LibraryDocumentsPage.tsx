@@ -5,6 +5,7 @@ import { toUserMessage } from '@/shared/api/errorMessage'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
+import { CAN_RENAME_DOCUMENT } from '../api/documentApi'
 import { useDocuments } from '../hooks/useDocuments'
 import { useOpenDocument } from '../hooks/useOpenDocument'
 import { DOCUMENT_TABS, filterDocuments, MAX_DOCUMENTS, type DocumentTab } from '../lib/documentDisplay'
@@ -12,6 +13,7 @@ import type { DocumentSummary } from '../types/document'
 
 import DocumentContentDialog from './DocumentContentDialog'
 import DocumentDeleteDialog from './DocumentDeleteDialog'
+import DocumentRenameDialog from './DocumentRenameDialog'
 import DocumentTable, { type DocumentTableBody } from './DocumentTable'
 import DocumentUploadDialog from './DocumentUploadDialog'
 import DocumentWriteDialog from './DocumentWriteDialog'
@@ -20,7 +22,7 @@ import LibraryTopBar from './LibraryTopBar'
 /**
  * C-02 내 보관함 > 자소서 · 포트폴리오. (이슈 #59)
  *
- * 등록한 문서를 보고, 종류별로 거르고, 원본을 다시 열어보고, 새로 올립니다.
+ * 등록한 문서를 보고, 종류별로 거르고, 원본을 다시 열어보고, 새로 올리고, 제목을 바꾸고, 지웁니다.
  * 올리기 창은 임시 시안입니다 (DocumentUploadDialog 주석 참고, 이슈 #54 1-4).
  *
  * "직접 작성" 은 본문을 적어서 저장합니다. 직접 작성한 문서도 파일 문서처럼 면접에 쓸 수 있습니다
@@ -39,6 +41,7 @@ export default function LibraryDocumentsPage() {
   const [dialog, setDialog] = useState<'upload' | 'write' | null>(null)
   const [savedNotice, setSavedNotice] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<DocumentSummary | null>(null)
+  const [renaming, setRenaming] = useState<DocumentSummary | null>(null)
 
   // 사용자당 20개가 상한입니다. 채우면 올려봐야 서버가 거절해서 버튼을 잠그고, 지우면 자리가 난다는 걸
   // 글로 적습니다 (지운 문서는 상한에서 빠집니다 — Cue-A/backend#40).
@@ -58,6 +61,18 @@ export default function LibraryDocumentsPage() {
 
   const handleGone = (message: string) => {
     setSavedNotice(message)
+    documents.refresh()
+  }
+
+  const openRename = (document: DocumentSummary) => {
+    setSavedNotice(null)
+    setRenaming(document)
+  }
+
+  // 지우기처럼 탭 · 검색을 그대로 둡니다. 다만 검색어가 옛 제목에만 걸려 있었다면 바꾼 문서가 목록에서 빠지므로,
+  // 안내 문구에 새 제목을 적어 어떤 문서가 바뀌었는지 알 수 있게 합니다.
+  const handleRenamed = (document: DocumentSummary) => {
+    setSavedNotice(`제목을 바꿨어요: ‘${document.title}’`)
     documents.refresh()
   }
 
@@ -187,7 +202,13 @@ export default function LibraryDocumentsPage() {
           </p>
         )}
 
-        <DocumentTable body={body} openingId={opener.openingId} onOpen={opener.open} onDelete={openDelete} />
+        <DocumentTable
+          body={body}
+          openingId={opener.openingId}
+          onOpen={opener.open}
+          onRename={CAN_RENAME_DOCUMENT ? openRename : undefined}
+          onDelete={openDelete}
+        />
       </div>
 
       <DocumentContentDialog document={opener.viewing} onClose={opener.closeViewing} />
@@ -198,6 +219,15 @@ export default function LibraryDocumentsPage() {
           onDeleted={handleDeleted}
           onGone={handleGone}
           onClose={() => setDeleting(null)}
+        />
+      )}
+
+      {renaming && (
+        <DocumentRenameDialog
+          document={renaming}
+          onRenamed={handleRenamed}
+          onGone={handleGone}
+          onClose={() => setRenaming(null)}
         />
       )}
 

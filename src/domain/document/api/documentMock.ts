@@ -3,7 +3,12 @@ import { registerMock } from '@/shared/api/mock'
 
 import type { DocumentSourceType, DocumentType } from '../types/document'
 
-import type { DocumentDetailResponse, DocumentListResponse, DocumentResponse } from './documentResponse'
+import type {
+  DocumentDetailResponse,
+  DocumentListResponse,
+  DocumentResponse,
+  DocumentUpdateResponse,
+} from './documentResponse'
 
 /**
  * 문서 API 목업입니다. 검증 순서와 에러 코드는 백엔드
@@ -186,14 +191,8 @@ function validateFile(file: File) {
 function register(form: FormData): DocumentResponse {
   const sourceType = parseSourceType(readString(form, 'sourceType'))
   const documentType = parseDocumentType(readString(form, 'documentType'))
-  const title = readString(form, 'title')
+  const title = validateTitle(readString(form, 'title'))
 
-  if (title === null || !title.trim()) {
-    throw new ApiError('INVALID_REQUEST', 'title 이 필요합니다')
-  }
-  if (title.trim().length > MAX_TITLE_LENGTH) {
-    throw new ApiError('INVALID_REQUEST', `제목은 ${MAX_TITLE_LENGTH}자 이하여야 합니다`)
-  }
   // 백엔드도 업로드보다 상한 검사를 먼저 합니다. 뒤에 두면 10MB 를 다 받은 뒤 거절하게 됩니다.
   if (store.length >= MAX_DOCUMENTS_PER_USER) {
     throw new ApiError('DOCUMENT_LIMIT_EXCEEDED', `문서는 최대 ${MAX_DOCUMENTS_PER_USER}개까지 등록할 수 있습니다`)
@@ -204,7 +203,7 @@ function register(form: FormData): DocumentResponse {
     documentId: crypto.randomUUID(),
     documentType,
     sourceType,
-    title: title.trim(),
+    title,
     createdAt: now,
     updatedAt: now,
   }
@@ -234,6 +233,17 @@ function register(form: FormData): DocumentResponse {
 
   store.push(document)
   return toResponse(document)
+}
+
+/** 제목 검사. 등록과 제목 수정이 같은 규칙 · 같은 코드를 씁니다. 통과하면 앞뒤 공백을 뺀 제목을 돌려줍니다 */
+function validateTitle(title: string | null): string {
+  if (title === null || !title.trim()) {
+    throw new ApiError('INVALID_REQUEST', 'title 이 필요합니다')
+  }
+  if (title.trim().length > MAX_TITLE_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `제목은 ${MAX_TITLE_LENGTH}자 이하여야 합니다`)
+  }
+  return title.trim()
 }
 
 function parseNumber(value: string | null): number | null {
@@ -302,6 +312,34 @@ registerMock('GET', '/api/documents/:documentId', ({ documentId }): DocumentDeta
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
   }
+})
+
+/**
+ * 문서 제목 수정 목업.
+ *
+ * API 명세(Notion "문서 제목 수정")를 따랐습니다. ⚠️ 백엔드는 아직 시작 전입니다 (`documentApi.ts` 의
+ * `updateDocumentTitle`). 화면이 `title` 만 보내므로 목업도 `title` 만 받습니다 — 명세의 `content`(직접 작성 본문
+ * 수정)는 다루지 않습니다. 제목 검사는 명세에 없어 등록과 같은 규칙으로 두었고, 요청 본문 검사가 문서 찾기보다
+ * 먼저입니다(스프링은 요청 본문부터 검사합니다). 제목과 `updatedAt` 만 바꾸고 원본 파일명 · 본문 · 종류는 그대로 둡니다.
+ *
+ * 응답은 명세대로 `{ documentId, title, updatedAt }` 입니다. 명세 예시의 `indexStatus` 는 필요 없는 값으로 백엔드와
+ * 확인해서 넣지 않았습니다.
+ *
+ * `missingInBackend` 는 달지 않았습니다. 문서를 실제 서버에 붙였을 때 이 API 만 목업이 답하면, 실제 문서 id 를
+ * 모르는 이 저장소가 "없는 문서" 라고 답하기 때문입니다 (`CAN_RENAME_DOCUMENT`).
+ */
+registerMock('PATCH', '/api/documents/:documentId', ({ documentId }, body): DocumentUpdateResponse => {
+  const requested = typeof body === 'object' && body !== null ? (body as { title?: unknown }).title : undefined
+  const title = validateTitle(typeof requested === 'string' ? requested : null)
+
+  const document = store.find((item) => item.documentId === documentId)
+  if (!document) {
+    throw new ApiError('DOCUMENT_NOT_FOUND', '문서를 찾을 수 없습니다')
+  }
+
+  document.title = title
+  document.updatedAt = nowIso()
+  return { documentId: document.documentId, title: document.title, updatedAt: document.updatedAt }
 })
 
 /**

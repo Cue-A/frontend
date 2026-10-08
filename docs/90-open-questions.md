@@ -195,6 +195,34 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 걸리는 작업: `domain/user/api/userApi.ts` 의 `withdraw`, `domain/user/components/WithdrawPage.tsx` ·
   `WithdrawConfirmDialog.tsx`, `domain/user/lib/withdrawReasons.ts`.
 
+### Q15. 🟡 문서 제목 수정 API 가 아직 없습니다 (명세만 있음)
+
+보관함(C-02) 시안에 "조회/수정" 이 있습니다. API 명세(Notion "문서 제목 수정")는 있지만 백엔드는 **시작 전**이라
+문서 API 에는 등록 · 목록 · 상세 · 삭제만 있습니다 (Cue-A/backend `DocumentController`).
+
+- 명세에서 정해진 것: `PATCH /api/documents/{documentId}`, 본문 `{ title?, content? }`(제목 최대 100자, `content` 는
+  직접 작성 문서만 — 파일 문서면 400 `CONTENT_NOT_EDITABLE`), 응답 `{ documentId, title, updatedAt }`.
+  명세 예시의 `indexStatus` 는 필요 없는 값으로 백엔드와 확인했습니다 (다른 문서 응답에서도 빠졌습니다 — Cue-A/backend#58).
+- **임시 결정: 제목만 바꾸는 흐름(행의 연필 버튼 → 제목 수정 창)을 만들고 목업이 답하게 둡니다.** 화면은 `title` 만
+  보내고 응답에서도 바뀐 제목만 읽습니다. 원본 파일명 · 본문 · 종류는 바꾸지 않습니다.
+- **문서를 실제 서버에 붙인 동안은 수정 버튼을 내지 않습니다.** 이 API 만 목업이 답하게(`missingInBackend`) 두면
+  목업 저장소가 실제 문서 id 를 몰라서 "없는 문서" 라고 답하기 때문입니다 (`CAN_RENAME_DOCUMENT`). 백엔드에 올라오면
+  `CAN_RENAME_DOCUMENT` 를 지웁니다.
+- 명세가 지금 백엔드 코드와 다른 곳 (백엔드 확인 필요)
+  - 응답 봉투. 명세 예시는 `code`(성공 시 `"SUCCESS"`) · `message` 인데, 공용 응답(`Result`)은 `errorCode` · `message`
+    이고 성공하면 둘 다 null 입니다. 화면은 `errorCode` 를 읽습니다
+  - `documentId` 예시가 `doc_…` 인데 실제는 UUID 입니다
+- 명세에 없어서 등록 · 상세와 같다고 본 것 (백엔드 확인 필요)
+  - 빈 제목 · 100자 초과는 `INVALID_REQUEST`, 100자는 앞뒤 공백을 뺀 길이
+  - 없는 문서 · 남의 문서 · 지운 문서는 404 `DOCUMENT_NOT_FOUND` — 화면은 이 코드를 "이미 지워진 문서" 로 안내합니다
+  - `title` · `content` 를 둘 다 안 보냈을 때의 응답, 분당 호출 제한
+- 남은 결정 (프론트): 직접 작성 문서의 본문 수정 화면을 만들지. 명세는 열려 있고 지금 화면은 제목만입니다.
+- 남은 결정 (기획): 제목 수정 창 시안. 지금은 지우기 확인 창과 같은 모양으로 임시로 그렸습니다.
+- 알아둘 것: 옵션 설정(A-05)에 골라 둔 자기소개서는 고른 시점의 제목을 들고 있어서, 보관함에서 제목을 바꿔도
+  다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
+- 걸리는 작업: `domain/document/api/documentApi.ts` 의 `updateDocumentTitle` · `CAN_RENAME_DOCUMENT`,
+  `domain/document/hooks/useRenameDocument.ts`, `domain/document/components/DocumentRenameDialog.tsx`.
+
 ---
 
 ## 그 외

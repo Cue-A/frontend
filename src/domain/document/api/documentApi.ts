@@ -1,4 +1,5 @@
 import { api } from '@/shared/api/apiClient'
+import { isRealApi } from '@/shared/api/mock'
 
 import type { CreateDocumentInput, DocumentListQuery } from '../types/document'
 
@@ -9,6 +10,7 @@ import {
   type DocumentDetailResponse,
   type DocumentListResponse,
   type DocumentResponse,
+  type DocumentUpdateResponse,
 } from './documentResponse'
 
 import './documentMock'
@@ -122,3 +124,40 @@ export async function getDocument(documentId: string) {
 export function deleteDocument(documentId: string) {
   return api.delete<void>(`/api/documents/${encodeURIComponent(documentId)}`)
 }
+
+/**
+ * 문서 제목 수정. `PATCH /api/documents/{documentId}` (본문 `{ title }`)
+ *
+ * API 명세(Notion "문서 제목 수정") 기준입니다. ⚠️ **백엔드는 아직 시작 전**이라 `DocumentController` 에는 등록 ·
+ * 목록 · 상세 · 삭제만 있습니다. 올라오면 이 함수와 목업, `CAN_RENAME_DOCUMENT` 를 맞춥니다.
+ * (docs/90-open-questions.md Q15)
+ *
+ * 명세에서 정해진 것
+ * - 본문은 `{ title?, content? }` 입니다. **화면은 `title` 만 보냅니다.** `content` 는 직접 작성 문서만 바꿀 수 있고,
+ *   파일 문서에 보내면 400 `CONTENT_NOT_EDITABLE` 입니다 — 본문 수정 화면이 생기면 그때 씁니다
+ * - 제목은 최대 100자
+ * - 응답은 `{ documentId, title, updatedAt }` — 바뀐 제목만 읽습니다 (`DocumentUpdateResponse`). 명세 예시의
+ *   `indexStatus` 는 필요 없는 값으로 백엔드와 확인했습니다
+ *
+ * 명세에 없어서 **등록 · 상세와 같다고 본 것** (백엔드 확인 필요)
+ * - 빈 제목 · 100자 초과는 `INVALID_REQUEST`, 100자는 앞뒤 공백을 뺀 길이
+ * - 없는 문서 · 남의 문서 · 지운 문서는 `DOCUMENT_NOT_FOUND`(404)
+ * - 실패 응답의 코드는 다른 API 처럼 `errorCode` 로 옵니다. 명세 예시는 `code` 로 적혀 있는데, 백엔드 공용
+ *   응답(`Result`)은 `errorCode` 입니다
+ */
+export async function updateDocumentTitle(documentId: string, title: string) {
+  const response = await api.patch<DocumentUpdateResponse>(`/api/documents/${encodeURIComponent(documentId)}`, {
+    title,
+  })
+  return { documentId: response.documentId, title: response.title }
+}
+
+/**
+ * 제목 수정을 쓸 수 있는지. **문서가 목업일 때만** true 입니다. 환경 변수로 정해져서 실행 중에 바뀌지 않습니다.
+ *
+ * 수정 API 가 백엔드에 아직 없어서(명세만 있고 시작 전), 문서를 실제 서버에 붙이면(`VITE_REAL_APIS=documents` 또는
+ * `VITE_USE_MOCK=false`) 보낼 곳이 없습니다. 이 API 만 목업이 답하게(`missingInBackend`) 두지도 않았습니다 — 목업
+ * 저장소는 실제 서버의 문서 id 를 몰라서 "없는 문서" 라고 답하고, 화면은 멀쩡한 문서를 지워졌다고 안내하게 됩니다.
+ * 그래서 그때는 화면이 수정 버튼을 내지 않습니다. 백엔드에 API 가 생기면 이 상수를 지웁니다.
+ */
+export const CAN_RENAME_DOCUMENT = !isRealApi('/api/documents')
