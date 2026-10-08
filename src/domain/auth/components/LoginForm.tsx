@@ -81,9 +81,9 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       </div>
 
       {/*
-        Google 로그인 버튼을 뺐습니다. docs/90-open-questions.md Q12 는 이 "남은 결정"
-        (만들지 뺄지)에 기획 쪽 확인이 필요하다고 적혀 있는데, 그 확인 없이 뺀 상태입니다
-        (이슈 #109). 기획 확인이 나면 그 결과로 Q12 를 닫아주세요 — 다시 넣어야 할 수도 있습니다.
+        Google 로그인 버튼을 뺐습니다. 기능명세서 AUTH-2 는 카카오 로그인만 정의하고
+        Google 은 어디에도 없어서, 시안에만 있고 명세서엔 없는 항목으로 보고 뺐습니다
+        (docs/90-open-questions.md 옛 Q12, 이슈 #109).
       */}
 
       {/*
