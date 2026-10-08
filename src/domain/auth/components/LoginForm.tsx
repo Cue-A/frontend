@@ -81,6 +81,12 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       </div>
 
       {/*
+        Google 로그인 버튼을 뺐습니다. docs/90-open-questions.md Q12 는 이 "남은 결정"
+        (만들지 뺄지)에 기획 쪽 확인이 필요하다고 적혀 있는데, 그 확인 없이 뺀 상태입니다
+        (이슈 #109). 기획 확인이 나면 그 결과로 Q12 를 닫아주세요 — 다시 넣어야 할 수도 있습니다.
+      */}
+
+      {/*
         카카오 인가 페이지로 나가는 외부 링크라 shared/ui/Button 의 `to` 를 못
         씁니다. `to` 는 react-router Link 라 클라이언트 라우팅만 하고 카카오
         도메인으로는 못 나갑니다. 그래서 여기만 순수 <a> 를 씁니다. (이슈 #53)
