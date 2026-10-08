@@ -22,13 +22,17 @@ function isFullBleed(handle: unknown): boolean {
  *
  * 시안에는 상단 헤더바가 없고, 왼쪽은 아이콘 레일입니다. 레일에 마우스를 올리면 메뉴 이름이 보이게 펼쳐지고,
  * 내 보관함처럼 하위 항목이 있는 메뉴는 그 아래로 하위 항목이 열립니다. 사이드바는 SideNav.tsx 에 따로 뒀습니다.
+ *
+ * `data-app-layout` 은 이 껍데기가 화면에 있는지 index.css 가 알아보는 표시입니다. 있으면 세로 스크롤바 자리를
+ * 늘 비워 둬서, 목록이 짧아져 스크롤바가 사라져도 본문이 옆으로 밀리지 않습니다. `fullBleed` 화면(홈)은 배경을
+ * 화면이 직접 깔아서 비워 둔 자리와 색이 달라지므로 `data-full-bleed` 로 빼 둡니다.
  */
 export default function AppLayout() {
   const fullBleed = useMatches().some((match) => isFullBleed(match.handle))
   const logout = useLogout()
 
   return (
-    <div className="flex min-h-screen bg-neutral-50">
+    <div data-app-layout data-full-bleed={fullBleed || undefined} className="flex min-h-screen bg-neutral-50">
       <SideNav onLogout={logout} />
 
       <main className={`min-w-0 flex-1 ${fullBleed ? '' : 'p-6 md:p-10'}`}>
