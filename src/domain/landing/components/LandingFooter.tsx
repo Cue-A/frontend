@@ -17,7 +17,7 @@ export default function LandingFooter() {
         <h2 className="text-h1 text-neutral-900">{CLOSING_CTA.title}</h2>
         <p className="text-body-lg font-normal text-neutral-500">{CLOSING_CTA.description}</p>
 
-        <Button variant="primary" size="lg" to={ROUTES.LOGIN} className="mt-4">
+        <Button variant="primary" size="lg" to={`${ROUTES.LOGIN}?tab=signup`} className="mt-4">
           {CLOSING_CTA.action}
         </Button>
       </section>

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { toUserMessage } from '@/shared/api/errorMessage'
 import Card from '@/shared/ui/Card'
+import Logo from '@/shared/ui/Logo'
 
 import LoginForm from './LoginForm'
 import SignupForm from './SignupForm'
@@ -23,8 +24,10 @@ const TAB_OFF = 'text-neutral-500'
  * 어느 탭이 열려 있는지는 이 카드만의 화면 상태라 여기 useState 로 둡니다.
  */
 export default function AuthCard() {
-  const [tab, setTab] = useState<Tab>('login')
   const [searchParams] = useSearchParams()
+  // 랜딩의 "무료로 시작하기" 는 가입 유도 CTA라 ?tab=signup 으로 들어오면
+  // 회원가입 탭을 바로 보여줍니다. 그 외엔 로그인 탭이 기본입니다.
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'signup' ? 'signup' : 'login')
 
   // 세션이 강제로 끊겨 로그인 화면으로 돌아온 경우입니다 (apiClient 의
   // forceLogout). 전체 새로고침이라 그때의 에러 상태를 못 들고 오니, 이유를
@@ -33,7 +36,7 @@ export default function AuthCard() {
 
   return (
     <Card padding="lg" className="w-full max-w-md">
-      <p className="text-center text-h1 font-bold text-primary-600">Cue&amp;A</p>
+      <Logo className="mx-auto h-9" />
 
       {reason && (
         <p className="mt-4 rounded-sm bg-badge-warning-bg p-3 text-center text-body-sm text-badge-warning-text">

@@ -80,11 +80,6 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
         <span className="h-px flex-1 bg-neutral-200" />
       </div>
 
-      {/* Google 은 기능명세서에 없는 항목입니다 (Q12). */}
-      <Button disabled className="w-full">
-        Google로 계속하기
-      </Button>
-
       {/*
         카카오 인가 페이지로 나가는 외부 링크라 shared/ui/Button 의 `to` 를 못
         씁니다. `to` 는 react-router Link 라 클라이언트 라우팅만 하고 카카오
@@ -96,10 +91,6 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       >
         카카오로 계속하기
       </a>
-
-      <p className="text-center text-body-sm text-neutral-400">
-        구글 로그인은 아직 연동 전이에요
-      </p>
 
       <p className="text-center text-body-sm text-neutral-500">
         계정이 없으신가요?{' '}
