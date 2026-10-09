@@ -17,12 +17,22 @@ export const ROUTES = {
   REPORT: '/reports/:reportId',
   /** C-02 내 보관함 > 자소서 · 포트폴리오 (이슈 #59) */
   LIBRARY_DOCUMENTS: '/library/documents',
-  /** 마이페이지 메뉴 목록. 지금은 계정 설정만 열려 있습니다 */
+  /** 마이페이지 메뉴 목록 */
   MYPAGE: '/mypage',
+  /** 마이페이지 > 프로필 — 이름 · 이메일 · 직무 */
+  MYPAGE_PROFILE: '/mypage/profile',
+  /** 마이페이지 > 관심 기업 */
+  MYPAGE_INTERESTS: '/mypage/interests',
+  /** 마이페이지 > 알림 설정 */
+  MYPAGE_NOTIFICATIONS: '/mypage/notifications',
+  /** 마이페이지 > 나만의 명함 생성 */
+  MYPAGE_BUSINESS_CARD: '/mypage/business-card',
   /** 마이페이지 > 계정 설정 — 로그아웃 · 회원 탈퇴 */
   MYPAGE_ACCOUNT: '/mypage/account',
   /** 계정 설정 > 계정 탈퇴하기 — 이유 고르기 · 최종 확인 */
   MYPAGE_WITHDRAW: '/mypage/account/withdraw',
+  /** 커뮤니티 — 정보공유 · 스터디모집 탭 (B-04 시안) */
+  COMMUNITY: '/community',
   /** B-01 확인용 정적 프리뷰. 리뷰 끝나면 지워도 되는 임시 라우트입니다. */
   DEV_INTERVIEW_PREVIEW: '/dev/interview-preview',
 } as const

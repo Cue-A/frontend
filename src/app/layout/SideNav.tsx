@@ -62,17 +62,17 @@ const NAV_ITEMS: NavItem[] = [
     // 내 보관함과 같은 여닫기 줄입니다. 메뉴 목록 화면(/mypage)은 상단 프로필 메뉴의 "마이페이지" 로 갑니다.
     to: ROUTES.MYPAGE,
     matchPrefix: ROUTES.MYPAGE,
-    // 마이페이지 시안의 여섯 메뉴 그대로입니다. 지금 화면이 있는 건 계정 설정뿐입니다.
+    // 마이페이지 시안의 여섯 메뉴입니다. "관심 질문" 만 기록(REC) 도메인 화면이 아직 없어 준비 중입니다.
     children: [
-      { label: '프로필' },
-      { label: '나만의 명함 생성' },
-      { label: '관심 기업' },
+      { label: '프로필', to: ROUTES.MYPAGE_PROFILE },
+      { label: '나만의 명함 생성', to: ROUTES.MYPAGE_BUSINESS_CARD },
+      { label: '관심 기업', to: ROUTES.MYPAGE_INTERESTS },
       { label: '관심 질문' },
       { label: '계정 설정', to: ROUTES.MYPAGE_ACCOUNT },
-      { label: '알림 설정' },
+      { label: '알림 설정', to: ROUTES.MYPAGE_NOTIFICATIONS },
     ],
   },
-  { label: '커뮤니티', Icon: IconUsers },
+  { label: '커뮤니티', Icon: IconUsers, to: ROUTES.COMMUNITY, matchPrefix: ROUTES.COMMUNITY },
 ]
 
 function isActive(item: NavItem, pathname: string) {

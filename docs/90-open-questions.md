@@ -223,6 +223,32 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 걸리는 작업: `domain/document/api/documentApi.ts` 의 `updateDocumentTitle` · `CAN_RENAME_DOCUMENT`,
   `domain/document/hooks/useRenameDocument.ts`, `domain/document/components/DocumentRenameDialog.tsx`.
 
+### Q16. 🟡 마이페이지 확장 화면과 커뮤니티 API 가 없습니다
+
+기능명세서 "사용자" 도메인(MY-1~3)은 있지만 프로필 수정 · 관심 기업 · 명함 API 가 전부
+백엔드 시작 전이고, "알림설정"은 기능명세서 자체에 없는 항목입니다. "커뮤니티"는 Figma
+시안(B-04, 정보공유 · 스터디모집)은 있는데 기능명세서 · API 명세서 어디에도 도메인이 없습니다
+— 성우님 담당으로 재배분됐다는 구두 전달을 받고 화면부터 목업으로 만들었습니다.
+
+- **임시 결정: 아래 경로로 가정해 전부 목업(`missingInBackend`)이 답하게 두고 화면을 완성했습니다.**
+  - 프로필: `PATCH /users/me/profile` (본문 `{ nickname, email, jobTitle }`) — API 명세서엔 이미
+    있는 경로지만, 이메일은 명세서상 별도 `PATCH /api/users/me/email` 소관이라 백엔드가 실제로
+    붙으면 이 화면의 이메일 입력을 어느 API로 보낼지 다시 맞춰야 합니다
+  - 관심 기업: API 명세서 그대로 `GET/PUT/DELETE /v1/users/me/company-interests`. 추가(PUT)는
+    기업 탐색(CMP-2) 화면 몫이라 이번엔 해제만 연결했습니다
+  - 알림설정: `GET/PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로
+  - 명함: API 명세서 그대로 `POST/GET/PATCH /api/users/me/business-card`. "이미지 다운로드" ·
+    "공유하기"는 PNG 변환 · 공유 링크 발급이 각자 별도 작업이라 비활성 버튼으로만 자리를 잡아뒀습니다
+  - 커뮤니티: `GET /api/community/study-posts` · `GET /api/community/info-posts` — 명세서에
+    도메인이 아예 없어서 경로 전체가 임시입니다. "글쓰기"도 작성 화면 시안이 없어 비활성입니다
+- 남은 결정 (백엔드 · 기획)
+  - 위 경로들의 실제 계약(특히 알림설정 · 커뮤니티는 API 명세서에 신규 등록부터 필요)
+  - 프로필 이메일 수정을 어느 API 가 받을지
+  - 커뮤니티 작성 · 댓글 · 좋아요 흐름의 화면 시안과 API
+  - 명함 이미지 내보내기 · 공유 방식 (클라이언트 canvas 렌더링인지, 서버가 이미지를 만드는지)
+- 걸리는 작업: `domain/user/components/ProfilePage.tsx` · `InterestsPage.tsx` ·
+  `NotificationSettingsPage.tsx` · `BusinessCardPage.tsx`, `domain/community/` 전체.
+
 ---
 
 ## 그 외

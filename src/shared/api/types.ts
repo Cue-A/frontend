@@ -6,4 +6,4 @@ export type Result<T> =
   | { success: true; data: T; errorCode: null; message: null }
   | { success: false; data: null; errorCode: string; message: string }
 
-export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'

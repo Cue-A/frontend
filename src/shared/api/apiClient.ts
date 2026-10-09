@@ -263,6 +263,7 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown, isRe
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   /**
    * `multipart/form-data` 로 보냅니다. 파일을 올릴 때만 씁니다 (문서 등록).
    * 목업 핸들러에는 이 `FormData` 가 본문으로 그대로 갑니다.
