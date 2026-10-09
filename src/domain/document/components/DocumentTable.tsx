@@ -1,8 +1,8 @@
-import { IconChevronLeft, IconChevronRight, IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconPencil, IconTrash } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
 import Button from '@/shared/ui/Button'
-import Card from '@/shared/ui/Card'
+import ListCard from '@/shared/ui/ListCard'
 
 import { DOCUMENT_TYPE_LABEL, formatBadgeOf, formatMeta } from '../lib/documentDisplay'
 import type { DocumentSummary } from '../types/document'
@@ -167,13 +167,14 @@ function renderBody(
  * "상태" 칸(완료 · 분석 중 · 실패)은 뺐습니다. 문서의 준비 상태가 백엔드 응답에서 빠져서(Cue-A/backend#58)
  * 모든 행에 똑같은 "완료" 만 남기 때문입니다. 등록한 문서는 곧바로 면접에 쓸 수 있습니다.
  *
- * 문서는 사용자당 20개까지라 한 페이지에 전부 옵니다. 페이지 버튼은 시안대로 두되 늘 비활성입니다.
+ * 문서는 사용자당 20개까지라 한 페이지에 전부 옵니다. 페이지 버튼은 시안대로 두되 늘 비활성입니다
+ * (`ListCard` 에 `pagination` 을 넘기지 않음). 판과 아래 줄은 연습 기록 · 질문 은행과 같은 `ListCard` 입니다.
  */
 export default function DocumentTable({ body, openingId, onOpen, onRename, onDelete }: Props) {
   const count = body.kind === 'rows' ? body.documents.length : 0
 
   return (
-    <Card padding="none" label="문서 목록" className="overflow-hidden">
+    <ListCard label="문서 목록" count={count}>
       <table className="w-full table-fixed">
         <thead>
           <tr className="whitespace-nowrap text-left text-body-sm text-neutral-500">
@@ -192,25 +193,6 @@ export default function DocumentTable({ body, openingId, onOpen, onRename, onDel
         <tbody>{renderBody(body, openingId, onOpen, onRename, onDelete)}</tbody>
       </table>
 
-      <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">
-        <p className="text-body-sm text-neutral-500">{count}개 항목</p>
-        <div className="flex gap-2">
-          {[
-            { label: '이전 페이지', Icon: IconChevronLeft },
-            { label: '다음 페이지', Icon: IconChevronRight },
-          ].map(({ label, Icon }) => (
-            <button
-              key={label}
-              type="button"
-              disabled
-              className="flex h-8 w-8 items-center justify-center rounded-sm border border-neutral-200 text-neutral-400 disabled:cursor-not-allowed"
-            >
-              <Icon size={16} stroke={2} aria-hidden />
-              <span className="sr-only">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </Card>
+    </ListCard>
   )
 }
