@@ -27,6 +27,7 @@ import type {
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
+import Select from '@/shared/ui/Select'
 
 import InterviewFlowHeader from './InterviewFlowHeader'
 
@@ -185,7 +186,25 @@ export default function DeviceCheckPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
 
-  const { camera, mic, network, lighting, noise, videoStream, micLevel, recheckCamera, recheckMic } = useDeviceCheck()
+  const {
+    camera,
+    mic,
+    network,
+    lighting,
+    noise,
+    videoStream,
+    micLevel,
+    recheckCamera,
+    recheckMic,
+    cameraDevices,
+    micDevices,
+    selectedCameraId,
+    selectedMicId,
+    selectCamera,
+    selectMic,
+    cameraDeviceMissing,
+    micDeviceMissing,
+  } = useDeviceCheck()
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
@@ -200,19 +219,43 @@ export default function DeviceCheckPage() {
 
   const cameraReady: ReadyItemStatus = camera.status === 'available' ? 'ready' : camera.status === 'failed' ? 'not-ready' : 'pending'
   const micReady: ReadyItemStatus = mic.status === 'available' ? 'ready' : mic.status === 'failed' ? 'not-ready' : 'pending'
-  const networkReady: ReadyItemStatus = network.status !== 'offline' ? 'ready' : 'not-ready'
+  // network.status 는 'good'/'unstable' 모두 바로 결정되어 'pending' 이 없다. 'unstable' 을
+  // 여기서도 'ready' 로 묶으면 "환경 체크" 패널은 경고를 보여주는데 이 패널만 체크 표시가
+  // 뜨는 모순이 생긴다(PR #103 리뷰, PR #84 에서 막았던 패널 간 불일치 재발) — 'good' 일
+  // 때만 ready 로 센다.
+  const networkReady: ReadyItemStatus = network.status === 'good' ? 'ready' : 'not-ready'
   const readyItems: ReadyItemStatus[] = [cameraReady, micReady, networkReady]
   const readyCount = readyItems.filter((status) => status === 'ready').length
   const readyTotal = readyItems.length
+
+  // 고른 장치가 목록에서 빠지면 네이티브 <select> 는 options 에 없는 value 를 그냥 무시하고
+  // 첫 항목을 보여준다 — 남은 장치가 이미 "선택된" 것처럼 보여 다시 골라도 change 가 안
+  // 난다(PR #103 리뷰). 빠진 장치를 비활성 취지의 항목으로 남겨두면 표시도 맞고, 남은
+  // 장치를 고를 때 change 도 정상적으로 난다.
+  const cameraOptions = cameraDevices.map((device) => ({ value: device.deviceId, label: device.label || '이름 없는 카메라' }))
+  if (cameraDeviceMissing && selectedCameraId) {
+    cameraOptions.unshift({ value: selectedCameraId, label: '연결이 끊긴 카메라' })
+  }
+  const micOptions = micDevices.map((device) => ({ value: device.deviceId, label: device.label || '이름 없는 마이크' }))
+  if (micDeviceMissing && selectedMicId) {
+    micOptions.unshift({ value: selectedMicId, label: '연결이 끊긴 마이크' })
+  }
 
   const handleStart = () => {
     if (!sessionId || !canStart) return
     // 이 화면의 점검 결과(INT-4)를 면접 진행 화면의 시작 값으로 넘긴다 — 스트림 자체는
     // (여기서 만든 스트림은 라우트를 벗어나며 정리돼서) 재사용 못 하고 그쪽에서 새로
     // 받지만, "이미 점검했다" 는 정보는 넘겨서 'unchecked' 로 잠깐 깜빡이지 않게 한다.
+    // 고른 장치의 deviceId(이슈 #97)도 같이 넘겨, 면접 화면이 새로 스트림을 받을 때
+    // 여기서 고른 장치가 아니라 브라우저 기본 장치를 여는 일이 없게 한다.
     // 옵션 설정에서 고른 값은 "← 옵션" 으로 돌아갈 때를 위해 남겨 뒀는데, 면접을 시작하면 쓸 일이 끝나서 지운다.
     clearSavedSessionSetup()
-    navigate(toInterview(sessionId), { state: { initialDeviceStatus: { camera, mic } } })
+    navigate(toInterview(sessionId), {
+      state: {
+        initialDeviceStatus: { camera, mic },
+        initialDeviceIds: { cameraId: selectedCameraId, micId: selectedMicId },
+      },
+    })
   }
 
   return (
@@ -256,7 +299,27 @@ export default function DeviceCheckPage() {
                   <Badge tone={STATUS_TONE[camera.status]}>카메라 {STATUS_LABEL[camera.status]}</Badge>
                 </div>
 
-                {camera.status === 'failed' && camera.failureReason && (
+                <Select
+                  options={cameraOptions}
+                  value={selectedCameraId}
+                  onChange={selectCamera}
+                  placeholder="사용 가능한 카메라가 없어요"
+                  ariaLabel="카메라 선택"
+                />
+
+                {/* 고른 장치가 코드 뽑힘 등으로 목록에서 사라진 경우입니다(이슈 #97). 스트림은
+                    그대로 두고(마지막 프레임이 멈춰 보일 수 있음) 안내만 띄웁니다 — 자동으로
+                    다른 장치로 바꾸지 않습니다. */}
+                {cameraDeviceMissing && (
+                  <p className="text-body-sm text-neutral-500">
+                    선택한 카메라의 연결이 끊겼어요. 장치를 다시 연결하거나 다른 장치를 선택해주세요.
+                  </p>
+                )}
+
+                {/* cameraDeviceMissing 이 이미 같은 상황(장치가 사라짐)을 알리고 있어서, 고른
+                    직후 바로 뽑혀 getUserMedia 가 실패한 경우(PR #103 리뷰) 두 안내가 같이
+                    뜨지 않도록 겹치지 않게 한다. */}
+                {camera.status === 'failed' && camera.failureReason && !cameraDeviceMissing && (
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-body-sm text-neutral-500">{FAILURE_MESSAGE[camera.failureReason]('카메라')}</p>
                     <Button size="sm" onClick={recheckCamera} className="shrink-0">
@@ -307,7 +370,21 @@ export default function DeviceCheckPage() {
                   </p>
                 </div>
 
-                {mic.status === 'failed' && mic.failureReason && (
+                <Select
+                  options={micOptions}
+                  value={selectedMicId}
+                  onChange={selectMic}
+                  placeholder="사용 가능한 마이크가 없어요"
+                  ariaLabel="마이크 선택"
+                />
+
+                {micDeviceMissing && (
+                  <p className="text-body-sm text-neutral-500">
+                    선택한 마이크의 연결이 끊겼어요. 장치를 다시 연결하거나 다른 장치를 선택해주세요.
+                  </p>
+                )}
+
+                {mic.status === 'failed' && mic.failureReason && !micDeviceMissing && (
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-body-sm text-neutral-500">{FAILURE_MESSAGE[mic.failureReason]('마이크')}</p>
                     <Button size="sm" onClick={recheckMic} className="shrink-0">

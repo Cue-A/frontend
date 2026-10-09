@@ -62,6 +62,67 @@ function classifyFailure(error: unknown): DeviceFailureReason {
   return 'unknown'
 }
 
+/** `enumerateDevices` 결과 중 화면이 실제로 쓰는 필드만 추려둔 모양입니다 (이슈 #97). */
+export type MediaDeviceOption = {
+  deviceId: string
+  label: string
+}
+
+// Chrome이 "현재 기본 장치"를 가리키는 합성(synthetic) 항목에 쓰는 예약된 deviceId다.
+// 실제 장치를 흉내만 낼 뿐 그 장치 고유의 deviceId 를 가진 실제 항목이 목록에 따로
+// 있어서(PR #103 리뷰, 실기기 콘솔로 확인: 'default' 항목의 label이 "기본값 - AirPods"
+// 였고, 같은 groupId를 가진 'AirPods' 항목이 별도로 존재했다), 걸러도 장치 자체가
+// 목록에서 사라지지 않는다. 'communications'는 Windows의 통화용 기본 장치에 쓰이는
+// 같은 성격의 예약 id라 실기기로 확인은 못 했지만 같이 걸러둔다.
+const SYNTHETIC_DEFAULT_DEVICE_IDS = new Set(['default', 'communications'])
+
+/** kind 가 같고 groupId 가 같은 "진짜"(합성 id 가 아닌) 장치가 목록에 따로 있는지. */
+function hasRealCounterpart(devices: MediaDeviceInfo[], kind: MediaDeviceKind, groupId: string): boolean {
+  return devices.some(
+    (device) =>
+      device.kind === kind && device.groupId === groupId && device.deviceId !== '' && !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId),
+  )
+}
+
+function toDeviceOptions(devices: MediaDeviceInfo[], kind: MediaDeviceKind): MediaDeviceOption[] {
+  return devices
+    // 권한을 안 준 장치 종류는 Chrome이 deviceId·label이 빈 문자열인 항목 하나로
+    // 돌려준다(PR #103 리뷰) — 그대로 두면 "이름 없는 카메라/마이크"가 실제로 고를 수
+    // 있는 장치처럼 계속 노출된다.
+    .filter((device) => device.kind === kind && device.deviceId !== '')
+    // 합성 id(deviceId: 'default'/'communications')는 같은 groupId 의 실제 장치가 목록에
+    // 따로 있을 때만 "중복"이라 거른다 — 못 찾으면 이 항목이 그 장치의 유일한 표현이라
+    // 남겨야 한다(PR #103 리뷰, heejoo11). 무조건 걸러내면 그 장치 자체가 목록에서
+    // 사라진다.
+    .filter((device) => !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId) || !hasRealCounterpart(devices, kind, device.groupId))
+    .map((device) => ({ deviceId: device.deviceId, label: device.label }))
+}
+
+/**
+ * 기본 장치로 그냥 getUserMedia 를 부르면(deviceId 지정 없이) `getSettings().deviceId`
+ * 가 실제 장치 id 가 아니라 `'default'` 같은 합성 id 로 올 수 있다(PR #103 리뷰, 실기기
+ * 확인: 기본 마이크로 열면 `default` 가 그대로 옴). 같은 groupId 를 가진 실제 장치 id 를
+ * 목록에서 찾아 대신 쓴다 — 그대로 두면 toDeviceOptions 가 중복으로 보고 걸러낸 합성
+ * id 가 selectedCameraId/selectedMicId 에 남아, 선택값이 목록에 없는 것으로 보여
+ * cameraDeviceMissing/micDeviceMissing 이 첫 진입부터 true 가 된다("연결이 끊긴
+ * 마이크"가 정상 상태에서 뜨는 버그). 실제 장치를 못 찾으면 합성 id 를 그대로 둔다 —
+ * 그 경우 toDeviceOptions 도 같은 이유로 그 항목을 목록에 남겨두므로 선택값과 옵션
+ * 목록이 계속 맞는다.
+ */
+function resolveSyntheticId(devices: MediaDeviceInfo[], kind: MediaDeviceKind, id: string | null): string | null {
+  if (id === null || !SYNTHETIC_DEFAULT_DEVICE_IDS.has(id)) return id
+  const synthetic = devices.find((device) => device.kind === kind && device.deviceId === id)
+  if (!synthetic) return id
+  const real = devices.find(
+    (device) =>
+      device.kind === kind &&
+      device.groupId === synthetic.groupId &&
+      device.deviceId !== '' &&
+      !SYNTHETIC_DEFAULT_DEVICE_IDS.has(device.deviceId),
+  )
+  return real?.deviceId ?? id
+}
+
 // 조명 임계값(이슈 #83). 캔버스 평균 밝기(0~255) 기준입니다 — 80~170 을 적정 구간으로
 // 보고, 그 아래는 어두움, 위는 역광·직광 등으로 인한 과다노출(밝음)로 판정합니다.
 // 상한은 원래 200 이었는데, 자동노출 때문에 후레쉬를 비춰도 실측 밝기가 200을 못 넘고
@@ -229,6 +290,15 @@ export type UseDeviceCheckResult = {
   micLevel: number
   recheckCamera: () => void
   recheckMic: () => void
+  cameraDevices: MediaDeviceOption[]
+  micDevices: MediaDeviceOption[]
+  selectedCameraId: string | null
+  selectedMicId: string | null
+  selectCamera: (deviceId: string) => void
+  selectMic: (deviceId: string) => void
+  /** 점검 중 고른 장치가 코드 뽑힘 등으로 목록에서 사라졌는지. 스트림은 그대로 두고 안내만 띄운다 (이슈 #97). */
+  cameraDeviceMissing: boolean
+  micDeviceMissing: boolean
 }
 
 /**
@@ -243,6 +313,16 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   const [noise, setNoise] = useState<NoiseCheckState>({ level: null, decibels: null })
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
   const [micLevel, setMicLevel] = useState(0)
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceOption[]>([])
+  const [micDevices, setMicDevices] = useState<MediaDeviceOption[]>([])
+  // enumerateDevices 를 한 번이라도 돌렸는지. 카메라·마이크가 1대뿐인 환경에서 그
+  // 장치를 뽑으면 목록이 정상적으로 0개가 되는데, cameraDevices.length 만 보면 "아직
+  // 못 받아왔다"와 구분이 안 돼 missing 판정이 영영 안 걸렸다(PR #103 리뷰).
+  const [hasFetchedDevices, setHasFetchedDevices] = useState(false)
+  // 실제로 잡힌 스트림의 트랙 설정에서 읽은 값입니다(이슈 #97) — enumerateDevices 목록의
+  // 첫 번째를 임의로 "선택됨"으로 보지 않고, 브라우저가 실제로 연 장치를 그대로 반영합니다.
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null)
+  const [selectedMicId, setSelectedMicId] = useState<string | null>(null)
 
   const videoStreamRef = useRef<MediaStream | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
@@ -255,6 +335,25 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   const cameraRequestIdRef = useRef(0)
   const micRequestIdRef = useRef(0)
   const removeResumeListenersRef = useRef<(() => void) | null>(null)
+
+  // 권한을 주기 전엔 label 이 빈 문자열이라(이슈 #97), camera·mic 중 하나라도 허용된
+  // 뒤부터 부릅니다 — 그 전엔 목록이 있어도 쓸모가 없어 비워둡니다.
+  //
+  // acquireCamera/acquireMic 가 방금 받은 스트림의 deviceId(합성 id 일 수 있음)를
+  // resolveSyntheticId 로 바꿀 때도 같은 enumerateDevices 스냅샷이 필요해서, 원본
+  // devices 배열을 반환한다 — 실패하면 null.
+  const refreshDeviceLists = useCallback(async (): Promise<MediaDeviceInfo[] | null> => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      setCameraDevices(toDeviceOptions(devices, 'videoinput'))
+      setMicDevices(toDeviceOptions(devices, 'audioinput'))
+      setHasFetchedDevices(true)
+      return devices
+    } catch (error) {
+      console.error('장치 목록 조회 실패', error)
+      return null
+    }
+  }, [])
 
   const stopCamera = useCallback(() => {
     stopLightingMeterRef.current?.()
@@ -400,11 +499,13 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   // 들어갔다가 최신 스트림에 덮어써져서 stopCamera 가 그 트랙을 못 찾고, 카메라가
   // 꺼지지 않은 채 남았습니다. requestId 는 "이 응답이 지금 보낸 가장 최신 요청의
   // 응답인지" 를 보므로 재점검 중 빠르게 두 번 누른 경우의 경쟁 상태도 같이 막습니다.
-  const acquireCamera = useCallback(async () => {
+  const acquireCamera = useCallback(async (deviceId?: string) => {
     const requestId = ++cameraRequestIdRef.current
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId ? { deviceId: { exact: deviceId } } : true,
+      })
 
       if (requestId !== cameraRequestIdRef.current) {
         // 이 사이 재점검이 돌았거나 언마운트됐습니다. ref 에 넣지 말고 바로 반납합니다.
@@ -416,6 +517,18 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       setVideoStream(stream)
       setCamera({ status: 'available', failureReason: null })
       stopLightingMeterRef.current = startLightingMeter(stream, setLighting)
+      // 요청한 deviceId 가 아니라 브라우저가 실제로 연 장치를 따릅니다 — 처음 마운트 시
+      // deviceId 없이 불러 브라우저 기본값이 뭔지 아직 모를 때도 이 값으로 알 수 있습니다.
+      // 기본 장치로 열면 이 값이 'default' 같은 합성 id 로 올 수 있어(PR #103 리뷰),
+      // 같은 enumerateDevices 스냅샷으로 실제 장치 id 로 바꿔둔다.
+      const settingsCameraId = stream.getVideoTracks()[0]?.getSettings().deviceId ?? null
+      const devices = await refreshDeviceLists()
+      // refreshDeviceLists 를 기다리는 사이 재점검/장치 변경으로 더 최신 요청이 시작됐을
+      // 수 있다 — 그 경우 이 낡은 요청의 resolve 결과로 selectedCameraId 를 덮어쓰지
+      // 않는다.
+      if (requestId === cameraRequestIdRef.current) {
+        setSelectedCameraId(devices ? resolveSyntheticId(devices, 'videoinput', settingsCameraId) : settingsCameraId)
+      }
     } catch (error) {
       const failureReason = classifyFailure(error)
       if (requestId === cameraRequestIdRef.current) {
@@ -423,9 +536,9 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       }
       console.error('카메라 점검 실패 reason=%s', failureReason)
     }
-  }, [])
+  }, [refreshDeviceLists])
 
-  const acquireMic = useCallback(async () => {
+  const acquireMic = useCallback(async (deviceId?: string) => {
     const requestId = ++micRequestIdRef.current
 
     try {
@@ -438,7 +551,12 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       // `audio: true` 로 세 옵션이 기본값(켜짐)인 채로 녹음한다. 즉 여기서 재는 "조용함/
       // 시끄러움" 은 녹음에 실제로 들어갈 노이즈 억제된 신호 기준이 아니다 (PR #102 리뷰).
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { noiseSuppression: false, echoCancellation: false, autoGainControl: false },
+        audio: {
+          ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+          noiseSuppression: false,
+          echoCancellation: false,
+          autoGainControl: false,
+        },
       })
 
       if (requestId !== micRequestIdRef.current) {
@@ -451,6 +569,15 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       audioStreamRef.current = stream
       setMic({ status: 'available', failureReason: null })
       startMicMeter(stream)
+      // 기본 마이크로 열면 이 값이 'default' 같은 합성 id 로 올 수 있어(PR #103 리뷰,
+      // 실기기 확인됨) 카메라와 같은 이유로 resolveSyntheticId 를 거친다.
+      const settingsMicId = stream.getAudioTracks()[0]?.getSettings().deviceId ?? null
+      const devices = await refreshDeviceLists()
+      // 카메라와 같은 이유(refreshDeviceLists 대기 중 더 최신 요청이 시작될 수 있음)로
+      // requestId 를 다시 확인한다.
+      if (requestId === micRequestIdRef.current) {
+        setSelectedMicId(devices ? resolveSyntheticId(devices, 'audioinput', settingsMicId) : settingsMicId)
+      }
     } catch (error) {
       const failureReason = classifyFailure(error)
       if (requestId === micRequestIdRef.current) {
@@ -458,19 +585,45 @@ export function useDeviceCheck(): UseDeviceCheckResult {
       }
       console.error('마이크 점검 실패 reason=%s', failureReason)
     }
-  }, [startMicMeter])
+  }, [startMicMeter, refreshDeviceLists])
 
   const recheckCamera = useCallback(() => {
     stopCamera()
     setCamera(UNCHECKED)
-    acquireCamera()
-  }, [stopCamera, acquireCamera])
+    acquireCamera(selectedCameraId ?? undefined)
+  }, [stopCamera, acquireCamera, selectedCameraId])
 
   const recheckMic = useCallback(() => {
     stopMic()
     setMic(UNCHECKED)
-    acquireMic()
-  }, [stopMic, acquireMic])
+    acquireMic(selectedMicId ?? undefined)
+  }, [stopMic, acquireMic, selectedMicId])
+
+  // 사용자가 드롭다운에서 다른 장치를 고르면(이슈 #97) 재점검과 똑같이 멈췄다 새로 잡되,
+  // 고른 장치로 바로 요청합니다. selectedCameraId/selectedMicId 를 먼저 낙관적으로
+  // 바꿔두는 이유는, <select> 가 이 값으로 제어되는 controlled 컴포넌트라 여기서 안
+  // 바꾸면 acquire 가 끝날 때까지 드롭다운이 고른 걸 보여주지 못하고 이전 값으로
+  // 잠깐(혹은 실패 시 계속) 되돌아가 보이기 때문입니다. 성공하면 acquireCamera/
+  // acquireMic 이 실제 트랙 값으로 다시 한번 맞춥니다(보통 같은 값).
+  const selectCamera = useCallback(
+    (deviceId: string) => {
+      setSelectedCameraId(deviceId)
+      stopCamera()
+      setCamera(UNCHECKED)
+      acquireCamera(deviceId)
+    },
+    [stopCamera, acquireCamera],
+  )
+
+  const selectMic = useCallback(
+    (deviceId: string) => {
+      setSelectedMicId(deviceId)
+      stopMic()
+      setMic(UNCHECKED)
+      acquireMic(deviceId)
+    },
+    [stopMic, acquireMic],
+  )
 
   useEffect(() => {
     const updateNetwork = () => setNetwork(readNetworkState(navigator.onLine))
@@ -490,6 +643,16 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     }
   }, [])
 
+  // 장치가 꽂히거나 빠지면(이슈 #97) 목록만 새로 받습니다. 지금 쓰고 있는 스트림은
+  // 여기서 건드리지 않습니다 — 고른 장치가 빠졌는지는 cameraDeviceMissing/micDeviceMissing
+  // 로 알리고, 안내만 할 뿐 스트림을 끊거나 다른 장치로 자동 전환하지 않습니다.
+  useEffect(() => {
+    navigator.mediaDevices.addEventListener('devicechange', refreshDeviceLists)
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', refreshDeviceLists)
+    }
+  }, [refreshDeviceLists])
+
   useEffect(() => {
     void (async () => {
       await Promise.all([acquireCamera(), acquireMic()])
@@ -505,6 +668,14 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     }
   }, [acquireCamera, acquireMic, stopCamera, stopMic])
 
+  // 목록을 한 번도 못 받아온(권한 전 · 첫 enumerate 전) 동안은 "사라짐"으로 오판하지
+  // 않습니다. 장치가 1대뿐인 환경에서 그걸 뽑으면 목록이 정상적으로 0개가 되므로,
+  // cameraDevices.length 가 아니라 hasFetchedDevices 로 "받아온 적이 있는지"를 봅니다.
+  const cameraDeviceMissing =
+    selectedCameraId !== null && hasFetchedDevices && !cameraDevices.some((device) => device.deviceId === selectedCameraId)
+  const micDeviceMissing =
+    selectedMicId !== null && hasFetchedDevices && !micDevices.some((device) => device.deviceId === selectedMicId)
+
   return {
     camera,
     mic,
@@ -515,5 +686,13 @@ export function useDeviceCheck(): UseDeviceCheckResult {
     micLevel,
     recheckCamera,
     recheckMic,
+    cameraDevices,
+    micDevices,
+    selectedCameraId,
+    selectedMicId,
+    selectCamera,
+    selectMic,
+    cameraDeviceMissing,
+    micDeviceMissing,
   }
 }
