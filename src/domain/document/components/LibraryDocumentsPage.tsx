@@ -1,9 +1,11 @@
-import { IconPencil, IconPlus, IconSearch } from '@tabler/icons-react'
+import { IconPencil, IconPlus } from '@tabler/icons-react'
 import { useState } from 'react'
 
 import { toUserMessage } from '@/shared/api/errorMessage'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
+import SearchField from '@/shared/ui/SearchField'
+import SegmentedTabs from '@/shared/ui/SegmentedTabs'
 
 import { CAN_RENAME_DOCUMENT } from '../api/documentApi'
 import { useDocuments } from '../hooks/useDocuments'
@@ -140,22 +142,7 @@ export default function LibraryDocumentsPage() {
 
           <div className="flex shrink-0 flex-col items-start gap-1 lg:items-end">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="relative">
-                <span className="sr-only">파일명 검색</span>
-                <IconSearch
-                  size={16}
-                  stroke={2}
-                  aria-hidden
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-                />
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="파일명 검색"
-                  className="w-56 rounded-sm border border-neutral-200 bg-neutral-0 py-2 pl-9 pr-3 text-body-md text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+              <SearchField label="파일명 검색" value={query} onChange={setQuery} />
               <Button size="sm" disabled={!canAdd} onClick={openWrite} className="whitespace-nowrap">
                 <IconPencil size={16} stroke={2} aria-hidden />
                 직접 작성
@@ -174,21 +161,7 @@ export default function LibraryDocumentsPage() {
           </div>
         </div>
 
-        <div role="group" aria-label="문서 종류" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-md bg-neutral-0 p-1 shadow-card">
-          {DOCUMENT_TABS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={tab === value}
-              onClick={() => setTab(value)}
-              className={`whitespace-nowrap rounded-sm px-4 py-2 text-body-md transition-colors ${
-                tab === value ? 'bg-primary-100 font-semibold text-primary-700' : 'text-neutral-500 hover:text-neutral-900'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <SegmentedTabs label="문서 종류" options={DOCUMENT_TABS} value={tab} onChange={setTab} />
 
         {savedNotice && (
           <p role="status" className="text-body-sm text-badge-success-text">
