@@ -1,59 +1,32 @@
 import { registerMock } from '@/shared/api/mock'
 
-import type {
-  Report,
-  ReportSummary,
-  ReportVideo,
-  RetryAxis,
-  SubMetric,
-  TurnFlow,
-} from '../types/report'
+import type { RetryAxis } from '../types/report'
 
 import type {
-  AnalysisResult,
   AxisKey,
   AxisResponse,
-  QuestionScoreResponse,
-} from './analysisResponse'
-import {
-  toCompanyComment,
-  toHesitationMetric,
-  toPartialNotices,
-  toQuestionComment,
-  toResilienceMetric,
-  toScoreGateReason,
-  toScoreMetrics,
-  toVerdict,
-} from './analysisResponse'
+  EvidenceResponse,
+  QuestionResultResponse,
+  ReportDetailResponse,
+} from './reportResponse'
 
 /**
- * 문항 하나의 채점 결과를 만듭니다. 화면이 쓰는 건 번호 · 코멘트뿐이라 나머지는 그럴듯한 값으로 채웁니다.
- * 축 점수는 리포트의 축 상태와 맞춥니다 — 실패한 축은 문항에서도 null 입니다.
+ * 리포트 상세 조회 목업입니다. **백엔드 응답 모양(`ReportDetailResponse`) 그대로** 돌려줍니다.
+ *
+ * 화면용 모양으로 미리 다듬어두면 변환 함수(`toReport`)가 한 번도 안 돌아서, 실제 응답이 왔을 때
+ * 처음 돌아가게 됩니다. 목업이라도 서버가 주는 모양으로 두면 변환층을 같이 검증합니다.
+ *
+ * 한 줄 총평(`summary`)과 문항 코멘트(`questions[].comment`)는 노션 명세에만 있고 **지금 백엔드 응답에는
+ * 없습니다.** 목업은 명세대로 넣어 두고, `noExtras` 회차만 지금 백엔드처럼 두 값을 뺐습니다.
  */
-function toQuestion(
-  number: number,
-  score: number,
-  axes: Record<AxisKey, number | null>,
-  comment: string | null,
-): QuestionScoreResponse {
-  return {
-    question_id: `q${number}`,
-    question_number: number,
-    category: null,
-    difficulty: null,
-    is_replay: false,
-    is_spare_topic: false,
-    score,
-    display: Math.min(5, Math.max(1, Math.ceil(score / 20))),
-    axes,
-    transcript: '',
-    duration_sec: 80,
-    word_count: 120,
-    was_timeout: false,
-    had_reask: false,
-    comment,
-  }
-}
+
+/** 문항 원문입니다. 실제로는 백엔드가 면접 질문에서 찾아 붙입니다(`questionText`) */
+const QUESTION_TEXTS = [
+  '자기소개를 1분 안에 해 주세요.',
+  '이 직무에 지원한 동기는 무엇인가요?',
+  '데이터 분석 프로젝트에서 그 모델을 고른 이유를 설명해 주세요.',
+  '팀원과 의견이 달랐던 경험을 말해 주세요.',
+]
 
 /** 문항별 한 줄 코멘트입니다. 값은 C-01 시안의 "면접 흐름" 문구를 그대로 옮겼습니다. */
 const QUESTION_COMMENTS = [
@@ -63,131 +36,257 @@ const QUESTION_COMMENTS = [
   '사례가 구체적이어서 톤을 회복했습니다',
 ]
 
-const QUESTION_SCORES = [82, 79, 71, 85]
+/** 문항 점수. 3번은 '흔들림'(60 미만), 2번은 '보통', 나머지는 '안정' 으로 보이게 골랐습니다 */
+const QUESTION_SCORES = [82, 79, 58, 85]
 
-/** 시선이 실패한 회차의 문항들입니다. 문항에서도 시선 점수가 비어 있습니다 */
-const SAMPLE_QUESTIONS: QuestionScoreResponse[] = QUESTION_SCORES.map((score, index) =>
-  toQuestion(index + 1, score, { content: score + 2, speech: score - 4, gaze: null }, QUESTION_COMMENTS[index]),
-)
+/** 답변 길이(초). 개요의 "총 답변 시간 5:09 · 평균 답변 1:17" 이 이 값에서 나옵니다 */
+const QUESTION_DURATIONS = [83, 85, 95, 46]
+
+function toDisplay(score: number) {
+  return Math.min(5, Math.max(1, Math.ceil(score / 20)))
+}
+
+type QuestionOptions = {
+  /** 문항 축 점수. 리포트의 축 상태와 맞춥니다 — 실패 · 미사용 축은 문항에서도 null 입니다 */
+  axes: (score: number) => Record<AxisKey, number | null>
+  /** 코멘트를 넣을지. `none` 이면 키 자체를 뺍니다(지금 백엔드 응답처럼) */
+  comments: 'all' | 'some' | 'none'
+  /** 시간이 다 돼 끊긴 문항 번호 */
+  timeoutNumber?: number
+}
+
+/** 문항 네 개를 만듭니다. 화면이 쓰지 않는 값(전사 · 단어 수 …)은 그럴듯하게 채웁니다 */
+function toQuestions({ axes, comments, timeoutNumber }: QuestionOptions): QuestionResultResponse[] {
+  return QUESTION_SCORES.map((score, index) => {
+    const number = index + 1
+    const question: QuestionResultResponse = {
+      questionId: `q${number}`,
+      questionText: QUESTION_TEXTS[index],
+      questionNumber: number,
+      category: null,
+      difficulty: null,
+      isReplay: false,
+      isSpareTopic: false,
+      score,
+      display: toDisplay(score),
+      axes: axes(score),
+      transcript: '',
+      durationSec: QUESTION_DURATIONS[index],
+      wordCount: 120,
+      wasTimeout: number === timeoutNumber,
+      hadReask: false,
+    }
+
+    if (comments === 'all') question.comment = QUESTION_COMMENTS[index]
+    // 생성에 실패한 문항은 null 로 옵니다. 2번 · 4번만 실패로 둡니다
+    if (comments === 'some') question.comment = index % 2 === 0 ? QUESTION_COMMENTS[index] : null
+
+    return question
+  })
+}
+
+/** 잘한 점 · 아쉬운 점의 출처가 되는 근거들입니다. 시각은 답변 오디오 기준 초입니다 */
+const CONTENT_EVIDENCE: EvidenceResponse[] = [
+  {
+    questionId: 'q1',
+    tStart: 1.2,
+    tEnd: 15.8,
+    kind: 'strength',
+    label: '두괄식',
+    comment: '결론을 먼저 말하는 구조로 답했습니다.',
+  },
+  {
+    questionId: 'q4',
+    tStart: 12,
+    tEnd: 30.4,
+    kind: 'strength',
+    label: '구체적 사례',
+    comment: '경험을 수치와 함께 제시했습니다.',
+  },
+  {
+    questionId: 'q3',
+    tStart: 8,
+    tEnd: 16.4,
+    kind: 'weakness',
+    label: '근거 부족',
+    comment: '선택 이유를 설명했으나 비교 대상이 제시되지 않았습니다.',
+  },
+]
+
+const SPEECH_EVIDENCE: EvidenceResponse[] = [
+  {
+    questionId: 'q3',
+    tStart: 0,
+    tEnd: 8,
+    kind: 'weakness',
+    label: '침묵',
+    comment: '예상 밖 질문에서 8초 동안 말이 멈췄습니다.',
+  },
+]
+
+const CONTENT_OK: AxisResponse = {
+  status: 'ok',
+  errorCode: null,
+  reason: null,
+  score: 84,
+  display: 4,
+  // 내용 축 metrics 는 계약서에서 아직 빈 객체입니다. 비어 있는 게 오류가 아닙니다.
+  metrics: {},
+  evidence: CONTENT_EVIDENCE,
+}
+
+const SPEECH_OK: AxisResponse = {
+  status: 'ok',
+  errorCode: null,
+  reason: null,
+  score: 78,
+  display: 4,
+  // 말하기 축만 키가 확정됐습니다. 백엔드가 키 이름을 camelCase 로 바꿔 보냅니다
+  metrics: { hesitationScore: 32, speechRateCv: 0.284, repetitionCount: 3 },
+  evidence: SPEECH_EVIDENCE,
+}
+
+function failedAxis(errorCode: string): AxisResponse {
+  return { status: 'failed', errorCode, reason: null, score: null, display: null, metrics: null, evidence: [] }
+}
+
+const GAZE_SKIPPED: AxisResponse = {
+  status: 'skipped',
+  errorCode: null,
+  reason: 'no_video',
+  score: null,
+  display: null,
+  metrics: null,
+  evidence: [],
+}
+
+/** 개선 답변 예시. 백엔드는 내용 점수가 낮은 문항을 최대 2개 보냅니다. 화면은 첫 번째만 씁니다 */
+const IMPROVED_ANSWERS: ReportDetailResponse['improvedAnswers'] = [
+  {
+    questionId: 'q3',
+    originalExcerpt:
+      '저는 데이터 분석 프로젝트에서 전처리를 담당했고 어… 랜덤 포레스트를 사용해서 성능을 좀 올렸습니다.',
+    suggestion:
+      '이탈률 예측 프로젝트에서 전처리를 맡아, 결측 구간을 재정의해 학습 데이터를 12% 늘렸습니다. 그 결과 모델 F1이 0.71에서 0.78로 개선됐습니다.',
+    tStart: 8,
+    tEnd: 21.5,
+  },
+]
+
+// AI 프롬프트대로 "인재상에서 드러난 것 + 더 보여주면 좋을 것" 1~2문장입니다 (ai/report_writer.py)
+const COMPANY_COMMENT =
+  '인재상에서 강조하는 협업 경험은 Q4 사례로 잘 드러났어요. 스스로 문제를 정의한 과정을 Q3 같은 직무 질문에서 더 보여주면 좋겠어요.'
 
 /**
- * AI 분석 결과 부분입니다. **전달 문서의 응답 모양 그대로** 적었습니다.
+ * 목업 리포트 id 입니다.
  *
- * 화면용 모양으로 미리 다듬어두면 변환 함수가 한 번도 안 돌아서, 실제 응답이
- * 왔을 때 처음 돌아가게 됩니다. 목업이라도 서버가 주는 모양으로 두는 편이
- * 변환층을 실제로 검증합니다.
- *
- * 시안대로 **시선 분석이 실패한 상태**입니다. 빈 값 · 실패 값일 때 화면이
- * 어떻게 되는지가 리포트에서 제일 자주 겪을 상황이기 때문입니다.
+ * 실제 `reportId` 는 **UUID 문자열**입니다. `Report` 엔티티가 정수 PK 와 별도로 `public_id` 를
+ * 들고 있고, 바깥에는 그것만 나갑니다 (이슈 #54 3-2). 목업도 같은 모양으로 둬야 짧은 id 에 기대는
+ * 코드가 연동 날 깨지지 않습니다.
  */
-const SAMPLE_ANALYSIS: AnalysisResult = {
-  report_status: 'partial',
+export const MOCK_REPORT_IDS = {
+  noExtras: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c01',
+  noCamera: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c02',
+  latest: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c03',
+  bothFailed: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c04',
+} as const
+
+/**
+ * 시선 분석이 **실패한** 회차입니다(기본). 시안과 같은 상태이고, 리포트에서 제일 자주 겪을 상황입니다.
+ * 시선을 다시 분석하면 살아납니다 (`reportRetryMock.ts`).
+ */
+const LATEST: ReportDetailResponse = {
+  reportId: MOCK_REPORT_IDS.latest,
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e03',
+  status: 'PARTIAL',
   summary:
     '자기소개와 협업 경험은 안정적으로 풀었지만, 3번 꼬리질문에서 흐름이 한 번 끊겼습니다. 끊긴 뒤 다시 페이스를 찾는 데 40초가 걸렸어요.',
   overall: {
     score: 82,
     display: 4,
     gated: false,
-    gate_reason: null,
+    gateReason: null,
     partial: true,
-    axes_used: ['content', 'speech'],
-    axes_failed: ['gaze'],
+    axesUsed: ['content', 'speech'],
+    axesFailed: ['gaze'],
   },
-  axes: {
-    content: {
-      status: 'ok',
-      score: 84,
-      display: 4,
-      // 내용 축 metrics 는 계약서에서 아직 빈 객체입니다. 비어 있는 게 오류가 아닙니다.
-      metrics: {},
-      evidence: [
-        {
-          question_id: 'q3',
-          t_start: 208,
-          t_end: 216.4,
-          kind: 'weakness',
-          label: '근거 부족',
-          comment: '선택 이유를 설명했으나 비교 대상이 제시되지 않았습니다.',
-        },
-      ],
-    },
-    speech: {
-      status: 'ok',
-      score: 78,
-      display: 4,
-      // 말하기 축만 키가 확정됐습니다. 내용 · 시선은 아직 빈 객체입니다.
-      metrics: { hesitation_score: 32, speech_rate_cv: 0.284, repetition_count: 3 },
-      evidence: [],
-    },
-    gaze: {
-      status: 'failed',
-      score: null,
-      display: null,
-      metrics: null,
-      evidence: [],
-      error_code: 'GAZE_FAILED',
-    },
-  },
-  questions: SAMPLE_QUESTIONS,
-  resilience: {
-    score: 58,
-    display: 3,
-    comment: '압박 질문 이후 답변 길이가 절반으로 줄었습니다.',
-  },
-  // AI 프롬프트대로 "인재상에서 드러난 것 + 더 보여주면 좋을 것" 1~2문장입니다 (ai/report_writer.py)
-  company_comment:
-    '인재상에서 강조하는 협업 경험은 Q4 사례로 잘 드러났어요. 스스로 문제를 정의한 과정을 Q3 같은 직무 질문에서 더 보여주면 좋겠어요.',
+  axes: { content: CONTENT_OK, speech: SPEECH_OK, gaze: failedAxis('GAZE_FAILED') },
+  questions: toQuestions({
+    axes: (score) => ({ content: score + 2, speech: score - 4, gaze: null }),
+    comments: 'all',
+  }),
+  resilience: { score: 58, display: 3, comment: '압박 질문 이후 답변 길이가 절반으로 줄었습니다.' },
+  companyComment: COMPANY_COMMENT,
+  improvedAnswers: IMPROVED_ANSWERS,
+  retry: null,
+  generatedAt: '2026-07-18T14:23:10+09:00',
+  createdAt: '2026-07-18T14:21:40+09:00',
+  completedAt: '2026-07-18T14:23:12+09:00',
 }
 
 /**
- * 시선을 **안 쓴** 회차입니다. 실패(`failed`)와 미사용(`skipped`)이 화면에서
- * 다르게 보이는지 확인하려고 둡니다. 친절형 면접이라 회복력도 없고, 총점에
- * 상한이 걸린 경우까지 한 번에 볼 수 있습니다.
+ * 시선을 **안 쓴** 회차입니다. 실패(`failed`)와 미사용(`skipped`)이 화면에서 다르게 보이는지 확인하려고 둡니다.
+ * 친절형 면접이라 회복력도 없고, 총점에 상한이 걸린 경우와 시간 초과 문항(4번)까지 한 번에 볼 수 있습니다.
  *
- * **미사용은 `partial` 이 아닙니다.** AI 구현(`ai/report_dummy.py`)이
- * `axes_failed` 를 `status == 'failed'` 인 축만으로 만들고, `report_status` ·
- * `overall.partial` 을 그 목록이 비었는지로 정합니다. `skipped` 는 거기 안
- * 들어가서, 카메라만 안 켠 회차는 `complete` · `partial: false` 로 옵니다.
- *
- * 전에는 여기를 `partial: true` 로 뒀는데 구현상 나올 수 없는 조합이었습니다.
- * 그 탓에 목업에서는 "일부 항목이 빠진 결과예요" 안내가 뜨는데 실제 연동
- * 후에는 안 떠서, 지금 확인한 화면이 나중 화면과 달랐습니다. (PR #50 리뷰)
- *
- * 미사용 축에는 다시 분석 버튼도 없습니다. 카메라를 안 켠 회차는 다시 돌려도 결과가 같습니다.
+ * **미사용은 `PARTIAL` 이 아닙니다.** `axesFailed` 는 `status == 'failed'` 인 축만 담고, `partial` 도 그 목록이
+ * 비었는지로 정해집니다. 카메라만 안 켠 회차는 `COMPLETED` · `partial: false` 로 옵니다. 그래서 위쪽 부분 실패
+ * 안내는 안 뜨고 시선 줄에만 사유가 남습니다. 다시 분석 버튼도 없습니다 — 다시 돌려도 결과가 같습니다.
  */
-const SKIPPED_ANALYSIS: AnalysisResult = {
-  report_status: 'complete',
+const NO_CAMERA: ReportDetailResponse = {
+  ...LATEST,
+  reportId: MOCK_REPORT_IDS.noCamera,
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e02',
+  status: 'COMPLETED',
   summary: '말하기 속도는 안정됐지만, 답변이 질문에서 벗어난 구간이 있어 내용 점수가 낮게 나왔습니다.',
   overall: {
     score: 40,
     display: 2,
     gated: true,
-    gate_reason: 'content_relevance_low',
+    gateReason: 'content_relevance_low',
     partial: false,
-    axes_used: ['content', 'speech'],
-    axes_failed: [],
+    axesUsed: ['content', 'speech'],
+    axesFailed: [],
   },
   axes: {
-    content: { status: 'ok', score: 38, display: 2, metrics: {}, evidence: [] },
+    content: { ...CONTENT_OK, score: 38, display: 2, evidence: CONTENT_EVIDENCE.slice(2) },
     speech: {
-      status: 'ok',
+      ...SPEECH_OK,
       score: 72,
-      display: 4,
-      metrics: { hesitation_score: 54, speech_rate_cv: 0.41, repetition_count: 6 },
+      metrics: { hesitationScore: 54, speechRateCv: 0.41, repetitionCount: 6 },
       evidence: [],
     },
-    gaze: {
-      status: 'skipped',
-      score: null,
-      display: null,
-      metrics: null,
-      evidence: [],
-      reason: 'no_video',
-    },
+    gaze: GAZE_SKIPPED,
   },
-  questions: SAMPLE_QUESTIONS,
+  questions: toQuestions({
+    axes: (score) => ({ content: score - 40, speech: score - 8, gaze: null }),
+    comments: 'all',
+    timeoutNumber: 4,
+  }),
   resilience: null,
-  company_comment: SAMPLE_ANALYSIS.company_comment,
+  createdAt: '2026-07-16T19:02:00+09:00',
+}
+
+/** 한 줄 총평 키를 뺀 사본입니다. null 이 아니라 키가 없는 모양입니다 */
+function withoutSummary(detail: ReportDetailResponse): ReportDetailResponse {
+  const copy = { ...detail }
+  delete copy.summary
+  return copy
+}
+
+/**
+ * **지금 백엔드 응답 그대로**인 회차입니다. 한 줄 총평 · 문항 코멘트 키가 없고, 개선 답변 예시도 빈 배열입니다.
+ * 총평 칸 · 흐름의 코멘트 줄 · 개선 답변 절과 토글이 모두 사라지는지 이 회차로 봅니다.
+ */
+const NO_EXTRAS: ReportDetailResponse = {
+  ...withoutSummary(LATEST),
+  reportId: MOCK_REPORT_IDS.noExtras,
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e01',
+  questions: toQuestions({
+    axes: (score) => ({ content: score + 2, speech: score - 4, gaze: null }),
+    comments: 'none',
+  }),
+  improvedAnswers: [],
+  createdAt: '2026-07-14T10:30:00+09:00',
 }
 
 /**
@@ -196,246 +295,42 @@ const SKIPPED_ANALYSIS: AnalysisResult = {
  * AI 가 쓰는 글이 실패했을 때(null) 화면이 어떻게 되는지도 이 회차로 봅니다.
  * - 한 줄 총평(`summary`) — null. 총평 칸을 그리지 않습니다
  * - 문항 코멘트(`questions[].comment`) — 2번 · 4번만 null. 그 줄만 코멘트 없이 제목만 남습니다
- * - 인재상 코멘트(`company_comment`) — 기업 미선택이라 null. 인재상 칸을 그리지 않습니다
+ * - 인재상 코멘트(`companyComment`) — 기업 미선택이라 null. 인재상 칸을 그리지 않습니다
  *
- * 내용만 남아서 총점도 내용 점수로만 계산된 값입니다.
+ * 내용만 남아서 총점도 내용 점수로만 계산된 값입니다. 다시 분석의 실패 흐름을 이 회차로 봅니다 (`reportRetryMock.ts`)
  */
-const BOTH_FAILED_ANALYSIS: AnalysisResult = {
-  report_status: 'partial',
+const BOTH_FAILED: ReportDetailResponse = {
+  ...LATEST,
+  reportId: MOCK_REPORT_IDS.bothFailed,
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e04',
   summary: null,
   overall: {
     score: 84,
     display: 4,
     gated: false,
-    gate_reason: null,
+    gateReason: null,
     partial: true,
-    axes_used: ['content'],
-    axes_failed: ['speech', 'gaze'],
+    axesUsed: ['content'],
+    axesFailed: ['speech', 'gaze'],
   },
-  axes: {
-    content: SAMPLE_ANALYSIS.axes.content,
-    speech: {
-      status: 'failed',
-      score: null,
-      display: null,
-      metrics: null,
-      evidence: [],
-      error_code: 'SPEECH_FAILED',
-    },
-    gaze: SAMPLE_ANALYSIS.axes.gaze,
-  },
-  questions: QUESTION_SCORES.map((score, index) =>
-    toQuestion(
-      index + 1,
-      score,
-      { content: score + 2, speech: null, gaze: null },
-      index % 2 === 0 ? QUESTION_COMMENTS[index] : null,
-    ),
-  ),
-  resilience: SAMPLE_ANALYSIS.resilience,
-  company_comment: null,
-}
-
-/** 값이 있는 보조 지표만 모읍니다. 없는 지표는 자리도 만들지 않습니다. */
-function toSubMetrics(analysis: AnalysisResult): SubMetric[] {
-  return [
-    toResilienceMetric(analysis.resilience),
-    toHesitationMetric(analysis.axes.speech),
-  ].filter((item): item is SubMetric => item !== null)
+  axes: { content: CONTENT_OK, speech: failedAxis('SPEECH_FAILED'), gaze: failedAxis('GAZE_FAILED') },
+  questions: toQuestions({
+    axes: (score) => ({ content: score + 2, speech: null, gaze: null }),
+    comments: 'some',
+  }),
+  companyComment: null,
+  createdAt: '2026-07-20T16:45:00+09:00',
 }
 
 /**
- * 목업 회차의 리포트 id 입니다.
- *
- * 실제 `reportId` 는 **UUID 문자열**입니다. `Report` 엔티티가 정수 PK 와 별도로 `public_id` 를
- * 들고 있고, 문서와 같은 이유로 바깥에는 그것만 나갑니다 (이슈 #54 3-2). 목업도 같은 모양으로
- * 둬야 `r1` 같은 짧은 id 에 기대는 코드가 연동 날 깨지지 않습니다.
+ * 리포트별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
+ * 목록에 없는 id 는 `latest` 모양에 id 만 바꿔 돌려줍니다 — 분석 중 화면(B-02)이 목업에서 여는 리포트가 이것입니다.
  */
-export const MOCK_REPORT_IDS = {
-  expired: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c01',
-  noCamera: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c02',
-  latest: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c03',
-  /** 다른 면접(1회차)이라 회차 칩에는 없습니다. 주소창에 직접 넣어 엽니다 */
-  bothFailed: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c04',
-} as const
-
-/** 분석 결과에서 채우는 값입니다. 목업은 이 부분을 **변환 함수로** 채워서 변환층을 같이 돌립니다 */
-type AnalysisFields =
-  | 'status'
-  | 'totalScore'
-  | 'totalScoreDisplay'
-  | 'scoreGateReason'
-  | 'companyComment'
-  | 'metrics'
-  | 'subMetrics'
-
-/**
- * 리포트에서 백엔드가 감싸는 바깥 부분입니다(회사명 · 회차 · 영상 · 개요 …).
- * 총평과 면접 흐름의 코멘트는 AI 가 쓰므로 여기 없고 분석 결과에서 채웁니다.
- * `notices` 에는 분석과 관계없는 안내(영상 만료)만 둡니다.
- */
-type ReportShell = Omit<Report, AnalysisFields | 'summary'> & {
-  summary: Omit<ReportSummary, 'verdict' | 'turns'> & { turns: Omit<TurnFlow, 'comment'>[] }
-}
-
-/**
- * 백엔드가 준비되기 전까지 화면을 그리기 위한 가짜 리포트입니다.
- * 값은 C-01 시안에 적힌 것을 그대로 옮겼습니다. 계약이 확정되면 교체합니다.
- */
-const SAMPLE_SHELL: ReportShell = {
-  reportId: MOCK_REPORT_IDS.latest,
-  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e03',
-  companyName: '네이버',
-  jobRole: '기획 직무',
-  interviewDate: '2026.07.18',
-  questionCount: 4,
-
-  attempt: 3,
-  attempts: [
-    { attempt: 1, reportId: MOCK_REPORT_IDS.expired, isLatest: false },
-    { attempt: 2, reportId: MOCK_REPORT_IDS.noCamera, isLatest: false },
-    { attempt: 3, reportId: MOCK_REPORT_IDS.latest, isLatest: true },
-  ],
-
-  totalScoreDelta: { fromAttempt: 2, diff: 6 },
-  notices: [],
-
-  summary: {
-    overview: [
-      { key: 'total', label: '총 소요', value: '05:48' },
-      { key: 'average', label: '평균 답변', value: '1:27' },
-      { key: 'questions', label: '질문 수', value: '4문항' },
-      { key: 'style', label: '면접관 스타일', value: '압박형' },
-    ],
-    // 코멘트는 분석 결과의 문항 번호(`question_number`)로 채웁니다
-    turns: [
-      { turnId: 1, title: 'Q1 자기소개', status: '안정', startSeconds: 12, endSeconds: 95, score: 82 },
-      { turnId: 2, title: 'Q2 지원동기', status: '보통', startSeconds: 105, endSeconds: 190, score: 79 },
-      {
-        turnId: 3,
-        title: 'Q3 직무역량 · 압박 꼬리질문',
-        status: '흔들림',
-        startSeconds: 200,
-        endSeconds: 295,
-        score: 71,
-      },
-      { turnId: 4, title: 'Q4 협업경험', status: '안정', startSeconds: 302, endSeconds: 348, score: 85 },
-    ],
-    strengths: [
-      { text: '결론을 먼저 말하는 구조', startSeconds: 14, endSeconds: 29 },
-      { text: '경험을 수치와 함께 제시', startSeconds: 316, endSeconds: 334 },
-    ],
-    weaknesses: [
-      { text: '예상 밖 질문에서 침묵', startSeconds: 208, endSeconds: 216 },
-      // 시각을 못 잡은 경우도 섞어둡니다
-      { text: '추상적 표현으로 마무리', startSeconds: null, endSeconds: null },
-    ],
-  },
-
-  metricsComment: '2회차 대비 내용 구성이 가장 크게 좋아졌어요',
-
-  improvedAnswer: {
-    turnTitle: 'Q3 직무역량',
-    myAnswer:
-      '저는 데이터 분석 프로젝트에서 전처리를 담당했고 어… 랜덤 포레스트를 사용해서 성능을 좀 올렸습니다.',
-    example:
-      '이탈률 예측 프로젝트에서 전처리를 맡아, 결측 구간을 재정의해 학습 데이터를 12% 늘렸습니다. 그 결과 모델 F1이 0.71에서 0.78로 개선됐습니다.',
-  },
-
-  // 재생 주소는 아직 계약이 없어서 비워둡니다. 화면은 "재생 자리"까지만 그리고
-  // 실제 재생은 계약이 온 뒤에 붙입니다. (이슈 #38)
-  video: {
-    playUrl: null,
-    isExpired: false,
-    durationSeconds: 348,
-    qualityLabel: '원본 화질',
-  },
-}
-
-/**
- * 링크 만료 상태(시안 `상태C`)도 확인할 수 있게 회차 하나를 만료로 둡니다.
- * 오래된 회차가 먼저 만료되는 게 자연스러워서 1회차로 골랐습니다.
- */
-const EXPIRED_VIDEO: ReportVideo = {
-  playUrl: null,
-  isExpired: true,
-  durationSeconds: 348,
-  qualityLabel: null,
-}
-
-const EXPIRED_NOTICE =
-  '보안을 위해 영상 재생 링크는 일정 시간이 지나면 만료됩니다. 점수와 분석 내용은 그대로 확인할 수 있습니다.'
-
-type MockScenario = { shell: ReportShell; analysis: AnalysisResult }
-
-/**
- * 회차별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
- *
- * - 1회차(`expired`) — 영상 링크 만료 (시안 `상태C`) · **개선 답변 예시 없음**.
- *   개선 답변 예시는 명세서 v0.2 에서 P1 이라 백엔드 MVP 에 안 올 수 있습니다. 절과 토글이 둘 다
- *   사라지는지 이 회차로 봅니다 (이슈 #54 3-1)
- * - 2회차(`noCamera`) — 시선 **미사용**(카메라 안 켬) · 회복력 없음(친절형) · 총점 상한 걸림.
- *   미사용뿐이라 `complete` 입니다 — 위쪽 부분 실패 안내는 안 뜨고 시선 줄에만 사유가 남습니다.
- *   카메라를 안 켰으니 **답변 영상도 없습니다**(`video: null`). "만료" 와 "애초에 없음" 은 다른
- *   상태입니다 (이슈 #54 3-4)
- * - 3회차(`latest`) — 시선 **분석 실패** (기본). 목록에 없는 id 도 이 모양으로 돌려줍니다.
- *   분석 중 화면(B-02)이 목업에서 세션 id 로 리포트를 여는 길이 이걸로 이어집니다.
- *   시선을 다시 분석하면 살아납니다 (`reportRetryMock.ts`)
- * - 다른 면접 1회차(`bothFailed`) — **말하기 · 시선 둘 다 실패** · 기업 미선택 · 총평 · 일부 문항 코멘트 생성 실패.
- *   다시 분석의 실패 흐름을 이 회차로 봅니다 (`reportRetryMock.ts`)
- */
-const SCENARIOS: Record<string, MockScenario> = {
-  [MOCK_REPORT_IDS.latest]: { shell: SAMPLE_SHELL, analysis: SAMPLE_ANALYSIS },
-
-  [MOCK_REPORT_IDS.noCamera]: {
-    shell: {
-      ...SAMPLE_SHELL,
-      reportId: MOCK_REPORT_IDS.noCamera,
-      attempt: 2,
-      // 회복력이 없는 건 친절형 면접이기 때문입니다. 개요도 같이 맞춰둡니다.
-      summary: {
-        ...SAMPLE_SHELL.summary,
-        overview: SAMPLE_SHELL.summary.overview.map((fact) =>
-          fact.key === 'style' ? { ...fact, value: '친절형' } : fact,
-        ),
-      },
-      totalScoreDelta: null,
-      // 기본 소제목이 "2회차 대비" 라 2회차 자기 자신과 비교하는 말이 됐습니다.
-      metricsComment: '1회차 대비 말하기 속도가 안정됐어요',
-      video: null,
-    },
-    analysis: SKIPPED_ANALYSIS,
-  },
-
-  [MOCK_REPORT_IDS.expired]: {
-    shell: {
-      ...SAMPLE_SHELL,
-      reportId: MOCK_REPORT_IDS.expired,
-      // 전에는 1회차를 열어도 3회차 칩이 골라지고 "2회차 대비" 가 떴습니다. 첫 회차라 비교 대상이 없습니다.
-      attempt: 1,
-      totalScoreDelta: null,
-      metricsComment: null,
-      video: EXPIRED_VIDEO,
-      improvedAnswer: null,
-      notices: [EXPIRED_NOTICE],
-    },
-    analysis: SAMPLE_ANALYSIS,
-  },
-
-  [MOCK_REPORT_IDS.bothFailed]: {
-    shell: {
-      ...SAMPLE_SHELL,
-      reportId: MOCK_REPORT_IDS.bothFailed,
-      sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e04',
-      companyName: null,
-      interviewDate: '2026.07.20',
-      attempt: 1,
-      attempts: [{ attempt: 1, reportId: MOCK_REPORT_IDS.bothFailed, isLatest: true }],
-      totalScoreDelta: null,
-      metricsComment: null,
-    },
-    analysis: BOTH_FAILED_ANALYSIS,
-  },
+const SCENARIOS: Record<string, ReportDetailResponse> = {
+  [MOCK_REPORT_IDS.latest]: LATEST,
+  [MOCK_REPORT_IDS.noCamera]: NO_CAMERA,
+  [MOCK_REPORT_IDS.noExtras]: NO_EXTRAS,
+  [MOCK_REPORT_IDS.bothFailed]: BOTH_FAILED,
 }
 
 /**
@@ -454,102 +349,64 @@ export function recoverMockAxes(reportId: string, axes: RetryAxis[]) {
 /** 다시 분석해서 살아난 축의 값입니다 */
 const RECOVERED_AXIS: Record<RetryAxis, AxisResponse> = {
   speech: {
-    status: 'ok',
+    ...SPEECH_OK,
     score: 76,
-    display: 4,
-    metrics: { hesitation_score: 35, speech_rate_cv: 0.31, repetition_count: 4 },
+    metrics: { hesitationScore: 35, speechRateCv: 0.31, repetitionCount: 4 },
     evidence: [],
   },
-  gaze: { status: 'ok', score: 74, display: 4, metrics: {}, evidence: [] },
+  gaze: { status: 'ok', errorCode: null, reason: null, score: 74, display: 4, metrics: {}, evidence: [] },
 }
 
 const AXIS_KEYS: AxisKey[] = ['content', 'speech', 'gaze']
 
 /**
- * 살아난 축을 분석 결과에 반영합니다. 실제로는 AI 가 리포트 전체를 다시 조립해 보내고 백엔드가 통째로
+ * 살아난 축을 리포트에 반영합니다. 실제로는 AI 가 리포트 전체를 다시 조립해 보내고 백엔드가 통째로
  * 바꿉니다(AI 계약 14장). 목업은 축 · 상태 · 총점만 바꿉니다.
  *
  * 총점은 AI 가 가중치로 다시 계산합니다. 목업은 그 규칙을 모르므로 **쓰인 축의 평균**으로 둡니다 —
  * 실제 점수와 같을 필요는 없고, 다시 분석한 뒤 총점이 바뀌어 보이는지만 확인하면 됩니다.
  */
-function withRecovered(analysis: AnalysisResult, recovered: Set<RetryAxis> | undefined): AnalysisResult {
-  if (!recovered || recovered.size === 0) return analysis
+function withRecovered(detail: ReportDetailResponse, recovered: Set<RetryAxis> | undefined): ReportDetailResponse {
+  if (!recovered || recovered.size === 0) return detail
 
-  const axes = { ...analysis.axes }
+  const axes = { ...detail.axes }
   recovered.forEach((axis) => {
-    if (axes[axis].status === 'failed') axes[axis] = RECOVERED_AXIS[axis]
+    if (axes[axis]?.status === 'failed') axes[axis] = RECOVERED_AXIS[axis]
   })
 
-  const used = AXIS_KEYS.filter((key) => axes[key].status === 'ok')
-  const failed = AXIS_KEYS.filter((key) => axes[key].status === 'failed')
-  const scores = used.map((key) => axes[key].score ?? 0)
+  const used = AXIS_KEYS.filter((key) => axes[key]?.status === 'ok')
+  const failed = AXIS_KEYS.filter((key) => axes[key]?.status === 'failed')
+  const scores = used.map((key) => axes[key]?.score ?? 0)
   const score = Math.round(scores.reduce((sum, value) => sum + value, 0) / Math.max(1, scores.length))
 
   return {
-    ...analysis,
-    report_status: failed.length > 0 ? 'partial' : 'complete',
+    ...detail,
+    status: failed.length > 0 ? 'PARTIAL' : 'COMPLETED',
     overall: {
-      ...analysis.overall,
+      ...detail.overall,
       score,
-      display: Math.min(5, Math.max(1, Math.ceil(score / 20))),
+      display: toDisplay(score),
       partial: failed.length > 0,
-      axes_used: used,
-      axes_failed: failed,
+      axesUsed: used,
+      axesFailed: failed,
     },
     axes,
   }
 }
 
-/** 바깥 부분과 분석 결과를 합쳐 화면용 리포트를 만듭니다. 분석에서 오는 값은 전부 변환 함수를 거칩니다 */
-function toMockReport(shell: ReportShell, analysis: AnalysisResult): Report {
-  return {
-    ...shell,
-    status: analysis.report_status,
-    totalScore: analysis.overall.score,
-    totalScoreDisplay: analysis.overall.display,
-    scoreGateReason: toScoreGateReason(analysis.overall),
-    // 분석에서 오는 안내(부분 실패)를 먼저, 회차 사정(영상 만료)을 뒤에 둡니다
-    notices: [...toPartialNotices(analysis), ...shell.notices],
-    summary: {
-      ...shell.summary,
-      verdict: toVerdict(analysis),
-      turns: shell.summary.turns.map((turn) => ({
-        ...turn,
-        comment: toQuestionComment(analysis, turn.turnId),
-      })),
-    },
-    companyComment: toCompanyComment(analysis),
-    metrics: toScoreMetrics(analysis.axes),
-    subMetrics: toSubMetrics(analysis),
-  }
-}
-
-/** 목록에 없는 id 는 3회차 모양으로 돌려줍니다 */
-function scenarioOf(reportId: string): MockScenario {
-  return SCENARIOS[reportId] ?? SCENARIOS[MOCK_REPORT_IDS.latest]
-}
-
-/** 지금 시점의 분석 결과 — 다시 분석해서 살아난 축까지 반영한 것입니다 */
-function mockAnalysisOf(reportId: string): AnalysisResult {
-  return withRecovered(scenarioOf(reportId).analysis, recoveredAxes.get(reportId))
-}
-
-/** 목업 리포트를 만듭니다. 목록에 없는 id 는 3회차 모양에 id 만 바꿔 돌려줍니다. */
-export function buildMockReport(reportId: string): Report {
-  return toMockReport({ ...scenarioOf(reportId).shell, reportId }, mockAnalysisOf(reportId))
+/** 지금 시점의 상세 응답 — 다시 분석해서 살아난 축까지 반영한 것입니다. 목록에 없는 id 는 `latest` 모양입니다 */
+function mockDetailOf(reportId: string): ReportDetailResponse {
+  const base = SCENARIOS[reportId] ?? { ...LATEST, reportId }
+  return withRecovered(base, recoveredAxes.get(reportId))
 }
 
 /**
  * 리포트의 상태와 총점만 꺼냅니다. 재시도 목업(`reportRetryMock.ts`)이 씁니다.
- *
- * 전에는 상태 하나를 보려고 `buildMockReport` 로 리포트 전체를 변환했습니다. 재시도 등록 · 결과 통지가 보는 건
- * 이 두 값뿐이라 분석 결과에서 바로 읽습니다. (PR #92 리뷰)
+ * 재시도 등록 · 결과 통지가 보는 건 이 두 값뿐이라 화면용으로 바꾸지 않고 응답에서 바로 읽습니다. (PR #92 리뷰)
  */
-export function mockReportState(reportId: string): Pick<Report, 'status' | 'totalScore'> {
-  const analysis = mockAnalysisOf(reportId)
-  return { status: analysis.report_status, totalScore: analysis.overall.score }
+export function mockReportState(reportId: string): { status: 'complete' | 'partial'; totalScore: number } {
+  const detail = mockDetailOf(reportId)
+  return { status: detail.status === 'PARTIAL' ? 'partial' : 'complete', totalScore: detail.overall.score ?? 0 }
 }
 
-registerMock('GET', '/api/reports/:reportId', ({ reportId }) => buildMockReport(reportId), {
-  missingInBackend: '리포트 조회 API 없음 (명세서 v0.2 `/v1/reports/{reportId}` 시작 전)',
-})
+registerMock('GET', '/api/reports/:reportId', ({ reportId }) => mockDetailOf(reportId))

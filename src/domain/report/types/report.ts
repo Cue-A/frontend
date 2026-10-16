@@ -1,8 +1,8 @@
 /**
  * 리포트 화면(C-01)이 쓰는 타입입니다.
  *
- * 서버 응답 타입이 아니라 **화면용 타입**입니다. 백엔드 계약이 확정되면
- * `domain/report/api/` 에서 응답을 이 모양으로 변환합니다.
+ * 서버 응답 타입이 아니라 **화면용 타입**입니다. 리포트 상세 응답은
+ * `domain/report/api/reportResponse.ts` 의 `toReport` 가 이 모양으로 바꿉니다.
  * 그래야 서버 필드가 바뀌어도 화면이 통째로 흔들리지 않습니다.
  * (docs/01-conventions.md "타입" 절)
  */
@@ -99,10 +99,13 @@ export type TurnFlow = {
    * "코멘트를 만들지 못했어요" 를 문항마다 적으면 실패가 리포트의 주인공처럼 보입니다.
    */
   comment: string | null
-  /** '안정' · '보통' · '흔들림' */
-  status: string
-  /** 영상 기준 시작 초. XAI 타임라인의 마커 위치로도 씁니다 */
-  startSeconds: number
+  /**
+   * '안정' · '보통' · '흔들림' · '시간 초과'. 응답에 없어 문항 점수로 나눕니다(`reportResponse.ts`).
+   * 점수가 없으면 null 이고 라벨을 달지 않습니다
+   */
+  status: string | null
+  /** 영상 기준 시작 초. XAI 타임라인의 마커 위치로도 씁니다. 응답에 영상 기준 시각이 없어 지금은 null 입니다 */
+  startSeconds: number | null
   /** 영상 기준 종료 초. 구간 재생에 씁니다. 아직 없으면 null (PR #8 리뷰) */
   endSeconds: number | null
   /** 0~100. 아직 못 매겼으면 null */
@@ -202,8 +205,10 @@ export type Report = {
   /** 면접 세션과 1:1 입니다. 면접이 끝나면 sessionId 로 리포트를 찾아옵니다 */
   sessionId: string
   status: ReportStatus
+  /** 응답에 아직 없어서 null 입니다. 없으면 머리말에서 빠집니다 */
   companyName: string | null
-  jobRole: string
+  /** 응답에 아직 없어서 null 입니다. 없으면 머리말 · 요약 소제목에서 빠집니다 */
+  jobRole: string | null
   /** 'YYYY.MM.DD' 로 이미 다듬어서 넘깁니다 */
   interviewDate: string
   questionCount: number

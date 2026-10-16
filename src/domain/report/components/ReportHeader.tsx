@@ -6,11 +6,14 @@ type Props = {
   report: Report
 }
 
-/** '네이버 · 기획 직무 면접 · 2026.07.18 · 질문 4문항' */
+/**
+ * '네이버 · 기획 직무 면접 · 2026.07.18 · 질문 4문항'
+ * 회사명 · 직무는 리포트 응답에 아직 없어서 비어 오면 그 칸만 뺍니다 ('2026.07.18 · 질문 4문항').
+ */
 function buildMeta(report: Report) {
   const parts = [
     report.companyName,
-    `${report.jobRole} 면접`,
+    report.jobRole && `${report.jobRole} 면접`,
     report.interviewDate,
     `질문 ${report.questionCount}문항`,
   ]

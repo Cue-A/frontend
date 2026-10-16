@@ -12,7 +12,7 @@ const STATUS_TONE: Record<string, 'success' | 'info' | 'warning'> = {
 
 type Props = {
   summary: ReportSummary
-  /** 소제목에 쓰는 '기획 직무 · 2026.07.18' */
+  /** 소제목에 쓰는 '기획 직무 · 2026.07.18'. 직무가 없으면 날짜만 옵니다 */
   subtitle: string
 }
 
@@ -69,7 +69,7 @@ export default function SummarySection({ summary, subtitle }: Props) {
                     {turn.comment && <p className="text-body-sm text-neutral-500">{turn.comment}</p>}
                   </div>
 
-                  <Badge tone={STATUS_TONE[turn.status] ?? 'neutral'}>{turn.status}</Badge>
+                  {turn.status && <Badge tone={STATUS_TONE[turn.status] ?? 'neutral'}>{turn.status}</Badge>}
                 </li>
               ))}
             </ul>

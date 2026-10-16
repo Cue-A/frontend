@@ -34,7 +34,7 @@ function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
  *
  * **실패와 미사용은 문구가 다릅니다.** 카메라를 안 켜서 시선을 안 잰 회차에
  * "분석 실패" 가 뜨면 사용자는 서비스가 고장 난 줄 압니다. 문구는 변환층
- * (`api/analysisResponse.ts`)이 만들어 `unavailableLabel` 로 넘겨줍니다.
+ * (`api/reportResponse.ts`)이 만들어 `unavailableLabel` 로 넘겨줍니다.
  *
  * `display`(1~5)는 타입에 들고만 있고 아직 그리지 않습니다. 시안에 자리가
  * 없어서입니다. 프론트가 `score` 로 만들어내는 값이 아니라 서버가 따로 주는
