@@ -32,7 +32,32 @@ registerMock('GET', '/api/companies', () => COMPANIES, {
  * 못하게 막고 있어서 화면에서는 이 경로로 올 일이 없습니다.
  *
  * sessionId 는 면접 진행 목업(sessionSocketMock)이 `s1` 시나리오를 돌려서 고정 값입니다.
+ *
+ * 진행 방식(`hideQuestionText`)은 기억해 뒀다가 아래 세션 옵션 목업이 돌려줍니다. 목업에서도 "음성만 듣기" 를 고르면
+ * 면접 화면에 질문 글이 숨겨집니다. 면접 화면에서 새로고침해도 남도록 sessionStorage 에 둡니다(막혀 있으면 메모리만).
  */
+const HIDE_QUESTION_TEXT_KEY = 'cue-a:mock:hideQuestionText'
+let lastHideQuestionText = false
+
+function rememberHideQuestionText(value: boolean) {
+  lastHideQuestionText = value
+  try {
+    sessionStorage.setItem(HIDE_QUESTION_TEXT_KEY, String(value))
+  } catch {
+    // 저장소가 막힌 브라우저는 메모리 값만 씁니다.
+  }
+}
+
+function recallHideQuestionText(): boolean {
+  try {
+    const saved = sessionStorage.getItem(HIDE_QUESTION_TEXT_KEY)
+    if (saved !== null) return saved === 'true'
+  } catch {
+    // 위와 같습니다.
+  }
+  return lastHideQuestionText
+}
+
 registerMock('POST', '/api/interviews', (_params, body) => {
   const request = (body ?? {}) as Partial<Record<string, unknown>>
 
@@ -54,20 +79,29 @@ registerMock('POST', '/api/interviews', (_params, body) => {
   if (questionCount !== 3 && questionCount !== 6 && questionCount !== 9) {
     throw new ApiError('INVALID_QUESTION_COUNT', '질문 수는 3, 6, 9 중 하나여야 합니다')
   }
+  if (request.hideQuestionText !== undefined && request.hideQuestionText !== null && typeof request.hideQuestionText !== 'boolean') {
+    // 서버는 Boolean 이라 다른 값은 요청 해석 단계에서 거절됩니다. 생략하면 false 입니다.
+    throw new ApiError('INVALID_REQUEST', `hideQuestionText 는 true/false 여야 합니다 (${String(request.hideQuestionText)})`)
+  }
 
+  rememberHideQuestionText(request.hideQuestionText === true)
   return { sessionId: 's1', questionTotal: questionCount }
 })
 
 /**
- * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다. 고정값만 돌려준다 — 이유는
+ * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다. 면접관 · 답변 시간은 고정값이다 — 이유는
  * sessionApi.getInterviewOptions 주석 참고 (interviewerStyle 대소문자/값 범위 불일치).
+ *
+ * `hideQuestionText` 는 위 세션 생성 목업이 받은 값입니다. ⚠️ 면접을 실제 서버에 붙이면 이 API 만 목업이 답하는데
+ * (`missingInBackend`), 세션 생성은 실제 서버로 가서 목업이 값을 모릅니다 — 그때는 늘 false 입니다. 백엔드에 세션 조회
+ * API 가 생기거나 화면이 옵션 설정 값을 직접 넘겨받아야 풀립니다.
  */
 registerMock(
   'GET',
   '/api/interviews/:sessionId',
   () => ({
     interviewerStyle: 'friendly',
-    hideQuestionText: false,
+    hideQuestionText: recallHideQuestionText(),
     answerTimeLimitSec: 90,
   }),
   { missingInBackend: '면접 옵션 조회 API 없음 (명세서 v0.2 에도 없음)' },

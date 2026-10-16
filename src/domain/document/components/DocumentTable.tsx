@@ -22,8 +22,8 @@ type Props = {
   /** 지금 여는 중인 문서. 그 행의 조회 버튼을 잠급니다. */
   openingId: string | null
   onOpen: (document: DocumentSummary) => void
-  /** 제목 수정 창을 엽니다. 없으면 수정 버튼을 내지 않습니다 (수정 API 를 쓸 수 없을 때) */
-  onRename?: (document: DocumentSummary) => void
+  /** 제목 수정 창을 엽니다 */
+  onRename: (document: DocumentSummary) => void
   /** 지우기 확인 창을 엽니다. 실제로 지우는 건 확인 창입니다 */
   onDelete: (document: DocumentSummary) => void
 }
@@ -135,12 +135,10 @@ function renderBody(
                   {opening ? '여는 중…' : '조회'}
                   <span className="sr-only"> — {document.title}</span>
                 </Button>
-                {onRename && (
-                  <button type="button" onClick={() => onRename(document)} title="제목 수정" className={ICON_BUTTON}>
-                    <IconPencil size={18} stroke={2} aria-hidden />
-                    <span className="sr-only">제목 수정 — {document.title}</span>
-                  </button>
-                )}
+                <button type="button" onClick={() => onRename(document)} title="제목 수정" className={ICON_BUTTON}>
+                  <IconPencil size={18} stroke={2} aria-hidden />
+                  <span className="sr-only">제목 수정 — {document.title}</span>
+                </button>
                 <button type="button" onClick={() => onDelete(document)} title="지우기" className={ICON_BUTTON}>
                   <IconTrash size={18} stroke={2} aria-hidden />
                   <span className="sr-only">지우기 — {document.title}</span>
@@ -161,8 +159,8 @@ function renderBody(
  * 메뉴를 여는 수고가 없고, 표가 `overflow-hidden` 이라 아래쪽 행의 메뉴가 잘리는 문제도 없습니다. 항목이 더
  * 늘면 그때 메뉴로 모읍니다. (이슈 #59)
  *
- * 제목 수정 버튼은 `onRename` 을 받았을 때만 냅니다. 수정 API 가 백엔드에 아직 없어서, 문서를 실제 서버에 붙인
- * 동안은 화면이 `onRename` 을 주지 않습니다 (`documentApi.ts` 의 `CAN_RENAME_DOCUMENT`).
+ * 제목 수정은 실제 서버에서도 됩니다 (Cue-A/backend#76). 전에는 수정 API 가 없어서 문서를 실제 서버에 붙인 동안
+ * 버튼을 숨겼습니다.
  *
  * "상태" 칸(완료 · 분석 중 · 실패)은 뺐습니다. 문서의 준비 상태가 백엔드 응답에서 빠져서(Cue-A/backend#58)
  * 모든 행에 똑같은 "완료" 만 남기 때문입니다. 등록한 문서는 곧바로 면접에 쓸 수 있습니다.
