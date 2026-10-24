@@ -26,6 +26,23 @@ function classifyFailure(error: unknown): MediaTrackFailureReason {
   return 'unknown'
 }
 
+/**
+ * `deviceId` 로 exact 제약을 걸어 요청하되, 그 장치가 그 사이(장치 테스트 화면을 떠난
+ * 뒤 ~ 이 화면에 들어오기 전, 혹은 세션 도중) 빠져 `OverconstrainedError`/
+ * `NotFoundError` 가 나면 기본 장치로 한 번 더 시도한다(PR #103 리뷰) — 이 화면은
+ * DeviceCheckPage 와 달리 "다시 시도" 버튼이 없어, 폴백이 없으면 복구할 방법 없이
+ * 세션 내내 카메라·마이크가 먹통이 된다. 권한 거부 등 장치와 무관한 실패는 다시
+ * 시도해도 똑같이 실패하므로 그대로 던진다.
+ */
+async function getUserMediaWithFallback(kind: 'video' | 'audio', deviceId: string | undefined): Promise<MediaStream> {
+  try {
+    return await navigator.mediaDevices.getUserMedia({ [kind]: deviceId ? { deviceId: { exact: deviceId } } : true })
+  } catch (error) {
+    if (!deviceId || classifyFailure(error) !== 'not-found') throw error
+    return navigator.mediaDevices.getUserMedia({ [kind]: true })
+  }
+}
+
 export type UseMediaStreamResult = {
   camera: MediaTrackState
   mic: MediaTrackState
@@ -58,8 +75,15 @@ export type UseMediaStreamResult = {
  * `initialDeviceStatus` 는 장치 테스트 화면(INT-4)의 점검 결과를 시작 값으로 받는다.
  * 점검 통과 여부만 미리 알려줘서 'unchecked' 로 잠깐 깜빡이는 걸 줄이는 용도이고,
  * 스트림 자체는(장치 테스트 화면 것을 재사용할 수 없어서) 여기서 새로 받는다.
+ *
+ * `initialDeviceIds` 는 장치 테스트 화면에서 고른 카메라·마이크의 deviceId다(이슈 #97).
+ * 없으면(값이 null 이거나 아예 안 넘어오면) 브라우저 기본 장치로 받는다 — 장치 테스트를
+ * 거치지 않고 이 화면에 바로 들어온 경우도 있어 필수값으로 두지 않는다.
  */
-export function useMediaStream(initialDeviceStatus?: { camera: MediaTrackState; mic: MediaTrackState }): UseMediaStreamResult {
+export function useMediaStream(
+  initialDeviceStatus?: { camera: MediaTrackState; mic: MediaTrackState },
+  initialDeviceIds?: { cameraId: string | null; micId: string | null },
+): UseMediaStreamResult {
   const [camera, setCamera] = useState<MediaTrackState>(initialDeviceStatus?.camera ?? UNCHECKED)
   const [mic, setMic] = useState<MediaTrackState>(initialDeviceStatus?.mic ?? UNCHECKED)
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
@@ -84,11 +108,11 @@ export function useMediaStream(initialDeviceStatus?: { camera: MediaTrackState; 
     setAudioStream(null)
   }, [])
 
-  const acquireCamera = useCallback(async () => {
+  const acquireCamera = useCallback(async (deviceId?: string) => {
     const requestId = ++cameraRequestIdRef.current
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const stream = await getUserMediaWithFallback('video', deviceId)
 
       if (requestId !== cameraRequestIdRef.current) {
         stream.getTracks().forEach((track) => track.stop())
@@ -114,11 +138,11 @@ export function useMediaStream(initialDeviceStatus?: { camera: MediaTrackState; 
     }
   }, [stopCamera])
 
-  const acquireMic = useCallback(async () => {
+  const acquireMic = useCallback(async (deviceId?: string) => {
     const requestId = ++micRequestIdRef.current
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await getUserMediaWithFallback('audio', deviceId)
 
       if (requestId !== micRequestIdRef.current) {
         stream.getTracks().forEach((track) => track.stop())
@@ -145,7 +169,7 @@ export function useMediaStream(initialDeviceStatus?: { camera: MediaTrackState; 
 
   useEffect(() => {
     void (async () => {
-      await Promise.all([acquireCamera(), acquireMic()])
+      await Promise.all([acquireCamera(initialDeviceIds?.cameraId ?? undefined), acquireMic(initialDeviceIds?.micId ?? undefined)])
     })()
 
     return () => {
@@ -154,7 +178,7 @@ export function useMediaStream(initialDeviceStatus?: { camera: MediaTrackState; 
       stopCamera()
       stopMic()
     }
-    // 마운트 시 한 번만 받는다. initialDeviceStatus 는 첫 렌더의 시작값으로만 쓴다.
+    // 마운트 시 한 번만 받는다. initialDeviceStatus/initialDeviceIds 는 첫 렌더의 시작값으로만 쓴다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
