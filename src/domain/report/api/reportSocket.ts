@@ -44,15 +44,15 @@ export function connectReportSocket(
 }
 
 /**
- * 부분 재시도의 진행 상황과 결과를 받습니다.
+ * 실패 축 재시도의 진행 상황과 결과를 받습니다. 분석 등록과 **같은 소켓 · 같은 메시지**입니다 (Cue-A/backend#68).
+ * 백엔드가 같은 폴러로 재시도를 돌리고, 끝나면 `report`(성공) · `error`(실패) 하나를 보냅니다.
  *
- * ⚠️ 재시도 API 가 백엔드에 아직 없어서 **분석 등록과 같은 소켓 · 같은 메시지로 온다고 가정**했습니다
- * (`reportRetryApi.ts`). 재시도도 같은 reportId 의 리포트를 다시 만드는 일이라 백엔드 폴러를 그대로 쓸 가능성이
- * 높지만, 정해지면 다시 맞춥니다.
+ * 실제로 붙일지는 **재시도 등록을 누가 받는지**로 정합니다. 등록을 목업이 받았는데 소켓만 실제 서버에 붙으면
+ * 서버는 그 재시도를 모르니 아무것도 오지 않습니다. 재시도 경로는 `reports` 도메인이라 `VITE_REAL_APIS` 에
+ * `reports` 를 켜면 둘 다 실제 서버로 갑니다.
  *
- * 실제로 붙일지는 **재시도 등록을 누가 받았는지**로 정합니다. 등록을 목업이 받았는데 소켓만 실제 서버에 붙으면
- * 서버는 그 재시도를 모르니 아무것도 오지 않습니다. 재시도 API 는 `missingInBackend` 라 `reports` 를 실제로
- * 켜도 목업이 받으므로, 도메인 스위치(`isRealApi`)가 아니라 `mockFor` 로 봅니다.
+ * 재시도는 등록 **전에** 이 소켓부터 붙입니다(`useAxisRetry`). 소켓은 붙기 전에 지나간 메시지를 다시 보내주지
+ * 않아서, 등록 뒤에 붙으면 빨리 끝난 결과를 놓칠 수 있습니다.
  */
 export function connectRetrySocket(reportId: string, handlers: ReportSocketHandlers): () => void {
   if (mockFor('POST', reportRetryPath(reportId))) {

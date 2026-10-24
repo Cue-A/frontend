@@ -101,6 +101,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   // 분석이 실패한 리포트를 상세 조회하면 409 로 옵니다 (Cue-A/backend#66). 이 리포트는 다시 볼 수 없어서
   // 다시 연습하는 쪽으로 안내합니다.
   REPORT_FAILED: '리포트를 만들지 못했어요. 다시 연습해 주세요.',
+  // 둘은 실패 축 재시도(Cue-A/backend#68)의 409 입니다. 리포트 화면은 RETRY_MESSAGES 로 따로 다룹니다.
+  REPORT_NOT_RETRYABLE: '다시 분석할 수 없는 리포트예요.',
+  REPORT_RETRY_IN_PROGRESS: '이미 다시 분석하고 있어요. 잠시 후 확인해 주세요.',
   // 둘은 리포트 등록(Cue-A/backend#50)의 409 입니다. 다시 요청해도 결과가 같습니다.
   SESSION_NOT_COMPLETED: '아직 끝나지 않은 면접이에요. 면접을 마친 뒤 리포트를 볼 수 있어요.',
   // 실패한 리포트는 409 가 아니라 다시 돌아서, 이 코드는 "이미 만들고 있거나 다 만든" 경우입니다.

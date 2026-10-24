@@ -27,6 +27,7 @@ import type {
   OverviewFact,
   Report,
   RetryAxis,
+  RetryState,
   ScoreMetric,
   SubMetric,
   TurnFlow,
@@ -135,13 +136,21 @@ export type ImprovedAnswerResponse = {
   tEnd: number | null
 }
 
-/** 실패 축 재시도 상태. 재시도한 적이 없거나 성공했으면 응답의 `retry` 가 null 입니다 */
-export type ReportRetryResponse = {
-  /** `PROCESSING` | `FAILED` */
+/**
+ * 실패 축 재시도 상태입니다. (Cue-A/backend#68 `ReportRetryInfo`)
+ * 재시도한 적이 없거나 재시도가 성공해 결과가 바뀌었으면 응답의 `retry` 가 null 입니다.
+ * 상세 조회 · 상태 조회 · 재시도 접수 응답에 같은 모양으로 들어갑니다.
+ */
+export type ReportRetryInfoResponse = {
+  /** `PROCESSING`(다시 분석 중) | `FAILED`(마지막 재시도 실패). 실패해도 리포트는 원래 결과 그대로입니다 */
   status: string
+  /** 다시 분석하는 축. 리포트의 `overall.axesFailed` 와 같습니다 */
   axes: string[]
+  /** `FAILED` 일 때만 */
   errorCode: string | null
+  /** `FAILED` 일 때만. 소켓 `error.message` 와 같은 문구입니다 */
   message: string | null
+  /** `FAILED` 일 때만. true 면 다시 눌러 볼 만합니다 */
   retryable: boolean | null
 }
 
@@ -157,7 +166,7 @@ export type ReportDetailResponse = {
   companyComment: string | null
   /** 내용 점수가 낮은 문항 최대 2개. 없으면 빈 배열 */
   improvedAnswers: ImprovedAnswerResponse[]
-  retry: ReportRetryResponse | null
+  retry: ReportRetryInfoResponse | null
   /** AI 가 리포트를 만든 시각 (ISO 8601) */
   generatedAt: string | null
   /** 최초 분석 요청 시각 — 면접을 마친 시각과 거의 같습니다 */
@@ -266,6 +275,32 @@ function isRetryAxis(key: AxisKey): key is RetryAxis {
 /** 실패한 축이면 다시 분석할 축 이름을, 아니면 null 을 돌려줍니다. 미사용(`skipped`)은 다시 돌려도 같아서 null 입니다 */
 function toRetryAxis(key: AxisKey, axis: AxisResponse): RetryAxis | null {
   return toMetricStatus(axis) === 'failed' && isRetryAxis(key) ? key : null
+}
+
+/**
+ * 재시도 상태를 화면 값으로 옮깁니다. 재시도한 적이 없거나 성공했으면 null 입니다.
+ *
+ * 새로고침하거나 다른 탭에서 연 화면이 **도는 중인 재시도를 이어 기다리고**, 마지막 재시도가 실패했다는 걸
+ * 알려주는 데 씁니다. 모르는 상태 값이면 null 로 둡니다 — 없는 재시도를 기다리게 하는 것보다 버튼을 보여주는
+ * 편이 낫고, 눌렀을 때 이미 도는 중이면 서버가 `REPORT_RETRY_IN_PROGRESS` 로 알려줍니다.
+ */
+export function toRetryState(retry: ReportRetryInfoResponse | null): RetryState | null {
+  if (!retry) return null
+
+  const axes = retry.axes.filter((axis): axis is RetryAxis => isRetryAxis(axis as AxisKey))
+  if (retry.status === 'PROCESSING') {
+    return { status: 'processing', axes, errorCode: null, message: null, retryable: true }
+  }
+  if (retry.status === 'FAILED') {
+    return {
+      status: 'failed',
+      axes,
+      errorCode: retry.errorCode,
+      message: toText(retry.message),
+      retryable: retry.retryable ?? false,
+    }
+  }
+  return null
 }
 
 /** 세부 점수 세 줄을 만듭니다. */
@@ -534,5 +569,6 @@ export function toReport(detail: ReportDetailResponse): Report {
 
     improvedAnswer: toImprovedAnswer(detail, questions),
     video: null,
+    retry: toRetryState(detail.retry),
   }
 }

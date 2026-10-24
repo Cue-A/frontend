@@ -44,17 +44,15 @@ export const FINAL_REQUEST_ERRORS = new Set([
 export const RETRY_MESSAGES: ErrorMessageOverrides = {
   ...ANALYSIS_MESSAGES,
   STT_FAILED: '답변 녹음을 글로 옮기지 못해 다시 분석하지 못했어요.',
+  // 부분 실패 리포트가 아닙니다. 다른 탭에서 이미 다시 분석해 다 살아났을 수 있어서, 화면은 리포트를 다시 불러옵니다
+  REPORT_NOT_RETRYABLE: '다시 분석할 항목이 없는 리포트예요. 최신 결과로 바꿔 두었어요.',
 }
 
 /**
- * 재시도 등록이 이 코드로 실패하면 다시 눌러도 결과가 같습니다. 버튼을 거두고 문구만 남깁니다.
- * - `INVALID_REQUEST` — 다시 분석할 수 없는 리포트(부분 실패가 아님) · 빈 축 목록
+ * 재시도 등록이 이 코드로 실패하면 다시 눌러도 결과가 같습니다. 버튼을 거두고 문구만 남깁니다. (Cue-A/backend#68)
+ * - `REPORT_NOT_RETRYABLE` — 부분 실패(`PARTIAL`) 리포트가 아님
  * - `REPORT_NOT_FOUND` — 없는 리포트 · 남의 리포트
- * - `PATH_NOT_FOUND` · `METHOD_NOT_ALLOWED` — 백엔드에 재시도 API 가 아직 없음
+ *
+ * `REPORT_RETRY_IN_PROGRESS`(이미 도는 중)는 실패로 보지 않고 그 결과를 같이 기다립니다 (`useAxisRetry`).
  */
-export const FINAL_RETRY_ERRORS = new Set([
-  'INVALID_REQUEST',
-  'REPORT_NOT_FOUND',
-  'PATH_NOT_FOUND',
-  'METHOD_NOT_ALLOWED',
-])
+export const FINAL_RETRY_ERRORS = new Set(['REPORT_NOT_RETRYABLE', 'REPORT_NOT_FOUND'])

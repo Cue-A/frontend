@@ -8,6 +8,7 @@ import type {
   EvidenceResponse,
   QuestionResultResponse,
   ReportDetailResponse,
+  ReportRetryInfoResponse,
 } from './reportResponse'
 
 /**
@@ -394,19 +395,36 @@ function withRecovered(detail: ReportDetailResponse, recovered: Set<RetryAxis> |
   }
 }
 
-/** 지금 시점의 상세 응답 — 다시 분석해서 살아난 축까지 반영한 것입니다. 목록에 없는 id 는 `latest` 모양입니다 */
+/**
+ * 리포트별 재시도 상태(`retry`)입니다. 재시도 목업이 접수 · 실패 때 채우고, 성공하면 지웁니다 — 실제 서버도
+ * 성공하면 `retry` 가 null 입니다. 메모리에만 둡니다.
+ */
+const retryInfos = new Map<string, ReportRetryInfoResponse>()
+
+/** 재시도 상태를 바꿉니다. null 이면 지웁니다 (`reportRetryMock.ts`) */
+export function setMockRetry(reportId: string, info: ReportRetryInfoResponse | null) {
+  if (info) retryInfos.set(reportId, info)
+  else retryInfos.delete(reportId)
+}
+
+/** 지금 시점의 상세 응답 — 다시 분석해서 살아난 축 · 재시도 상태까지 반영한 것입니다. 목록에 없는 id 는 `latest` 모양입니다 */
 function mockDetailOf(reportId: string): ReportDetailResponse {
   const base = SCENARIOS[reportId] ?? { ...LATEST, reportId }
-  return withRecovered(base, recoveredAxes.get(reportId))
+  return { ...withRecovered(base, recoveredAxes.get(reportId)), retry: retryInfos.get(reportId) ?? null }
 }
 
 /**
- * 리포트의 상태와 총점만 꺼냅니다. 재시도 목업(`reportRetryMock.ts`)이 씁니다.
- * 재시도 등록 · 결과 통지가 보는 건 이 두 값뿐이라 화면용으로 바꾸지 않고 응답에서 바로 읽습니다. (PR #92 리뷰)
+ * 재시도 목업(`reportRetryMock.ts`)이 보는 값만 꺼냅니다 — 리포트 상태 · 총점 · 실패한 축 · 재시도 상태.
+ * 실제 서버처럼 리포트가 `PARTIAL` 인지, 이미 도는 중인지, 어느 축을 다시 돌릴지를 이걸로 정합니다.
  */
-export function mockReportState(reportId: string): { status: 'complete' | 'partial'; totalScore: number } {
+export function mockRetryTarget(reportId: string) {
   const detail = mockDetailOf(reportId)
-  return { status: detail.status === 'PARTIAL' ? 'partial' : 'complete', totalScore: detail.overall.score ?? 0 }
+  return {
+    status: detail.status,
+    totalScore: detail.overall.score ?? 0,
+    axesFailed: detail.overall.axesFailed.filter((axis): axis is RetryAxis => axis === 'speech' || axis === 'gaze'),
+    retry: detail.retry,
+  }
 }
 
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => mockDetailOf(reportId))
