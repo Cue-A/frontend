@@ -31,8 +31,8 @@ registerMock('POST', '/api/interviews/:sessionId/answers/upload-urls', ({ sessio
 
   const response: AnswerUploadUrlsResponse = {
     audioObjectKey,
-    // 실제 스토리지 주소가 아니다 — mediaApi.uploadToPresignedUrl 이 mock 모드에서는
-    // 이 주소로 fetch 하지 않고 바로 성공으로 취급한다.
+    // 실제 스토리지 주소가 아니다 — mediaApi.uploadToPresignedUrl 이 `mock://` 주소는
+    // fetch 하지 않고 바로 성공으로 취급한다.
     audioUploadUrl: `mock://media-upload/${encodeURIComponent(audioObjectKey)}`,
   }
 
