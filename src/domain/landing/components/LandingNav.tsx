@@ -31,7 +31,7 @@ export default function LandingNav() {
           로그인
         </Link>
 
-        <Button variant="primary" size="sm" to={ROUTES.LOGIN}>
+        <Button variant="primary" size="sm" to={`${ROUTES.LOGIN}?tab=signup`}>
           무료로 시작하기
         </Button>
       </nav>

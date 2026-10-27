@@ -80,10 +80,11 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
         <span className="h-px flex-1 bg-neutral-200" />
       </div>
 
-      {/* Google 은 기능명세서에 없는 항목입니다 (Q12). */}
-      <Button disabled className="w-full">
-        Google로 계속하기
-      </Button>
+      {/*
+        Google 로그인 버튼을 뺐습니다. 기능명세서 AUTH-2 는 카카오 로그인만 정의하고
+        Google 은 어디에도 없어서, 시안에만 있고 명세서엔 없는 항목으로 보고 뺐습니다
+        (docs/90-open-questions.md 옛 Q12, 이슈 #109).
+      */}
 
       {/*
         카카오 인가 페이지로 나가는 외부 링크라 shared/ui/Button 의 `to` 를 못
@@ -96,10 +97,6 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       >
         카카오로 계속하기
       </a>
-
-      <p className="text-center text-body-sm text-neutral-400">
-        구글 로그인은 아직 연동 전이에요
-      </p>
 
       <p className="text-center text-body-sm text-neutral-500">
         계정이 없으신가요?{' '}
