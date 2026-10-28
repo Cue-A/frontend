@@ -421,7 +421,7 @@ export function mockRetryTarget(reportId: string) {
   const detail = mockDetailOf(reportId)
   return {
     status: detail.status,
-    totalScore: detail.overall.score ?? 0,
+    totalScore: detail.overall.score,
     axesFailed: detail.overall.axesFailed.filter((axis): axis is RetryAxis => axis === 'speech' || axis === 'gaze'),
     retry: detail.retry,
   }
