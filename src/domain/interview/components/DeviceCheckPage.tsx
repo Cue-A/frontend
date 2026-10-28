@@ -8,14 +8,15 @@ import {
   IconWifi,
   IconX,
 } from '@tabler/icons-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { ROUTES, toInterview } from '@/app/routes'
 
 import { useDeviceCheck } from '../hooks/useDeviceCheck'
-import { clearSavedSessionSetup } from '../hooks/useSessionSetup'
+import { clearSavedSessionSetup, loadSavedSessionSetup } from '../hooks/useSessionSetup'
 import { canStartInterview } from '../lib/canStartInterview'
+import { setupSummaryValues } from '../lib/setupSummaryValues'
 import type {
   DeviceCheckState,
   DeviceFailureReason,
@@ -31,7 +32,12 @@ import Select from '@/shared/ui/Select'
 
 import InterviewFlowHeader from './InterviewFlowHeader'
 
-const SUMMARY_ROW_LABELS = ['직무', '질문 수', '답변 시간', '면접관'] as const
+const SUMMARY_ROWS = [
+  { label: '직무', toValue: setupSummaryValues.jobRole },
+  { label: '질문 수', toValue: setupSummaryValues.questionCount },
+  { label: '답변 시간', toValue: setupSummaryValues.answerTime },
+  { label: '면접관', toValue: setupSummaryValues.interviewer },
+] as const
 
 /**
  * 환경 체크 4항목입니다. 조명·주변소음·네트워크는 `useDeviceCheck` 의 실측 로직을
@@ -185,6 +191,11 @@ const FAILURE_MESSAGE: Record<DeviceFailureReason, (deviceLabel: string) => stri
 export default function DeviceCheckPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
+
+  // 옵션 설정에서 고른 값(이 탭의 sessionStorage). 처음 한 번만 읽는다 — "면접 시작하기" 가 저장된 값을
+  // 지우는데(clearSavedSessionSetup), 매 렌더 읽으면 화면이 넘어가기 전에 패널이 placeholder 로 되돌아간다.
+  // 주소를 바로 열었거나 새 탭이거나 저장된 값의 모양이 깨져 있으면 null 이고, 그땐 placeholder 를 둔다.
+  const [savedSetup] = useState(loadSavedSessionSetup)
 
   const {
     camera,
@@ -474,23 +485,17 @@ export default function DeviceCheckPage() {
             <Card padding="lg" className="flex flex-col gap-4">
               <h2 className="text-body-lg font-semibold text-neutral-900">면접 요약</h2>
               <dl className="flex flex-col">
-                {SUMMARY_ROW_LABELS.map((label) => (
+                {SUMMARY_ROWS.map(({ label, toValue }) => (
                   <div
                     key={label}
                     className="flex justify-between gap-4 border-b border-neutral-200 py-2.5 last:border-b-0"
                   >
                     <dt className="text-body-sm text-neutral-500">{label}</dt>
-                    {/*
-                      TODO(interview-summary-data): 옵션설정 값(jobRole·
-                      questionCount·answerSeconds·interviewerStyle)을 이
-                      화면까지 전달할 경로가 아직 없음 — SessionSetup 은
-                      SessionSetupPage 의 로컬 state 로만 있고 createSession
-                      응답은 sessionId 만 돌려준다. GET /api/interviews/
-                      :sessionId 신설 또는 응답 echo + 전달 방식 확정이
-                      필요하다. 정해지기 전까지 실제 값처럼 보이지 않도록
-                      흐린 안내 문구만 둔다.
-                    */}
-                    <dd className="text-body-sm text-neutral-300">연동 준비 중</dd>
+                    {savedSetup ? (
+                      <dd className="text-body-sm font-semibold text-neutral-900">{toValue(savedSetup)}</dd>
+                    ) : (
+                      <dd className="text-body-sm text-neutral-300">연동 준비 중</dd>
+                    )}
                   </div>
                 ))}
               </dl>
