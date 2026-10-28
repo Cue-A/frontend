@@ -16,7 +16,7 @@ export function getCompanies() {
  * (Cue-A/backend#46). 값은 그대로 문서의 UUID 입니다.
  *
  * 화면의 설정 중 **서버가 받지 않는 값은 싣지 않습니다.** 받을 자리가 없어서 보내도 버려집니다.
- * - `answerSeconds` · `deliveryMode` — 서버 요청에 없습니다 (#54 확인 필요 1 · 2번)
+ * - `answerSeconds` — 서버 요청에 없습니다 (#54 확인 필요 1번, docs/90-open-questions.md Q10)
  * - `customCulture`(목록에 없는 기업의 인재상 직접 입력) — 서버 요청에 없습니다. 서버는 등록된
  *   기업 id 만 받고, 인재상은 그 기업 정보로 서버가 만듭니다
  */
@@ -31,6 +31,11 @@ type InterviewStartRequest = {
   persona: InterviewerStyle
   /** 3 · 6 · 9 */
   questionCount: number
+  /**
+   * 질문 글을 숨기고 음성만 들려줄지. 옵션 설정의 진행 방식 "음성만 듣기"(`VOICE_ONLY`)면 true 입니다
+   * (Cue-A/backend#70). 서버는 생략하면 false 로 봅니다
+   */
+  hideQuestionText: boolean
 }
 
 /**
@@ -68,6 +73,7 @@ function toCreateBody(setup: SessionSetup): InterviewStartRequest {
     jobRole,
     persona: setup.interviewerStyle,
     questionCount: setup.questionCount,
+    hideQuestionText: setup.deliveryMode === 'VOICE_ONLY',
   }
 }
 
@@ -85,8 +91,8 @@ export type CreatedSession = {
  * 서버는 응답을 돌려준 **뒤** 백그라운드에서 첫 질문을 만들어 소켓으로 밀어 넣습니다.
  *
  * 걸리는 제한 — 서버가 다시 봅니다.
- * - 문서: 본인 것 · 준비 완료(`COMPLETED`) · 파일 문서만. 아니면 `DOCUMENT_NOT_FOUND` ·
- *   `UPLOAD_NOT_COMPLETED` · `UNSUPPORTED_FILE_FORMAT` (A-05 는 못 쓰는 문서를 고르지 못하게 막습니다)
+ * - 문서: 본인 것 · 준비된 것 · 저장된 파일이 있는 것(직접 작성 문서도 파일로 저장됩니다 — Cue-A/backend#39).
+ *   아니면 `DOCUMENT_NOT_FOUND` · `UPLOAD_NOT_COMPLETED` · `UNSUPPORTED_FILE_FORMAT`
  * - 문항 수: 3 · 6 · 9. 아니면 `INVALID_QUESTION_COUNT`
  * - 분당 10회 (`RATE_LIMIT_EXCEEDED`)
  */

@@ -5,7 +5,6 @@ import { toUserMessage } from '@/shared/api/errorMessage'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 
-import { CAN_RENAME_DOCUMENT } from '../api/documentApi'
 import { useDocuments } from '../hooks/useDocuments'
 import { useOpenDocument } from '../hooks/useOpenDocument'
 import { DOCUMENT_TABS, filterDocuments, MAX_DOCUMENTS, type DocumentTab } from '../lib/documentDisplay'
@@ -206,7 +205,7 @@ export default function LibraryDocumentsPage() {
           body={body}
           openingId={opener.openingId}
           onOpen={opener.open}
-          onRename={CAN_RENAME_DOCUMENT ? openRename : undefined}
+          onRename={openRename}
           onDelete={openDelete}
         />
       </div>

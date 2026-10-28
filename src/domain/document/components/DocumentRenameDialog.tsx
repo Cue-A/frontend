@@ -85,7 +85,7 @@ export default function DocumentRenameDialog({ document, onRenamed, onGone, onCl
       return
     }
 
-    // 수정 응답은 제목만 돌려줍니다. 나머지는 열 때 받은 문서 그대로입니다 (화면은 이어서 목록을 다시 부릅니다).
+    // 바뀐 제목만 받아 씁니다. 나머지는 열 때 받은 문서 그대로이고, 화면이 이어서 목록을 다시 부릅니다.
     if (result.kind === 'renamed') onRenamed({ ...document, title: result.title })
     else onGone('이미 지워진 문서예요. 목록을 새로 불러왔어요.')
     dialogRef.current?.close()
