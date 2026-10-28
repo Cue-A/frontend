@@ -404,9 +404,9 @@ function mockDetailOf(reportId: string): ReportDetailResponse {
  * 리포트의 상태와 총점만 꺼냅니다. 재시도 목업(`reportRetryMock.ts`)이 씁니다.
  * 재시도 등록 · 결과 통지가 보는 건 이 두 값뿐이라 화면용으로 바꾸지 않고 응답에서 바로 읽습니다. (PR #92 리뷰)
  */
-export function mockReportState(reportId: string): { status: 'complete' | 'partial'; totalScore: number } {
+export function mockReportState(reportId: string): { status: 'complete' | 'partial'; totalScore: number | null } {
   const detail = mockDetailOf(reportId)
-  return { status: detail.status === 'PARTIAL' ? 'partial' : 'complete', totalScore: detail.overall.score ?? 0 }
+  return { status: detail.status === 'PARTIAL' ? 'partial' : 'complete', totalScore: detail.overall.score }
 }
 
 registerMock('GET', '/api/reports/:reportId', ({ reportId }) => mockDetailOf(reportId))

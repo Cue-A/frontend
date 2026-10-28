@@ -512,8 +512,8 @@ export function toReport(detail: ReportDetailResponse): Report {
     attempt: 1,
     attempts: [],
 
-    totalScore: detail.overall.score ?? 0,
-    totalScoreDisplay: detail.overall.display ?? 1,
+    totalScore: detail.overall.score,
+    totalScoreDisplay: detail.overall.display,
     totalScoreDelta: null,
     scoreGateReason: toScoreGateReason(detail.overall),
     notices: toPartialNotices(detail),

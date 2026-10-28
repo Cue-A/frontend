@@ -47,26 +47,29 @@ export default function ReportHeader({ report }: Props) {
         <p className="text-body-md text-neutral-500">{buildMeta(report)}</p>
       </div>
 
-      <Card padding="md" surface="brand" className="w-64">
-        <div className="flex flex-col gap-2">
-          <p className="text-body-sm text-neutral-700">종합 점수</p>
+      {/* 총점이 없으면 카드째 뺍니다. 0점이나 빈 카드로 두면 실제로 그 점수를 받은 것처럼 읽힙니다 (PR #118 리뷰) */}
+      {report.totalScore !== null && (
+        <Card padding="md" surface="brand" className="w-64">
+          <div className="flex flex-col gap-2">
+            <p className="text-body-sm text-neutral-700">종합 점수</p>
 
-          <p className="flex items-baseline gap-2 tabular-nums">
-            <span className="text-display text-primary-600">{report.totalScore}</span>
-            <span className="text-body-md text-neutral-500">/ 100</span>
-          </p>
-
-          {delta && (
-            <p
-              className={`text-body-sm font-semibold tabular-nums ${
-                isUp ? 'text-semantic-success' : 'text-semantic-danger'
-              }`}
-            >
-              {delta}
+            <p className="flex items-baseline gap-2 tabular-nums">
+              <span className="text-display text-primary-600">{report.totalScore}</span>
+              <span className="text-body-md text-neutral-500">/ 100</span>
             </p>
-          )}
-        </div>
-      </Card>
+
+            {delta && (
+              <p
+                className={`text-body-sm font-semibold tabular-nums ${
+                  isUp ? 'text-semantic-success' : 'text-semantic-danger'
+                }`}
+              >
+                {delta}
+              </p>
+            )}
+          </div>
+        </Card>
+      )}
     </header>
   )
 }

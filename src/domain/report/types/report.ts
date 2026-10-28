@@ -217,10 +217,15 @@ export type Report = {
   /** 회차 선택 칩에 쓸 목록 */
   attempts: AttemptRef[]
 
-  /** 0~100 */
-  totalScore: number
-  /** 1~5. 총점의 표시용 등급입니다. `totalScore` 와 함께 옵니다 */
-  totalScoreDisplay: number
+  /**
+   * 0~100. 응답에 없으면 null 이고, 그때는 종합 점수 카드를 그리지 않습니다.
+   *
+   * 끝난 리포트(COMPLETED · PARTIAL)에는 늘 있지만, 없는 걸 0점으로 채우면 사용자는 실제로 0점을 받은 것으로
+   * 읽습니다. 다른 값처럼 없는 점수는 지어내지 않습니다. (PR #118 리뷰)
+   */
+  totalScore: number | null
+  /** 1~5. 총점의 표시용 등급입니다. `totalScore` 와 함께 오고, 없으면 null 입니다 */
+  totalScoreDisplay: number | null
   totalScoreDelta: ScoreDelta | null
 
   /**
