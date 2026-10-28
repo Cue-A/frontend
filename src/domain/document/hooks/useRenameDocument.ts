@@ -10,7 +10,8 @@ export type UseRenameDocumentResult = {
   /**
    * `renamed` 바꿨음(서버가 저장한 제목) · `gone` 이미 없음 · `failed` 그 밖의 실패(`error` 에 문구).
    *
-   * 수정 응답에는 제목만 쓸 만한 값이라(종류 · 파일명 · 등록일이 없습니다) 문서 전체가 아니라 제목을 돌려줍니다.
+   * 서버는 목록 · 상세와 같은 문서 객체를 돌려주지만 여기서는 제목만 돌려줍니다. 화면은 바뀐 제목만 쓰고
+   * 이어서 목록을 다시 부르기 때문입니다 (LibraryDocumentsPage `handleRenamed`).
    *
    * 다른 탭에서 지운 문서는 `DOCUMENT_NOT_FOUND` 로 옵니다. 지우기와 마찬가지로 실패가 아니라 `gone` 으로
    * 돌려주고, 화면은 목록을 새로 부릅니다 (useDeleteDocument).
@@ -24,10 +25,8 @@ export type UseRenameDocumentResult = {
 }
 
 /**
- * 보관함 문서의 제목을 바꿉니다. (C-02)
- *
- * ⚠️ API 명세는 있지만 백엔드가 아직 시작 전이라, 지금은 목업에서만 동작합니다
- * (`documentApi.ts` 의 `updateDocumentTitle`, docs/90-open-questions.md Q15).
+ * 보관함 문서의 제목을 바꿉니다. (C-02 · Cue-A/backend#76 `PATCH /api/documents/{documentId}`)
+ * 요청 · 에러 규칙은 `documentApi.ts` 의 `updateDocumentTitle` 에 있습니다.
  */
 export function useRenameDocument(): UseRenameDocumentResult {
   const [renaming, setRenaming] = useState(false)
