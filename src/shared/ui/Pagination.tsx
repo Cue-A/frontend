@@ -1,5 +1,5 @@
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 type Props = {
   /** 지금 페이지. **0부터** 셉니다 — 백엔드 목록 응답(`page`)과 같습니다 */
@@ -20,17 +20,34 @@ const PAGE_BUTTON =
  *
  * 마지막 쪽으로 넘어가면 누른 "다음" 버튼이 잠기면서 포커스가 화면 밖으로 빠집니다. 키보드로 넘기던 사람이 제자리를
  * 잃지 않게, 그때는 포커스를 반대쪽 버튼으로 옮깁니다. 첫 쪽으로 돌아올 때도 같습니다.
+ *
+ * 포커스는 **쪽이 바뀌어 다시 그린 뒤에** 옮깁니다. 누른 순간에는 버튼이 아직 이전 쪽 기준이라, 두 쪽짜리 목록에서는
+ * 옮겨 갈 반대쪽 버튼이 그때까지 잠겨 있어서 `focus()` 가 먹지 않습니다. (PR #114 리뷰)
+ * 어느 쪽으로 가려고 했는지도 같이 기억해서, 부모가 그 쪽으로 바꿨을 때만 옮깁니다. 검색어를 바꿔 첫 쪽으로
+ * 돌아가는 것처럼 버튼을 누르지 않고 쪽이 바뀐 경우에는 포커스를 건드리지 않습니다.
  */
 export default function Pagination({ page, totalPages, onChange }: Props) {
   const lastPage = Math.max(totalPages, 1) - 1
   const current = Math.min(Math.max(page, 0), lastPage)
   const previousRef = useRef<HTMLButtonElement | null>(null)
   const nextRef = useRef<HTMLButtonElement | null>(null)
+  /** 버튼으로 넘긴 쪽과, 그 쪽이 그려진 뒤 포커스를 줄 버튼 */
+  const pendingFocusRef = useRef<{ page: number; to: 'previous' | 'next' } | null>(null)
+
+  useEffect(() => {
+    const pending = pendingFocusRef.current
+    pendingFocusRef.current = null
+    if (pending?.page !== current) return
+
+    const target = pending.to === 'previous' ? previousRef.current : nextRef.current
+    target?.focus()
+  }, [current])
 
   const goTo = (target: number) => {
+    if (target <= 0) pendingFocusRef.current = { page: target, to: 'next' }
+    else if (target >= lastPage) pendingFocusRef.current = { page: target, to: 'previous' }
+    else pendingFocusRef.current = null
     onChange(target)
-    if (target <= 0) nextRef.current?.focus()
-    else if (target >= lastPage) previousRef.current?.focus()
   }
 
   return (
