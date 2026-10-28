@@ -42,6 +42,10 @@ type RetryRun = {
 
 const NO_AXES: RetryAxis[] = []
 
+/** 따라잡기 조회(`catchUp`)를 몇 번까지 해 볼지와 그 사이 간격 */
+const CATCH_UP_ATTEMPTS = 2
+const CATCH_UP_RETRY_MS = 3000
+
 /** 분석은 끝났는데 바뀐 리포트를 못 받아온 경우입니다. 다시 분석할 일이 아니라 새로고침하면 됩니다 */
 const RELOAD_FAILED_MESSAGE = '다시 분석은 끝났는데 결과를 불러오지 못했어요. 새로고침해 주세요.'
 
@@ -168,10 +172,24 @@ export function useAxisRetry(
         })
       }
 
-      /** 소켓에 붙기 전에 끝났을 수 있어서 리포트를 한 번 다시 불러 봅니다. 아직 도는 중이면 소켓을 기다립니다 */
-      const catchUp = () => {
+      /**
+       * 소켓에 붙기 전에 끝났을 수 있어서 리포트를 한 번 다시 불러 봅니다. 아직 도는 중이면 소켓을 기다립니다.
+       *
+       * 불러오기가 실패하면 조금 뒤 한 번 더 불러 봅니다. 그 사이 이미 끝났다면 소켓 메시지가 다시 오지 않아서,
+       * 그냥 넘기면 기다림 상한(`ANALYSIS_TIMEOUT_MS`)까지 "분석 중" 으로 남습니다. (PR #120 리뷰)
+       */
+      const catchUp = (attempt = 1) => {
         reload().then((fresh) => {
-          if (!alive || !fresh) return
+          if (!alive) return
+          if (!fresh) {
+            console.error('실패 축 재시도 따라잡기 조회 실패 reportId=%s attempt=%d', reportId, attempt)
+            if (attempt < CATCH_UP_ATTEMPTS) {
+              window.setTimeout(() => {
+                if (alive) catchUp(attempt + 1)
+              }, CATCH_UP_RETRY_MS)
+            }
+            return
+          }
           if (fresh.retry?.status === 'processing') return
           if (fresh.retry?.status === 'failed') {
             finish(outcomesFromReport(fresh.retry))

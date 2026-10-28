@@ -297,7 +297,9 @@ export function toRetryState(retry: ReportRetryInfoResponse | null): RetryState 
       axes,
       errorCode: retry.errorCode,
       message: toText(retry.message),
-      retryable: retry.retryable ?? false,
+      // 계약상 FAILED 면 늘 값이 옵니다. 비어 오면 버튼을 남겨 둡니다 — 숨기면 다시 누를 길이 없고, 눌렀을 때
+      // 다시 분석할 수 없는 리포트면 서버가 `REPORT_NOT_RETRYABLE` 로 알려줍니다 (PR #120 리뷰)
+      retryable: retry.retryable ?? true,
     }
   }
   return null

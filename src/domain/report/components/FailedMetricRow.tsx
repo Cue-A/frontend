@@ -53,7 +53,7 @@ function describe({ metric, axis, running, outcome, retryLabels }: Omit<Props, '
     // 다시 해도 결과가 같은 실패(다시 분석할 수 없는 리포트 · 음성 인식 실패)면 버튼을 거둡니다
     showButton: outcome?.kind !== 'failed' || outcome.retryable,
     // 어느 줄에서 눌러도 실패한 항목이 다 같이 돕니다. 누르기 전에 알 수 있게 적습니다
-    together: retryLabels.length > 1 ? `다시 분석하면 ${retryLabels.join(' · ')}을 함께 다시 분석해요.` : null,
+    together: retryLabels.length > 1 ? `다시 분석하면 ${retryLabels.join(' · ')} 항목을 함께 다시 분석해요.` : null,
   }
 }
 
