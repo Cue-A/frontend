@@ -3,7 +3,7 @@ import { ApiError } from '@/shared/api/apiError'
 
 import type { AnswerUploadUrlsRequest, AnswerUploadUrlsResponse } from '../types/media'
 
-import './mediaMock'
+import { MOCK_UPLOAD_URL_PREFIX } from './mediaMock'
 
 /**
  * 답변 녹화 업로드 1단계 — presigned URL 발급입니다. (이슈 #54, `feat/24-interview-answer-flow`
@@ -28,7 +28,7 @@ export function requestAnswerUploadUrls(sessionId: string, request: AnswerUpload
  * `POST /api/interviews/{sessionId}/answers` 자체가 완료 통보를 겸한다.
  */
 export async function uploadToPresignedUrl(uploadUrl: string, blob: Blob): Promise<void> {
-  if (uploadUrl.startsWith('mock://')) return
+  if (uploadUrl.startsWith(MOCK_UPLOAD_URL_PREFIX)) return
 
   const response = await fetch(uploadUrl, {
     method: 'PUT',

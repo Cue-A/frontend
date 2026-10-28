@@ -5,6 +5,12 @@ import { isAllowedAudioRecordingType, isAllowedVideoRecordingType } from '../lib
 import type { AnswerUploadUrlsRequest, AnswerUploadUrlsResponse } from '../types/media'
 
 /**
+ * mock 이 발급하는 업로드 주소의 접두어. 실제 스토리지 주소가 아니라는 표시이며,
+ * mediaApi.uploadToPresignedUrl 이 이 접두어로 시작하는 주소는 fetch 하지 않는다.
+ */
+export const MOCK_UPLOAD_URL_PREFIX = 'mock://'
+
+/**
  * // TODO(#54 확인 필요): objectKey 뒤쪽 이름 규칙이 아직 확정되지 않았다(이슈 원문에
  * 정확한 값이 없음). 여기 값은 mock 이 그럴듯한 응답을 만들기 위해 임의로 지어낸
  * 것으로, 실제 백엔드 `ObjectKeys` 규칙과 다를 수 있다. `mediaApi.ts`/
@@ -33,14 +39,14 @@ registerMock('POST', '/api/interviews/:sessionId/answers/upload-urls', ({ sessio
     audioObjectKey,
     // 실제 스토리지 주소가 아니다 — mediaApi.uploadToPresignedUrl 이 `mock://` 주소는
     // fetch 하지 않고 바로 성공으로 취급한다.
-    audioUploadUrl: `mock://media-upload/${encodeURIComponent(audioObjectKey)}`,
+    audioUploadUrl: `${MOCK_UPLOAD_URL_PREFIX}media-upload/${encodeURIComponent(audioObjectKey)}`,
   }
 
   // 카메라가 없어 videoFileName 을 안 보낸 요청이면 video 쪽 응답도 만들지 않는다.
   if (request.videoFileName) {
     const videoObjectKey = buildAnswerObjectKey(sessionId, request.questionId, 'video')
     response.videoObjectKey = videoObjectKey
-    response.videoUploadUrl = `mock://media-upload/${encodeURIComponent(videoObjectKey)}`
+    response.videoUploadUrl = `${MOCK_UPLOAD_URL_PREFIX}media-upload/${encodeURIComponent(videoObjectKey)}`
   }
 
   return response
