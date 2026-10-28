@@ -1,10 +1,9 @@
 import { api } from '@/shared/api/apiClient'
 import { ApiError } from '@/shared/api/apiError'
-import { USE_MOCK } from '@/shared/api/mock'
 
 import type { AnswerUploadUrlsRequest, AnswerUploadUrlsResponse } from '../types/media'
 
-import './mediaMock'
+import { MOCK_UPLOAD_URL_PREFIX } from './mediaMock'
 
 /**
  * 답변 녹화 업로드 1단계 — presigned URL 발급입니다. (이슈 #54, `feat/24-interview-answer-flow`
@@ -20,14 +19,16 @@ export function requestAnswerUploadUrls(sessionId: string, request: AnswerUpload
  * 요청이라 `Result<T>` 봉투도 안 쓰고 `Authorization` 헤더도 안 붙는다 — URL 자체의
  * 서명이 인증이다. 그래서 `shared/api/apiClient` 를 거치지 않고 `fetch` 를 직접 쓴다.
  *
- * mock 모드에서는 uploadUrl 이 실제 주소가 아니라서(mediaMock.ts 참고) fetch 하지
- * 않고 바로 성공으로 취급한다.
+ * mock 이 발급한 주소(`mock://`)는 실제 주소가 아니라서(mediaMock.ts 참고) fetch 하지
+ * 않고 바로 성공으로 취급한다. 전역 `USE_MOCK` 은 보지 않는다 — 면접 도메인만 실서버로
+ * 붙인 부분 연동 모드에서도 `USE_MOCK` 은 true 인데 발급 API 는 실서버라, 스위치를 보면
+ * 실제 주소로 가야 할 PUT 이 조용히 빠진다.
  *
  * 3단계(완료 통보)는 별도 엔드포인트가 없다 — `sessionApi.submitAnswer` 가 호출하는
  * `POST /api/interviews/{sessionId}/answers` 자체가 완료 통보를 겸한다.
  */
 export async function uploadToPresignedUrl(uploadUrl: string, blob: Blob): Promise<void> {
-  if (USE_MOCK) return
+  if (uploadUrl.startsWith(MOCK_UPLOAD_URL_PREFIX)) return
 
   const response = await fetch(uploadUrl, {
     method: 'PUT',
