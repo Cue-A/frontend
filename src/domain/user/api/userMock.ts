@@ -19,22 +19,30 @@ const me = {
 
 registerMock('GET', '/api/users/me', () => ({ ...me }))
 
-registerMock('PATCH', '/users/me/profile', (_params, body) => {
-  const input = body as { nickname?: unknown; email?: unknown; jobTitle?: unknown } | undefined
+/** 명세서엔 있는 경로지만 백엔드가 아직 시작 전입니다 (docs/90-open-questions.md Q16). */
+const PROFILE_MISSING = '프로필 수정 API 없음 (명세서 경로는 있지만 백엔드 시작 전, Q16)'
 
-  if (typeof input?.nickname !== 'string' || !input.nickname.trim()) {
-    throw new ApiError('INVALID_REQUEST', '이름을 입력해 주세요')
-  }
-  if (typeof input.email !== 'string' || !input.email.trim()) {
-    throw new ApiError('INVALID_REQUEST', '이메일을 입력해 주세요')
-  }
+registerMock(
+  'PATCH',
+  '/users/me/profile',
+  (_params, body) => {
+    const input = body as { nickname?: unknown; email?: unknown; jobTitle?: unknown } | undefined
 
-  me.nickname = input.nickname.trim()
-  me.email = input.email.trim()
-  me.jobTitle = typeof input.jobTitle === 'string' && input.jobTitle.trim() ? input.jobTitle.trim() : null
+    if (typeof input?.nickname !== 'string' || !input.nickname.trim()) {
+      throw new ApiError('INVALID_REQUEST', '이름을 입력해 주세요')
+    }
+    if (typeof input.email !== 'string' || !input.email.trim()) {
+      throw new ApiError('INVALID_REQUEST', '이메일을 입력해 주세요')
+    }
 
-  return { ...me }
-})
+    me.nickname = input.nickname.trim()
+    me.email = input.email.trim()
+    me.jobTitle = typeof input.jobTitle === 'string' && input.jobTitle.trim() ? input.jobTitle.trim() : null
+
+    return { ...me }
+  },
+  { missingInBackend: PROFILE_MISSING },
+)
 
 /**
  * 회원 탈퇴 목업입니다. 백엔드에 탈퇴 API 가 아직 없어서 `users` 를 실제 서버에 붙여도 이 API 만은
@@ -52,33 +60,58 @@ const companyInterests: CompanyInterest[] = [
   { companyId: 'samsung', name: '삼성전자', tagline: '창의·혁신, 글로벌 역량 중시' },
 ]
 
-registerMock('GET', '/v1/users/me/company-interests', () => [...companyInterests])
+/** 명세서 경로 그대로지만 백엔드가 아직 시작 전입니다 (Q16). */
+const COMPANY_INTEREST_MISSING = '관심 기업 API 없음 (명세서 경로는 있지만 백엔드 시작 전, Q16)'
 
-registerMock('PUT', '/v1/users/me/company-interests/:companyId', ({ companyId }) => {
-  if (!companyInterests.some((item) => item.companyId === companyId)) {
-    // 목업이라 이름 모를 기업은 id 를 그대로 이름 삼아 더합니다.
-    companyInterests.push({ companyId, name: companyId, tagline: '' })
-  }
-  return undefined
+registerMock('GET', '/v1/users/me/company-interests', () => [...companyInterests], {
+  missingInBackend: COMPANY_INTEREST_MISSING,
 })
 
-registerMock('DELETE', '/v1/users/me/company-interests/:companyId', ({ companyId }) => {
-  const index = companyInterests.findIndex((item) => item.companyId === companyId)
-  if (index >= 0) companyInterests.splice(index, 1)
-  return undefined
-})
+registerMock(
+  'PUT',
+  '/v1/users/me/company-interests/:companyId',
+  ({ companyId }) => {
+    if (!companyInterests.some((item) => item.companyId === companyId)) {
+      // 목업이라 이름 모를 기업은 id 를 그대로 이름 삼아 더합니다.
+      companyInterests.push({ companyId, name: companyId, tagline: '' })
+    }
+    return undefined
+  },
+  { missingInBackend: COMPANY_INTEREST_MISSING },
+)
+
+registerMock(
+  'DELETE',
+  '/v1/users/me/company-interests/:companyId',
+  ({ companyId }) => {
+    const index = companyInterests.findIndex((item) => item.companyId === companyId)
+    if (index >= 0) companyInterests.splice(index, 1)
+    return undefined
+  },
+  { missingInBackend: COMPANY_INTEREST_MISSING },
+)
 
 /** 알림 설정 목업. 명세서에 없는 임시 경로입니다 (userApi.ts 주석 참고). */
 const notificationSettings: NotificationSettings = { emailAlerts: true, pushAlerts: false }
 
-registerMock('GET', '/api/users/me/notification-settings', () => ({ ...notificationSettings }))
+/** 명세서 자체에 없는 완전 임시 경로입니다 (Q16). */
+const NOTIFICATION_MISSING = '알림설정 API 없음 (명세서에 없는 임시 경로, Q16)'
 
-registerMock('PATCH', '/api/users/me/notification-settings', (_params, body) => {
-  const input = body as Partial<NotificationSettings> | undefined
-  if (typeof input?.emailAlerts === 'boolean') notificationSettings.emailAlerts = input.emailAlerts
-  if (typeof input?.pushAlerts === 'boolean') notificationSettings.pushAlerts = input.pushAlerts
-  return { ...notificationSettings }
+registerMock('GET', '/api/users/me/notification-settings', () => ({ ...notificationSettings }), {
+  missingInBackend: NOTIFICATION_MISSING,
 })
+
+registerMock(
+  'PATCH',
+  '/api/users/me/notification-settings',
+  (_params, body) => {
+    const input = body as Partial<NotificationSettings> | undefined
+    if (typeof input?.emailAlerts === 'boolean') notificationSettings.emailAlerts = input.emailAlerts
+    if (typeof input?.pushAlerts === 'boolean') notificationSettings.pushAlerts = input.pushAlerts
+    return { ...notificationSettings }
+  },
+  { missingInBackend: NOTIFICATION_MISSING },
+)
 
 /** 디지털 명함 목업. 아직 만들지 않았으면 null 입니다 (B-03 마이페이지/디지털 명함 시안). */
 let businessCard: BusinessCard | null = null
@@ -92,18 +125,33 @@ function validateBusinessCard(input: BusinessCardInput | undefined): asserts inp
   if (!input.companyName?.trim()) throw new ApiError('INVALID_REQUEST', '기업명을 입력해 주세요')
 }
 
-registerMock('GET', '/api/users/me/business-card', () => businessCard)
+/** 명세서 경로 그대로지만 백엔드가 아직 시작 전입니다 (Q16). */
+const BUSINESS_CARD_MISSING = '명함 API 없음 (명세서 경로는 있지만 백엔드 시작 전, Q16)'
 
-registerMock('POST', '/api/users/me/business-card', (_params, body) => {
-  const input = body as BusinessCardInput | undefined
-  validateBusinessCard(input)
-  businessCard = toBusinessCard(input)
-  return businessCard
+registerMock('GET', '/api/users/me/business-card', () => businessCard, {
+  missingInBackend: BUSINESS_CARD_MISSING,
 })
 
-registerMock('PATCH', '/api/users/me/business-card', (_params, body) => {
-  const input = body as BusinessCardInput | undefined
-  validateBusinessCard(input)
-  businessCard = toBusinessCard(input)
-  return businessCard
-})
+registerMock(
+  'POST',
+  '/api/users/me/business-card',
+  (_params, body) => {
+    const input = body as BusinessCardInput | undefined
+    validateBusinessCard(input)
+    businessCard = toBusinessCard(input)
+    return businessCard
+  },
+  { missingInBackend: BUSINESS_CARD_MISSING },
+)
+
+registerMock(
+  'PATCH',
+  '/api/users/me/business-card',
+  (_params, body) => {
+    const input = body as BusinessCardInput | undefined
+    validateBusinessCard(input)
+    businessCard = toBusinessCard(input)
+    return businessCard
+  },
+  { missingInBackend: BUSINESS_CARD_MISSING },
+)
