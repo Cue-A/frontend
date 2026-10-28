@@ -32,6 +32,8 @@ type Props = {
   question: Question
   hideQuestionText: boolean
   phase: SessionPhase
+  /** 면접관 아바타를 고르는 기준(세션 단위로 고정). */
+  sessionId: string
   onSubmitAnswer?: () => void
   progressLabel?: string | null
   needsRerecord?: boolean
@@ -61,6 +63,7 @@ export default function InterviewSessionPage({
   question,
   hideQuestionText,
   phase,
+  sessionId,
   onSubmitAnswer,
   progressLabel = null,
   needsRerecord = false,
@@ -101,12 +104,14 @@ export default function InterviewSessionPage({
           />
         </div>
 
-        <div className="flex flex-1 items-center justify-center">
-          <InterviewerAvatarStage speakingIntensity={speakingIntensity} />
+        {/* items-end · -mb-4: 아바타 몸통 아래쪽이 위 gap-4 를 지나 QuestionCard 윗면에 바로 얹히게 한다. */}
+        <div className="-mb-4 flex flex-1 items-end justify-center">
+          <InterviewerAvatarStage speakingIntensity={speakingIntensity} sessionId={sessionId} phase={phase} interviewerStyle={interviewerStyle} />
         </div>
 
         {/* 질문 음성 재생 전용. 컨트롤은 안 보여주고 useQuestionAudio/useAudioAmplitude 가 소스·재생을 관리한다. */}
-        <audio ref={onAudioElement} hidden />
+        {/* crossOrigin: 음성 파일(S3)이 다른 출처라서, 없으면 배포 환경에서 볼륨이 0으로 읽혀 입이 안 움직인다. 저장소 CORS 헤더와 짝이다. */}
+        <audio ref={onAudioElement} crossOrigin="anonymous" hidden />
 
         <QuestionCard
           question={question}

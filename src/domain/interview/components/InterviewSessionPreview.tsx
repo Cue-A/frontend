@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { DeviceStatus, InterviewerStyle, Question, QuestionType, SessionPhase } from '../types/interview'
 
@@ -21,6 +21,8 @@ const PHASES: SessionPhase[] = ['presenting', 'answering', 'submitting', 'waitin
 const DEVICE_STATUSES: DeviceStatus[] = ['ok', 'warning']
 const INTERVIEWER_STYLES: InterviewerStyle[] = ['friendly', 'pressure']
 const SPEAKING_INTENSITIES = [0, 0.3, 0.7, 1] as const
+/** pickAvatarPreset 해시로 각각 A · B · C · D 가 나오는 세션 id (이슈 #124). */
+const AVATAR_SESSION_IDS = ['preview-1', 'preview-2', 'preview-3', 'preview-4'] as const
 
 const SAMPLE_TEXT: Record<QuestionType, string> = {
   QUESTION: '포트폴리오에 랜덤 포레스트를 쓰셨네요. 왜 이 모델을 선택하셨나요?',
@@ -92,6 +94,7 @@ type PreviewState = {
   interviewerStyle: InterviewerStyle
   hasCameraStream: boolean
   speakingIntensity: number
+  sessionId: string
   showProgressLabel: boolean
   needsRerecord: boolean
   showSubmitError: boolean
@@ -107,6 +110,7 @@ const INITIAL_STATE: PreviewState = {
   interviewerStyle: 'friendly',
   hasCameraStream: false,
   speakingIntensity: 0,
+  sessionId: AVATAR_SESSION_IDS[0],
   showProgressLabel: false,
   needsRerecord: false,
   showSubmitError: false,
@@ -123,6 +127,23 @@ const MIN_WIDTH_PX = 1024
 function LiveFullWidthPreview() {
   const [state, setState] = useState<PreviewState>(INITIAL_STATE)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  // 아바타 입 모션 확인용: 켜면 말하는 것처럼 speakingIntensity 가 0~1 사이를 오간다 (이슈 #124).
+  const [simulateSpeaking, setSimulateSpeaking] = useState(false)
+
+  useEffect(() => {
+    if (!simulateSpeaking) return
+
+    const timer = setInterval(() => {
+      // 음절처럼 0.12초마다 새 값. 가끔 0 으로 떨어져 단어 사이 쉼도 흉내낸다.
+      const next = Math.random() < 0.2 ? 0 : 0.3 + Math.random() * 0.7
+      setState((prev) => ({ ...prev, speakingIntensity: next }))
+    }, 120)
+
+    return () => {
+      clearInterval(timer)
+      setState((prev) => ({ ...prev, speakingIntensity: 0 }))
+    }
+  }, [simulateSpeaking])
 
   const set = <K extends keyof PreviewState>(key: K) => (value: PreviewState[K]) =>
     setState((prev) => ({ ...prev, [key]: value }))
@@ -191,6 +212,19 @@ function LiveFullWidthPreview() {
           options={REMAINING_SEC_OPTIONS}
           onChange={(v) => set('remainingSec')(v === 'none' ? null : Number(v))}
         />
+        <ControlGroup
+          label="말하는 흉내 (자동 재생)"
+          value={simulateSpeaking ? 'on' : 'off'}
+          options={['off', 'on']}
+          onChange={(v) => setSimulateSpeaking(v === 'on')}
+        />
+        <ControlGroup
+          label="끄덕임 (phase 전환)"
+          value={state.phase === 'submitting' || state.phase === 'waitingNextQuestion' ? 'on' : 'off'}
+          options={['off', 'on']}
+          onChange={(v) => set('phase')(v === 'on' ? 'waitingNextQuestion' : 'answering')}
+        />
+        <ControlGroup label="sessionId (아바타 A~D)" value={state.sessionId} options={AVATAR_SESSION_IDS} onChange={set('sessionId')} />
         <div className="flex flex-col gap-1">
           <span className="text-body-sm text-neutral-500">speakingIntensity</span>
           <div className="flex flex-wrap gap-1">
@@ -224,6 +258,7 @@ function LiveFullWidthPreview() {
           deviceStatus={state.deviceStatus}
           deviceStatusMessage={DEVICE_STATUS_MESSAGE[state.deviceStatus]}
           speakingIntensity={state.speakingIntensity}
+          sessionId={state.sessionId}
           hasCameraStream={state.hasCameraStream}
           caption="저는 데이터 분석 프로젝트에서 전처리를 담당했고..."
           question={buildQuestion(state.questionType, state.audioAvailable)}
