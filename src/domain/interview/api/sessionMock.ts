@@ -89,12 +89,11 @@ registerMock('POST', '/api/interviews', (_params, body) => {
 })
 
 /**
- * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다. 면접관 · 답변 시간은 고정값이다 — 이유는
- * sessionApi.getInterviewOptions 주석 참고 (interviewerStyle 대소문자/값 범위 불일치).
+ * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다.
  *
- * `hideQuestionText` 는 위 세션 생성 목업이 받은 값입니다. ⚠️ 면접을 실제 서버에 붙이면 이 API 만 목업이 답하는데
- * (`missingInBackend`), 세션 생성은 실제 서버로 가서 목업이 값을 모릅니다 — 그때는 늘 false 입니다. 백엔드에 세션 조회
- * API 가 생기거나 화면이 옵션 설정 값을 직접 넘겨받아야 풀립니다.
+ * 보통은 여기까지 오지 않습니다. 세션을 만들 때 고른 옵션을 이 탭에 남겨 두고 면접 화면이 그걸 먼저 읽기 때문입니다
+ * (sessionApi.getInterviewOptions · sessionOptionsDraft.ts). 남긴 값이 없을 때만(다른 탭에서 연 면접) 이 목업이
+ * 답하고, 그때 면접관 · 답변 시간은 고정값, `hideQuestionText` 는 위 세션 생성 목업이 받은 값입니다.
  */
 registerMock(
   'GET',

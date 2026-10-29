@@ -11,8 +11,8 @@ export type UseInterviewSessionOptionsResult =
 
 /**
  * 면접 진행 화면(B-01-2)이 필요로 하는 세션 옵션(interviewerStyle · hideQuestionText ·
- * answerTimeLimitSec)을 조회한다. GET /api/interviews/{sessionId} 는 백엔드에 아직
- * 없는 엔드포인트라 지금은 mock 만 동작한다 (sessionApi.getInterviewOptions 참고).
+ * answerTimeLimitSec)을 가져온다. 조회 API 가 백엔드에 없어서, 세션을 만들 때 이 탭에 남겨 둔 값을 먼저 쓰고
+ * 없을 때만 GET /api/interviews/{sessionId}(지금은 목업)로 간다 (sessionApi.getInterviewOptions 참고).
  */
 type State = UseInterviewSessionOptionsResult & { sessionId: string }
 
