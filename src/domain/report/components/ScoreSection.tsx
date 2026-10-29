@@ -6,6 +6,7 @@ import type { AxisRetry } from '../hooks/useAxisRetry'
 import type { ScoreMetric, SubMetric } from '../types/report'
 
 import FailedMetricRow from './FailedMetricRow'
+import RetryPanel, { type FailedAxis } from './RetryPanel'
 
 type Props = {
   metrics: ScoreMetric[]
@@ -47,8 +48,9 @@ function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
  * 남습니다. 그건 계약 위반이라 0점으로 그리지 않고 문구로 드러냅니다.
  * (PR #50 리뷰)
  *
- * **분석이 실패한 축**(`retryAxis` 가 있는 줄)은 `FailedMetricRow` 로 그립니다. 사유와 "다시 분석" 버튼이
- * 그 줄에 같이 있습니다. 백엔드가 실패한 축을 한 번에 다시 돌려서, 어느 줄에서 눌러도 실패한 줄이 다 같이 돕니다.
+ * **분석이 실패한 축**(`retryAxis` 가 있는 줄)은 `FailedMetricRow` 로 그리고, 그 줄에는 상태만 적습니다.
+ * "다시 분석" 버튼은 점수 목록 바로 아래 `RetryPanel` 하나에 둡니다. 백엔드가 실패한 축을 한 번에 다시 돌려서
+ * 버튼도 하나이고, 무엇을 다시 분석하는지는 그 칸의 제목에 적습니다. (#125)
  * 다시 분석해서 점수를 받으면 리포트가 통째로 새 값으로 바뀌고,
  * 무엇이 바뀌었는지 절 머리에 한 줄로 알려줍니다 — 총점도 같이 바뀌어서, 말없이 숫자만 바뀌면 왜 바뀌었는지 모릅니다.
  *
@@ -57,7 +59,9 @@ function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
  */
 export default function ScoreSection({ metrics, subMetrics, comment, retry }: Props) {
   const recovered = recoveredLabels(metrics, retry)
-  const retryLabels = metrics.filter((metric) => metric.retryAxis).map((metric) => metric.label)
+  const failed: FailedAxis[] = metrics.flatMap((metric) =>
+    metric.retryAxis ? [{ axis: metric.retryAxis, label: metric.label }] : [],
+  )
 
   return (
     <Card label="세부 점수" padding="lg">
@@ -81,11 +85,8 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
                 <FailedMetricRow
                   key={metric.key}
                   metric={metric}
-                  axis={metric.retryAxis}
-                  running={retry.running}
+                  isRunning={retry.running.includes(metric.retryAxis)}
                   outcome={retry.outcomes[metric.retryAxis]}
-                  retryLabels={retryLabels}
-                  onRetry={retry.retry}
                 />
               )
             }
@@ -132,6 +133,8 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
             )
           })}
         </ul>
+
+        <RetryPanel failed={failed} running={retry.running} outcomes={retry.outcomes} onRetry={retry.retry} />
 
         {subMetrics.length > 0 && (
           <div className="flex flex-wrap gap-3">
