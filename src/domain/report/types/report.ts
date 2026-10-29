@@ -26,6 +26,25 @@ export type MetricStatus = 'ok' | 'failed' | 'skipped'
 export type RetryAxis = 'speech' | 'gaze'
 
 /**
+ * 실패한 축을 다시 분석한 상태입니다. 재시도한 적이 없거나 성공했으면 리포트에서 null 입니다.
+ *
+ * 다시 분석은 **실패한 축 전부를 한 번에** 돌립니다. 백엔드가 축을 고르게 하지 않고 리포트의 실패 축
+ * (`overall.axesFailed`)을 그대로 씁니다 (Cue-A/backend#68).
+ */
+export type RetryState = {
+  /** `processing` 이면 다시 분석하는 중, `failed` 면 마지막 재시도가 실패했습니다. 리포트는 어느 쪽이든 원래 결과 그대로입니다 */
+  status: 'processing' | 'failed'
+  /** 다시 분석하는(한) 축 */
+  axes: RetryAxis[]
+  /** `failed` 일 때만. 화면 문구는 이 코드로 고릅니다 (`RETRY_MESSAGES`) */
+  errorCode: string | null
+  /** `failed` 일 때만. 서버 문구입니다. 우리 문구가 없는 코드일 때만 씁니다 */
+  message: string | null
+  /** `failed` 일 때 다시 눌러 볼 만한지 */
+  retryable: boolean
+}
+
+/**
  * 점수의 근거가 된 답변 구간입니다.
  *
  * 재생 위치로 점프하는 기능은 아직 없지만 값은 처음부터 옵니다.
@@ -258,4 +277,7 @@ export type Report = {
   improvedAnswer: ImprovedAnswer | null
   /** 영상이 아예 없는 회차도 있을 수 있어서 null 을 허용합니다 */
   video: ReportVideo | null
+
+  /** 실패한 축을 다시 분석한 상태. 재시도한 적이 없거나 성공했으면 null 입니다 */
+  retry: RetryState | null
 }

@@ -9,24 +9,30 @@ type Props = {
   metric: ScoreMetric
   /** 다시 분석할 축. `metric.retryAxis` 가 있는 줄만 이 컴포넌트로 그립니다 */
   axis: RetryAxis
-  /** 지금 다시 분석 중인 축. 이 줄이 아니어도 다른 줄이 돌고 있으면 버튼을 잠급니다 */
-  running: RetryAxis | null
+  /** 지금 다시 분석 중인 축들. 비어 있으면 안 돌고 있습니다 */
+  running: RetryAxis[]
   /** 이 축을 다시 분석한 마지막 결과. 아직 안 했으면 undefined */
   outcome: RetryOutcome | undefined
-  onRetry: (axis: RetryAxis) => void
+  /**
+   * 다시 분석하면 같이 도는 항목 이름들(이 줄 포함). 백엔드가 실패한 축을 한 번에 다시 돌려서, 둘 이상이면
+   * 버튼을 누르기 전에 같이 돈다는 걸 적어 둡니다. 예) ['말하기', '시선']
+   */
+  retryLabels: string[]
+  /** 실패한 축을 전부 다시 분석합니다 */
+  onRetry: () => void
 }
 
 const ICON_SIZE = 16
 
 /** 지금 상태에서 보여줄 제목 · 설명 · 버튼입니다 */
-function describe({ metric, axis, running, outcome }: Omit<Props, 'onRetry'>) {
-  if (running === axis) {
+function describe({ metric, axis, running, outcome, retryLabels }: Omit<Props, 'onRetry'>) {
+  if (running.includes(axis)) {
     return {
       title: `${metric.label} 분석을 다시 하고 있어요`,
       detail: '끝나면 이 자리에 점수가 나와요.',
       error: null,
       showButton: true,
-      blockedReason: null,
+      together: null,
     }
   }
 
@@ -44,10 +50,10 @@ function describe({ metric, axis, running, outcome }: Omit<Props, 'onRetry'>) {
     title,
     detail,
     error: outcome?.kind === 'failed' ? outcome.message : null,
-    // 다시 해도 결과가 같은 실패(없는 API · 고칠 수 없는 요청)면 버튼을 거둡니다
+    // 다시 해도 결과가 같은 실패(다시 분석할 수 없는 리포트 · 음성 인식 실패)면 버튼을 거둡니다
     showButton: outcome?.kind !== 'failed' || outcome.retryable,
-    // 못 누르는 이유는 툴팁이 아니라 글로 적습니다 (Button 의 title 주석)
-    blockedReason: running !== null ? '다른 항목을 다시 분석하는 중이라, 끝난 뒤에 누를 수 있어요.' : null,
+    // 어느 줄에서 눌러도 실패한 항목이 다 같이 돕니다. 누르기 전에 알 수 있게 적습니다
+    together: retryLabels.length > 1 ? `다시 분석하면 ${retryLabels.join(' · ')} 항목을 함께 다시 분석해요.` : null,
   }
 }
 
@@ -63,9 +69,9 @@ function describe({ metric, axis, running, outcome }: Omit<Props, 'onRetry'>) {
  * 상태가 바뀌면 화면 읽기 프로그램이 읽도록 가운데 칸을 `role="status"` 로 둡니다. 다시 분석은 몇십 초가
  * 걸려서, 버튼을 누른 뒤 결과를 소리로 알려주지 않으면 끝났는지 알 수 없습니다.
  */
-export default function FailedMetricRow({ metric, axis, running, outcome, onRetry }: Props) {
-  const { title, detail, error, showButton, blockedReason } = describe({ metric, axis, running, outcome })
-  const isRunning = running === axis
+export default function FailedMetricRow({ metric, axis, running, outcome, retryLabels, onRetry }: Props) {
+  const { title, detail, error, showButton, together } = describe({ metric, axis, running, outcome, retryLabels })
+  const isRunning = running.includes(axis)
 
   return (
     <li className="flex items-start gap-4">
@@ -86,7 +92,7 @@ export default function FailedMetricRow({ metric, axis, running, outcome, onRetr
         </p>
         <p className="text-body-sm text-neutral-500">{detail}</p>
         {error && <p className="text-body-sm text-semantic-danger">{error}</p>}
-        {!isRunning && blockedReason && <p className="text-body-sm text-neutral-500">{blockedReason}</p>}
+        {showButton && together && <p className="text-body-sm text-neutral-500">{together}</p>}
       </div>
 
       {/* 버튼이 점수 칸(w-24)보다 넓어서 최소 너비로 둡니다. 오른쪽 끝은 다른 줄의 점수와 맞습니다 */}
@@ -94,8 +100,8 @@ export default function FailedMetricRow({ metric, axis, running, outcome, onRetr
         {showButton && (
           <Button
             size="sm"
-            onClick={() => onRetry(axis)}
-            disabled={running !== null}
+            onClick={onRetry}
+            disabled={running.length > 0}
             className="whitespace-nowrap"
           >
             {isRunning ? (

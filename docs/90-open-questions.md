@@ -129,25 +129,20 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
 - 남은 것
   - **다른 탭 · 기기에서 연 경우.** 기억해 둔 reportId 가 없으면 등록이 409 `REPORT_ALREADY_EXISTS` 이고, 상태 조회도
     reportId 로만 물을 수 있어서 이어 볼 길이 없습니다. 리포트 목록이 생기면 풀립니다
-  - **리포트 조회 API.** 분석이 끝나 리포트 화면으로 넘어가도 조회 API 가 없어서 실제 모드에서는 화면이 뜨지 않습니다
 - 걸리는 작업: 리포트 화면, 분석 중 화면.
 
-### Q14. 🟡 실패한 축만 다시 분석 (부분 재시도)
+### Q14. ✅ 실패한 축만 다시 분석 (부분 재시도)
 
-AI 는 준비돼 있고(AI 계약 14장 `POST /ai/sessions/{session_id}/report/retry`), 백엔드는 아직 없습니다
-(Cue-A/backend `docs/13-report.md` "아직 없는 것" — "`PARTIAL` 전용. 만들지 팀 확인 필요"). 리포트 화면의
-"다시 분석" 버튼은 아래 임시 계약으로 목업에 붙였습니다(`domain/report/api/reportRetryApi.ts`, `missingInBackend`).
+백엔드에 들어왔습니다(Cue-A/backend#68). 프론트는 그 계약에 맞췄습니다(`domain/report/api/reportRetryApi.ts`).
 
-- 임시 결정
-  - `POST /api/reports/{reportId}/retry` 본문 `{ axes: ['speech' | 'gaze'] }` → 202 `{ reportId, status: 'PROCESSING' }`
-  - 진행 · 결과는 분석 등록과 같은 소켓 `/ws/reports/{reportId}` 의 `progress` · `report` · `error`
-  - 한 번에 한 축만. 버튼은 분석이 실패한 축(`failed`) 줄에만 있고, 미사용(`skipped`) 줄에는 없습니다
-  - `report` 가 오면 리포트를 다시 조회해 통째로 바꿉니다. 재시도는 총점 · 상태까지 새 값으로 교체합니다
-- 남은 결정 (백엔드)
-  - 만들지 여부 · 경로 · 축 이름(`gaze` / `score_vision`) · 에러 코드(부분 실패가 아닌 리포트, 이미 도는 중)
-  - 재시도 중에 상태 조회(`GET /api/reports/{reportId}/status`)가 `PROCESSING` 으로 보이는지. 새로고침한 뒤
-    이어 받으려면 필요합니다. 지금은 새로고침하면 기다림이 끊기고 버튼이 다시 보입니다
-- 걸리는 작업: 리포트 화면 세부 점수.
+- `POST /api/reports/{reportId}/retry` — **본문 없음.** 백엔드가 리포트의 실패 축(`overall.axesFailed`)을 전부
+  한 번에 다시 돌립니다. 202 `{ reportId, status: 'PARTIAL', retry: { status: 'PROCESSING', axes } }`
+- 진행 · 결과는 분석 등록과 같은 소켓 `/ws/reports/{reportId}` 의 `progress` · `report` · `error`
+- 재시도 중에도 리포트는 `PARTIAL` 로 조회되고, 상세 · 상태 조회의 `retry.status` 가 `PROCESSING` 입니다.
+  성공하면 리포트가 통째로 바뀌고 `retry` 가 null, 실패하면 리포트는 그대로이고 `retry.status` 가 `FAILED` 입니다
+- 409 `REPORT_NOT_RETRYABLE`(부분 실패 리포트가 아님) · `REPORT_RETRY_IN_PROGRESS`(이미 도는 중)
+- 화면: 실패한 줄마다 "다시 분석" 버튼이 있지만 어느 줄에서 눌러도 실패한 줄이 다 같이 돕니다(둘 이상이면 줄에 적어 둡니다).
+  새로고침하거나 다른 탭에서 열어도 리포트의 `retry` 를 보고 도는 중인 재시도를 이어 기다리고, 마지막 실패 사유도 보여줍니다
 
 ### Q13. 🔴 카카오 인가 요청에 `state` 파라미터가 없습니다
 

@@ -35,7 +35,7 @@ import TimelineSection from './TimelineSection'
 export default function ReportPage() {
   const { reportId } = useParams()
   const { data, isLoading, error, reload } = useReport(reportId)
-  const retry = useAxisRetry(reportId, reload)
+  const retry = useAxisRetry(reportId, data, reload)
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
 
   if (isLoading) {

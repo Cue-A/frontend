@@ -89,8 +89,7 @@ export function getReportStatus(reportId: string) {
  * 알림은 **한 번만** 남깁니다. 화면에 들어올 때 · 다시 분석할 때 · 새로고침할 때마다 불려서, 매번 찍으면 콘솔이
  * 덮입니다 (`shared/api/mock.ts` 의 `announceMissing` 과 같은 이유).
  *
- * 실제로 붙일 때는 `VITE_REAL_APIS` 에 `interviews` 와 `reports` 를 같이 켭니다. 리포트 **상세** 조회는
- * 백엔드에 아직 없어서 `reports` 를 켜도 목업이 답합니다(`missingInBackend`, #78).
+ * 실제로 붙일 때는 `VITE_REAL_APIS` 에 `interviews` 와 `reports` 를 같이 켭니다.
  */
 let warnedSplitDomains = false
 

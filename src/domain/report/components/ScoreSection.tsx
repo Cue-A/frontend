@@ -48,7 +48,8 @@ function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
  * (PR #50 리뷰)
  *
  * **분석이 실패한 축**(`retryAxis` 가 있는 줄)은 `FailedMetricRow` 로 그립니다. 사유와 "다시 분석" 버튼이
- * 그 줄에 같이 있습니다. 다시 분석해서 점수를 받으면 리포트가 통째로 새 값으로 바뀌고,
+ * 그 줄에 같이 있습니다. 백엔드가 실패한 축을 한 번에 다시 돌려서, 어느 줄에서 눌러도 실패한 줄이 다 같이 돕니다.
+ * 다시 분석해서 점수를 받으면 리포트가 통째로 새 값으로 바뀌고,
  * 무엇이 바뀌었는지 절 머리에 한 줄로 알려줍니다 — 총점도 같이 바뀌어서, 말없이 숫자만 바뀌면 왜 바뀌었는지 모릅니다.
  *
  * 막대 너비는 계산값이라 인라인 style 을 씁니다.
@@ -56,6 +57,7 @@ function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
  */
 export default function ScoreSection({ metrics, subMetrics, comment, retry }: Props) {
   const recovered = recoveredLabels(metrics, retry)
+  const retryLabels = metrics.filter((metric) => metric.retryAxis).map((metric) => metric.label)
 
   return (
     <Card label="세부 점수" padding="lg">
@@ -82,6 +84,7 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
                   axis={metric.retryAxis}
                   running={retry.running}
                   outcome={retry.outcomes[metric.retryAxis]}
+                  retryLabels={retryLabels}
                   onRetry={retry.retry}
                 />
               )
