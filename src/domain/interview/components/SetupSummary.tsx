@@ -4,20 +4,8 @@ import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
 import { estimateDurationMinutes } from '../lib/estimateDuration'
-import {
-  CUSTOM_COMPANY,
-  INTERVIEWER_STYLES,
-  DELIVERY_MODES,
-  type Company,
-  type SessionSetup,
-} from '../types/sessionSetup'
-
-const NOT_SELECTED = '미선택'
-
-function labelOf(choices: { value: string; label: string }[], value: string | null) {
-  if (!value) return NOT_SELECTED
-  return choices.find((choice) => choice.value === value)?.label ?? NOT_SELECTED
-}
+import { NOT_SELECTED, setupSummaryValues } from '../lib/setupSummaryValues'
+import { CUSTOM_COMPANY, type Company, type SessionSetup } from '../types/sessionSetup'
 
 function companyLabel(setup: SessionSetup, companies: Company[]) {
   if (!setup.useCompanyQuestion) return '미사용'
@@ -56,16 +44,13 @@ export default function SetupSummary({
   const minutes = estimateDurationMinutes(setup.questionCount, setup.answerSeconds)
 
   const rows = [
-    { label: '직무', value: setup.jobRole.trim() || '미입력' },
+    { label: '직무', value: setupSummaryValues.jobRole(setup) },
     { label: '자기소개서', value: setup.resume ? '1개 연결됨' : '미연결' },
     { label: '기업 맞춤 질문', value: companyLabel(setup, companies) },
-    { label: '질문 수', value: `${setup.questionCount}문항` },
-    {
-      label: '답변 시간',
-      value: setup.answerSeconds === null ? '제한 없음' : `질문당 ${setup.answerSeconds}초`,
-    },
-    { label: '면접관', value: labelOf(INTERVIEWER_STYLES, setup.interviewerStyle) },
-    { label: '진행 방식', value: labelOf(DELIVERY_MODES, setup.deliveryMode) },
+    { label: '질문 수', value: setupSummaryValues.questionCount(setup) },
+    { label: '답변 시간', value: setupSummaryValues.answerTime(setup) },
+    { label: '면접관', value: setupSummaryValues.interviewer(setup) },
+    { label: '진행 방식', value: setupSummaryValues.deliveryMode(setup) },
   ]
 
   return (

@@ -28,9 +28,17 @@ const INITIAL_SETUP: SessionSetup = {
 /** 이 탭에 남겨 두는 이름 (shared/lib/draftStorage) */
 const DRAFT_NAME = 'sessionSetup'
 
+/**
+ * 이 탭에 남겨 둔 옵션을 꺼냅니다. 남겨 둔 값이 없거나 모양이 맞지 않으면 null 입니다.
+ * 장치 테스트의 면접 요약이 옵션 설정에서 고른 값을 보여줄 때도 이걸 씁니다.
+ */
+export function loadSavedSessionSetup(): SessionSetup | null {
+  return parseSavedSessionSetup(loadDraft(DRAFT_NAME))
+}
+
 /** 남겨 둔 값이 있으면 그걸로, 없거나 모양이 맞지 않으면 처음 값으로 시작합니다 */
 function restoreSetup(): SessionSetup {
-  return parseSavedSessionSetup(loadDraft(DRAFT_NAME)) ?? INITIAL_SETUP
+  return loadSavedSessionSetup() ?? INITIAL_SETUP
 }
 
 /**
