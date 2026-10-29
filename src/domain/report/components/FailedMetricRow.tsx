@@ -1,23 +1,23 @@
 import { IconAlertTriangle, IconLoader2 } from '@tabler/icons-react'
 
-import type { RetryOutcome } from '../hooks/useAxisRetry'
 import type { ScoreMetric } from '../types/report'
 
 type Props = {
   metric: ScoreMetric
   /** 이 축을 지금 다시 분석하는 중인지 */
   isRunning: boolean
-  /** 이 축을 다시 분석한 마지막 결과. 아직 안 했으면 undefined */
-  outcome: RetryOutcome | undefined
 }
 
 const ICON_SIZE = 16
 
-/** 이 줄에 적을 상태 한 줄입니다 */
-function titleOf(metric: ScoreMetric, isRunning: boolean, outcome: RetryOutcome | undefined) {
-  if (isRunning) return `${metric.label} 분석을 다시 하고 있어요`
-  if (outcome?.kind === 'stillFailed') return `${metric.label} 분석을 이번에도 마치지 못했어요`
-  return `${metric.label} 분석에 실패했어요`
+/**
+ * 이 줄에 적을 상태 한 줄입니다. 항목 이름은 왼쪽 칸에 있어서 다시 적지 않습니다.
+ *
+ * 분석 중이 아니면 몇 번째 시도든 같은 문구입니다 — "다시" · "이번에도" 를 붙이면 실패가 쌓이는 것처럼 읽혀서
+ * 뺐습니다. 시도마다 달라지는 사유는 아래 `RetryPanel` 이 적습니다.
+ */
+function titleOf(isRunning: boolean) {
+  return isRunning ? '분석하고 있어요' : '분석하지 못했어요'
 }
 
 /**
@@ -32,7 +32,7 @@ function titleOf(metric: ScoreMetric, isRunning: boolean, outcome: RetryOutcome 
  * 줄의 칸은 다른 점수 줄과 같습니다(이름 · 가운데 · 오른쪽). 막대 자리에 상태를 적고, 점수 자리는 점수가 없는
  * 다른 줄처럼 `—` 로 둡니다. 상태가 바뀌었다는 소리 안내는 `RetryPanel` 이 한 번만 합니다.
  */
-export default function FailedMetricRow({ metric, isRunning, outcome }: Props) {
+export default function FailedMetricRow({ metric, isRunning }: Props) {
   return (
     <li className="flex items-center gap-4">
       <span className="w-24 shrink-0 text-body-md text-neutral-700">{metric.label}</span>
@@ -43,7 +43,7 @@ export default function FailedMetricRow({ metric, isRunning, outcome }: Props) {
         ) : (
           <IconAlertTriangle size={ICON_SIZE} aria-hidden className="shrink-0 text-semantic-warning" />
         )}
-        {titleOf(metric, isRunning, outcome)}
+        {titleOf(isRunning)}
       </p>
 
       <span className="w-24 shrink-0 text-right text-stat text-neutral-300">—</span>

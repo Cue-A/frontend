@@ -74,7 +74,7 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
         {recovered.length > 0 && (
           <p role="status" className="flex items-center gap-2 text-body-md text-semantic-success">
             <IconCircleCheck size={18} aria-hidden className="shrink-0" />
-            {recovered.join(' · ')} 점수를 다시 받았어요. 총점도 새로 계산했어요.
+            {recovered.join(' · ')} 점수가 나왔어요. 총점을 새로 계산했어요.
           </p>
         )}
 
@@ -86,7 +86,6 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
                   key={metric.key}
                   metric={metric}
                   isRunning={retry.running.includes(metric.retryAxis)}
-                  outcome={retry.outcomes[metric.retryAxis]}
                 />
               )
             }
