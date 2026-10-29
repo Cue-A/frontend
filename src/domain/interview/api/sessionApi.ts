@@ -3,6 +3,7 @@ import { api } from '@/shared/api/apiClient'
 import type { AnswerSubmission, InterviewOptions } from '../types/interview'
 import { CUSTOM_COMPANY, type Company, type InterviewerStyle, type SessionSetup } from '../types/sessionSetup'
 
+import { recallSessionOptions, rememberSessionOptions, toSessionOptions } from './sessionOptionsDraft'
 import './sessionMock'
 
 export function getCompanies() {
@@ -96,8 +97,11 @@ export type CreatedSession = {
  * - 문항 수: 3 · 6 · 9. 아니면 `INVALID_QUESTION_COUNT`
  * - 분당 10회 (`RATE_LIMIT_EXCEEDED`)
  */
-export function createSession(setup: SessionSetup) {
-  return api.post<CreatedSession>('/api/interviews', toCreateBody(setup))
+export async function createSession(setup: SessionSetup) {
+  const session = await api.post<CreatedSession>('/api/interviews', toCreateBody(setup))
+  // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 조회 API 가 없어서입니다 (`getInterviewOptions` · sessionOptionsDraft.ts)
+  rememberSessionOptions(session.sessionId, toSessionOptions(setup))
+  return session
 }
 
 /**
@@ -106,15 +110,19 @@ export function createSession(setup: SessionSetup) {
  * questionCountLabel · interviewerCount 는 지금까지 만들어진 B-01/B-01-2 UI 어디에서도
  * 쓰이지 않는다.
  *
- * GET /api/interviews/{sessionId} 는 백엔드에 아직 없는 엔드포인트다. mock 은 실제로
- * 제출된 SessionSetup 을 반영하지 않고 고정값을 돌려준다 — SessionSetup.interviewerStyle
- * (대문자 3종: FRIENDLY/NEUTRAL/PRESSURE)과 이 InterviewOptions.interviewerStyle(소문자
- * 2종: friendly/pressure, NEUTRAL 없음) 사이의 매핑이 아직 정해지지 않았기 때문이다.
- * 계약이 정해지면 이 함수와 매핑만 고치면 된다.
+ * GET /api/interviews/{sessionId} 는 백엔드에 아직 없는 엔드포인트다. 그래서 **세션을 만들 때 남겨 둔 값을 먼저
+ * 쓴다** (`createSession` · sessionOptionsDraft.ts). 남긴 값이 없을 때만(다른 탭 · 기기에서 연 면접) 이 API 로
+ * 가고, 지금은 목업이 고정값을 돌려준다.
+ *
+ * 면접관 스타일은 옵션 설정이 대문자(FRIENDLY · PRESSURE), 면접 화면이 소문자(friendly · pressure)라
+ * `toSessionOptions` 에서 바꾼다. 백엔드에 조회 API 가 생기면 서버 값을 먼저 쓰도록 바꾸고 남겨 둔 값은 지운다.
  */
 export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'>
 
-export function getInterviewOptions(sessionId: string) {
+export async function getInterviewOptions(sessionId: string): Promise<InterviewSessionOptions> {
+  const remembered = recallSessionOptions(sessionId)
+  if (remembered) return remembered
+
   return api.get<InterviewSessionOptions>(`/api/interviews/${sessionId}`)
 }
 
