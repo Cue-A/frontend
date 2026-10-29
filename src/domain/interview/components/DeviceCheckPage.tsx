@@ -193,8 +193,12 @@ export default function DeviceCheckPage() {
   const navigate = useNavigate()
 
   // 옵션 설정에서 고른 값(이 탭의 sessionStorage). 처음 한 번만 읽는다 — "면접 시작하기" 가 저장된 값을
-  // 지우는데(clearSavedSessionSetup), 매 렌더 읽으면 화면이 넘어가기 전에 패널이 placeholder 로 되돌아간다.
-  // 주소를 바로 열었거나 새 탭이거나 저장된 값의 모양이 깨져 있으면 null 이고, 그땐 placeholder 를 둔다.
+  // 지우는데(clearSavedSessionSetup), 매 렌더 읽으면 화면이 넘어가기 전에 패널이 빈 표시("-")로 되돌아간다.
+  // 주소를 바로 열었거나 새 탭이거나 저장된 값의 모양이 깨져 있으면 null 이고, 그땐 빈 표시를 둔다.
+  //
+  // TODO(session-detail-api): 세션 조회 API(GET /api/interviews/{sessionId})가 생기면 이 탭 저장값 대신
+  // 서버값으로 바꾼다. 면접 화면은 "면접 시작하기" 에서 저장값이 지워지므로 이 값을 읽을 수 없다 —
+  // "음성만 듣기" 일 때 질문 글을 숨기는 것도 임시로 저장값을 읽지 말고 이 API 를 기다린다.
   const [savedSetup] = useState(loadSavedSessionSetup)
 
   const {
@@ -494,7 +498,9 @@ export default function DeviceCheckPage() {
                     {savedSetup ? (
                       <dd className="text-body-sm font-semibold text-neutral-900">{toValue(savedSetup)}</dd>
                     ) : (
-                      <dd className="text-body-sm text-neutral-300">연동 준비 중</dd>
+                      <dd className="text-body-sm text-neutral-300" aria-label="값 없음">
+                        -
+                      </dd>
                     )}
                   </div>
                 ))}
