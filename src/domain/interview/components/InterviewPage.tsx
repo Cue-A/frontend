@@ -300,6 +300,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         question={session.question}
         hideQuestionText={options.hideQuestionText}
         phase={session.phase}
+        sessionId={sessionId}
         onSubmitAnswer={handleSubmitAnswer}
         progressLabel={session.progressLabel}
         needsRerecord={session.needsRerecord}

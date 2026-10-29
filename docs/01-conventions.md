@@ -251,6 +251,7 @@ Tailwind CSS v4 를 CSS-first 로 씁니다. `tailwind.config.js` 는 없습니�
 
 - **색 · radius · 그림자 · 타이포는 디자인 토큰 클래스만 씁니다.** `bg-[#5345F0]` 같은
   arbitrary value 를 쓰지 않습니다. 토큰 목록은 `docs/design-system.md` 에 있습니다.
+  예외: 일러스트 SVG 색은 `lib/interviewerAvatars.ts` 에서만 hex 로 둡니다. className 에는 여전히 임의 값을 쓰지 않습니다.
 - 여백은 Tailwind 기본 spacing 숫자(`p-6`, `gap-5`)를 그대로 씁니다. Figma 스펙과 맞습니다.
 - 클래스가 길어져도 별도 CSS 파일로 빼지 않습니다. 반복되면 컴포넌트로 뺍니다.
 - 인라인 `style` 은 계산값(진행률 바 너비 등)에만 씁니다.
