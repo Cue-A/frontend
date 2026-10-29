@@ -59,19 +59,19 @@ export default function ReportPage() {
     전에는 여기서 analysisStatus 가 COMPLETED 가 아닐 때 "분석 중" 문구를 띄웠습니다.
     `QUEUED` · `PROCESSING` 같은 값은 계약이 없을 때 지어낸 것이라 지웠습니다.
 
-    상황 자체는 그대로 있습니다. 다만 상태 필드가 아니라 **에러 코드**로 옵니다.
+    상황 자체는 그대로 있습니다. 다만 상태 필드가 아니라 **에러 코드**로 옵니다. (Cue-A/backend#66)
 
-      REPORT_NOT_READY   아직 만드는 중 (백엔드 ErrorCode.java, HTTP 202)
-      CONTENT_FAILED     내용 분석 실패 — 리포트가 아예 없음
-      REPORT_TOO_SHORT   답변 2문항 미만
+      REPORT_NOT_FOUND   없는 리포트 · 남의 리포트 (404)
+      REPORT_NOT_READY   아직 만드는 중 (202)
+      REPORT_FAILED      분석이 실패한 리포트 (409) — 내용 분석 실패 · 답변 부족 등
 
     셋 다 조회가 에러로 떨어져서 위의 error 분기가 받고, 문구는
     `shared/api/errorMessage.ts` 가 붙입니다. 그래서 여기 따로 분기하지 않습니다.
     점수가 빈 리포트를 그리는 길은 아예 없습니다.
 
     분석이 도는 동안 진행률을 보여주는 건 분석 중 화면(B-02)이 맡습니다.
-    분석 등록과 진행 소켓은 Cue-A/backend#50 에 맞춰 붙였고, 이 화면의 조회 API 와 실패한 축만 다시
-    분석하는 API(`reportRetryApi.ts`)가 아직 없습니다. 둘 다 목업이 답합니다.
+    조회 응답을 화면 값으로 바꾸는 건 `api/reportResponse.ts` 이고, 응답에 없는 값(회사명 · 회차 · 영상 …)을
+    무엇으로 채우는지도 그 파일 맨 위에 적어 뒀습니다.
   */
 
   /*
@@ -147,7 +147,7 @@ export default function ReportPage() {
 
         <SummarySection
           summary={data.summary}
-          subtitle={`${data.jobRole} · ${data.interviewDate}`}
+          subtitle={[data.jobRole, data.interviewDate].filter(Boolean).join(' · ')}
         />
 
         {data.companyComment && (
