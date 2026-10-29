@@ -110,7 +110,7 @@ export default function InterviewSessionPage({
         </div>
 
         {/* 질문 음성 재생 전용. 컨트롤은 안 보여주고 useQuestionAudio/useAudioAmplitude 가 소스·재생을 관리한다. */}
-        {/* crossOrigin: 음성 파일(S3)이 다른 출처라서, 없으면 배포 환경에서 볼륨이 0으로 읽혀 입이 안 움직인다. 저장소 CORS 헤더와 짝이다. */}
+        {/* crossOrigin: 음성 파일(S3)이 다른 출처라서, 없으면 Web Audio 를 거친 소리가 무음이 된다(입뿐 아니라 질문 음성이 안 들린다). 지우지 말 것 — 저장소 CORS 헤더와 짝이다. */}
         <audio ref={onAudioElement} crossOrigin="anonymous" hidden />
 
         <QuestionCard

@@ -1,4 +1,4 @@
-import type { AvatarPreset } from '../lib/interviewerAvatars'
+import { AVATAR_INK, AVATAR_WHITE, type AvatarPreset } from '../lib/interviewerAvatars'
 
 type Props = {
   preset: AvatarPreset
@@ -10,7 +10,6 @@ type Props = {
   isStern: boolean
 }
 
-const INK = '#2C2C2A'
 const BAR = 'transform-fill origin-center'
 
 /** 얼굴 윤곽. 긴 머리(C)는 이마가 뾰족한 아치형이라 윗선이 다르다. */
@@ -75,8 +74,8 @@ export default function InterviewerAvatar({ preset, mouthOpen, isNodding, isSter
         <path fill={preset.shirt} d="M28 214 L28 194 C28 174 50 162 78 154 L100 174 L122 154 C150 162 172 174 172 194 L172 214Z" />
         <rect x="87" y="126" width="26" height="36" fill={preset.skin} />
         <path d="M86 153 L114 153 L100 176Z" fill={preset.skin} />
-        <path d="M78 154 L86 152 L100 176 L89 188Z" fill="#FFFFFF" />
-        <path d="M122 154 L114 152 L100 176 L111 188Z" fill="#FFFFFF" />
+        <path d="M78 154 L86 152 L100 176 L89 188Z" fill={AVATAR_WHITE} />
+        <path d="M122 154 L114 152 L100 176 L111 188Z" fill={AVATAR_WHITE} />
 
         {/* 머리: 끄덕임은 기울임 없이 위아래로만 움직인다 */}
         <g className={isNodding ? 'motion-safe:animate-avatar-nod' : undefined}>
@@ -103,17 +102,17 @@ export default function InterviewerAvatar({ preset, mouthOpen, isNodding, isSter
 
           {/* 눈: 두 눈을 한 그룹으로 묶어 애니메이션 하나로 깜빡인다. 눈마다 따로 돌리면 한쪽씩 감길 수 있다. */}
           <g className={`${BAR} motion-safe:animate-avatar-blink`} style={blinkStyle}>
-            <ellipse cx="83" cy="95" rx="4.4" ry="5.6" fill={INK} />
-            <circle cx="84.6" cy="92.8" r="1.3" fill="#FFFFFF" />
-            <ellipse cx="117" cy="95" rx="4.4" ry="5.6" fill={INK} />
-            <circle cx="118.6" cy="92.8" r="1.3" fill="#FFFFFF" />
+            <ellipse cx="83" cy="95" rx="4.4" ry="5.6" fill={AVATAR_INK} />
+            <circle cx="84.6" cy="92.8" r="1.3" fill={AVATAR_WHITE} />
+            <ellipse cx="117" cy="95" rx="4.4" ry="5.6" fill={AVATAR_INK} />
+            <circle cx="118.6" cy="92.8" r="1.3" fill={AVATAR_WHITE} />
           </g>
 
           {/* 입: 평소엔 웃는 선(압박 면접관은 웃지 않는 선), 말할 땐 타원의 높이가 볼륨에 따라 커졌다 작아진다. */}
           <path
             d={isStern ? 'M90 121 Q100 119 110 121' : 'M88 118 Q100 126 112 118'}
             fill="none"
-            stroke={INK}
+            stroke={AVATAR_INK}
             strokeWidth="3"
             strokeLinecap="round"
             style={{ opacity: isTalking ? 0 : 1 }}
@@ -123,14 +122,14 @@ export default function InterviewerAvatar({ preset, mouthOpen, isNodding, isSter
             cy="122"
             rx="7"
             ry="6"
-            fill={INK}
+            fill={AVATAR_INK}
             className="transform-fill origin-center transition-transform duration-75"
             style={{ transform: `scaleY(${open})`, opacity: isTalking ? 1 : 0 }}
           />
 
           {/* 안경 */}
           {preset.glasses && (
-            <g fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round">
+            <g fill="none" stroke={AVATAR_INK} strokeWidth="3" strokeLinecap="round">
               <rect x="67" y="82" width="29" height="26" rx="10" />
               <rect x="104" y="82" width="29" height="26" rx="10" />
               <path d="M96 90 Q100 87 104 90" />

@@ -1,3 +1,8 @@
+/** 눈 · 입 · 안경 선 색. 머리색과 값이 같아도 쓰임이 달라 프리셋과 따로 둔다. */
+export const AVATAR_INK = '#2C2C2A'
+/** 셔츠 깃 · 눈 하이라이트. */
+export const AVATAR_WHITE = '#FFFFFF'
+
 export type AvatarId = 'A' | 'B' | 'C' | 'D'
 
 export type AvatarHairStyle = 'short' | 'long' | 'bun'
@@ -5,6 +10,7 @@ export type AvatarHairStyle = 'short' | 'long' | 'bun'
 /**
  * 면접관 아바타 프리셋. 피부·머리·옷 색은 디자인 전달 문서(프론트 전달 — 면접관 아바타)의 값
  * 그대로이고, 일러스트 색이라 디자인 토큰 대신 여기서 관리한다.
+ * 아바타 SVG 에 쓰는 hex 는 이 파일에만 둔다(docs/01-conventions.md 스타일 예외).
  * 다섯 번째 아바타는 이 배열에 한 줄 추가하면 된다.
  */
 export type AvatarPreset = {
