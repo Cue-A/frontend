@@ -105,6 +105,8 @@ cp .env.example .env.local
 |---|---|
 | `VITE_API_BASE_URL` | 백엔드 REST 기본 주소. 미정이면 비워둡니다 |
 | `VITE_USE_MOCK` | `true` 면 실제 API 대신 목업 응답을 씁니다 |
+| `VITE_KAKAO_REST_API_KEY` | 카카오 로그인(AUTH-2) REST API Key. 인가 URL 에 그대로 노출되는 값이라 공개되어도 됩니다 |
+| `VITE_KAKAO_REDIRECT_URI` | 카카오가 인가 코드를 돌려보낼 콜백 주소. 카카오에 등록된 주소와 정확히 같아야 합니다 |
 
 백엔드가 준비되기 전에는 `VITE_USE_MOCK=true` 로 두고 화면을 만듭니다.
 실제 API 가 오면 스위치만 끄면 되고, 화면 코드는 건드리지 않습니다.

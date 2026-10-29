@@ -1,8 +1,176 @@
+import { useState } from 'react'
+import { useParams } from 'react-router-dom'
+
+import { useAxisRetry } from '../hooks/useAxisRetry'
+import { useReport } from '../hooks/useReport'
+import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
+
+import AnswerVideoSection from './AnswerVideoSection'
+import CompanyCommentSection from './CompanyCommentSection'
+import ImprovedAnswerSection from './ImprovedAnswerSection'
+import ReportActions from './ReportActions'
+import ReportDocActions from './ReportDocActions'
+import ReportHeader from './ReportHeader'
+import ReportOptions from './ReportOptions'
+import ScoreSection from './ScoreSection'
+import SummarySection from './SummarySection'
+import TimelineSection from './TimelineSection'
+
+/**
+ * 면접 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
+ *
+ * 시안 순서대로 위에서 아래로 한 줄로 쌓습니다.
+ * 유틸리티(인쇄 · 공유) → 제목 · 종합 점수 → 리포트 옵션 → 안내 →
+ * 이번 면접 요약 → (인재상 코멘트) → 세부 점수 → 답변 영상 → XAI 타임라인 → 개선 답변 예시
+ * → 다음 단계
+ *
+ * 인재상 코멘트는 기업을 고른 면접에서만 나옵니다. 시안에 없던 자리라 요약 바로 아래에 붙였습니다.
+ *
+ * 사이드바 없이 혼자 그립니다. 시안에 사이드바가 없고 자체 상단바를 쓰기 때문에
+ * AppLayout 밖에 두었습니다. (router.tsx)
+ *
+ * 색 · 타이포는 전부 토큰 클래스이고, 반복되는 판 · 버튼 · 칩 · 배지는
+ * shared/ui 를 씁니다. 이 파일에는 임의 값이 하나도 없습니다.
+ */
 export default function ReportPage() {
+  const { reportId } = useParams()
+  const { data, isLoading, error, reload } = useReport(reportId)
+  const retry = useAxisRetry(reportId, data, reload)
+  const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 p-6">
+        <p className="text-body-md text-neutral-500">리포트를 불러오는 중이에요…</p>
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex min-h-screen flex-col items-start gap-4 bg-neutral-50 p-6">
+        <p className="text-body-md text-neutral-700">{error ?? '리포트를 찾을 수 없어요.'}</p>
+        <ReportActions />
+      </div>
+    )
+  }
+
+  /*
+    전에는 여기서 analysisStatus 가 COMPLETED 가 아닐 때 "분석 중" 문구를 띄웠습니다.
+    `QUEUED` · `PROCESSING` 같은 값은 계약이 없을 때 지어낸 것이라 지웠습니다.
+
+    상황 자체는 그대로 있습니다. 다만 상태 필드가 아니라 **에러 코드**로 옵니다. (Cue-A/backend#66)
+
+      REPORT_NOT_FOUND   없는 리포트 · 남의 리포트 (404)
+      REPORT_NOT_READY   아직 만드는 중 (202)
+      REPORT_FAILED      분석이 실패한 리포트 (409) — 내용 분석 실패 · 답변 부족 등
+
+    셋 다 조회가 에러로 떨어져서 위의 error 분기가 받고, 문구는
+    `shared/api/errorMessage.ts` 가 붙입니다. 그래서 여기 따로 분기하지 않습니다.
+    점수가 빈 리포트를 그리는 길은 아예 없습니다.
+
+    분석이 도는 동안 진행률을 보여주는 건 분석 중 화면(B-02)이 맡습니다.
+    조회 응답을 화면 값으로 바꾸는 건 `api/reportResponse.ts` 이고, 응답에 없는 값(회사명 · 회차 · 영상 …)을
+    무엇으로 채우는지도 그 파일 맨 위에 적어 뒀습니다.
+  */
+
+  /*
+    "시선 지표 포함" 을 끄면 시선 **점수**를 뺍니다. 다만 아래 두 경우의 시선 줄은 남깁니다. (PR #92 리뷰)
+
+    - **분석이 실패한 줄**(`retryAxis`): 점수가 아니라 "다시 분석" 버튼이 있는 줄입니다. 같이 빼면 위쪽 안내는
+      "세부 점수에서 빠진 항목만 다시 분석할 수 있어요" 라고 하는데 정작 누를 버튼이 없습니다
+    - **방금 다시 분석해서 살아난 줄**: 누른 결과가 눈앞에서 사라지고 총점만 바뀌면 무엇이 바뀌었는지 알 수 없습니다.
+      다른 회차로 옮기거나 새로고침하면 토글대로 다시 빠집니다
+  */
+  const keepGazeRow = (metric: (typeof data.metrics)[number]) =>
+    metric.retryAxis !== null || retry.outcomes.gaze?.kind === 'recovered'
+
+  const metrics = options.showGaze
+    ? data.metrics
+    : data.metrics.filter((metric) => metric.key !== 'gaze' || keepGazeRow(metric))
+
   return (
-    <section>
-      <h1>리포트</h1>
-      <p className="mt-2">점수 · 타임라인 · 개선 답변 예시 화면 자리입니다. (C 파트)</p>
-    </section>
+    <div className="min-h-screen bg-neutral-50">
+      {/*
+        유틸리티 줄은 리포트 내용이 아니라 이 화면을 다루는 도구라, 시안에서도
+        인쇄 영역(`sheet`) 바깥에 있습니다. 흑백으로 바꿔도 여기는 그대로 둡니다.
+      */}
+      <div className="mx-auto w-full max-w-5xl px-6 pt-6">
+        <ReportDocActions />
+      </div>
+
+      {/*
+        "인쇄용 흑백"은 색을 하나하나 바꾸지 않고 판 전체를 회색조로 그립니다.
+        토큰을 흑백 세트로 따로 만들면 화면마다 두 벌을 관리해야 합니다.
+      */}
+      <div
+        className={`mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 ${
+          options.printMono ? 'grayscale' : ''
+        }`}
+      >
+        <ReportHeader report={data} />
+
+        <ReportOptions
+          attempts={data.attempts}
+          currentAttempt={data.attempt}
+          options={options}
+          onChange={setOptions}
+          available={{
+            showTimeline: data.summary.turns.length > 0,
+            showImprovedAnswer: data.improvedAnswer !== null,
+            showGaze: data.metrics.some((metric) => metric.key === 'gaze'),
+          }}
+        />
+
+        {/*
+          총점 상한은 일반 안내보다 먼저 보여줍니다. "왜 점수가 낮지" 는 리포트를
+          열자마자 드는 질문이라, 아래쪽에 있으면 못 보고 지나갑니다.
+        */}
+        {data.scoreGateReason && (
+          <p
+            role="status"
+            className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
+          >
+            총점에 상한이 걸렸어요 — {data.scoreGateReason}
+          </p>
+        )}
+
+        {data.notices.map((notice) => (
+          <p
+            key={notice}
+            role="status"
+            className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
+          >
+            ⚠ {notice}
+          </p>
+        ))}
+
+        <SummarySection
+          summary={data.summary}
+          subtitle={[data.jobRole, data.interviewDate].filter(Boolean).join(' · ')}
+        />
+
+        {data.companyComment && (
+          <CompanyCommentSection comment={data.companyComment} companyName={data.companyName} />
+        )}
+
+        <ScoreSection
+          metrics={metrics}
+          subMetrics={data.subMetrics}
+          comment={data.metricsComment}
+          retry={retry}
+        />
+
+        {data.video && <AnswerVideoSection video={data.video} />}
+
+        {options.showTimeline && <TimelineSection turns={data.summary.turns} />}
+
+        {options.showImprovedAnswer && data.improvedAnswer && (
+          <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
+        )}
+
+        <ReportActions />
+      </div>
+    </div>
   )
 }

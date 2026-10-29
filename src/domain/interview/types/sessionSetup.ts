@@ -1,0 +1,138 @@
+/**
+ * 면접 옵션 설정 화면(A-05)이 쓰는 타입입니다.
+ *
+ * 서버 응답 타입이 아니라 **화면용 타입**입니다. 백엔드 계약이 확정되면
+ * `domain/interview/api/` 에서 이 모양을 요청 본문으로 변환합니다.
+ * (docs/01-conventions.md "타입" 절)
+ */
+
+/** 칩·드롭다운처럼 값 하나를 고르는 목록의 한 칸입니다. */
+export type Choice<T extends string = string> = {
+  value: T
+  label: string
+}
+
+/**
+ * 직무는 **사용자가 직접 적습니다.** 전에는 다섯 개(프론트엔드 · 백엔드 · 데이터 분석가 · 기획/PM · 디자이너) 중에
+ * 고르는 칩이었는데, 목록에 없는 직무로는 연습할 수 없었습니다. 서버도 정해진 값이 아니라 자유 문자열을 받아서
+ * AI 에 그대로 넘깁니다 (Cue-A/backend `InterviewStartRequest.jobRole` — `@NotBlank`, 100자).
+ */
+export const MAX_JOB_ROLE_LENGTH = 100
+
+/**
+ * 면접관 스타일. 기능명세서 INT-2 에 **친절형 · 압박형 2종**으로 정해져 있습니다.
+ *
+ * A-05 시안에는 "중립적 면접관"까지 3종이 그려져 있어서 코드도 3종이었는데,
+ * 명세서를 따르기로 했습니다. INT-2 는 "난이도는 사용자가 선택하지 않으며 면접관
+ * 스타일에 따라 시스템이 배분한다" 라서 종류 수가 AI 의 난이도 배분에 직접 걸립니다.
+ * AI 파트 전달 문서도 "친절형 면접에서는 회복력이 항상 null" 처럼 두 종만 전제합니다.
+ */
+export type InterviewerStyle = 'FRIENDLY' | 'PRESSURE'
+
+export const INTERVIEWER_STYLES: Choice<InterviewerStyle>[] = [
+  { value: 'FRIENDLY', label: '친절한 면접관' },
+  { value: 'PRESSURE', label: '압박 면접관' },
+]
+
+export type DeliveryMode = 'TEXT_VOICE' | 'VOICE_ONLY'
+
+export const DELIVERY_MODES: Choice<DeliveryMode>[] = [
+  { value: 'TEXT_VOICE', label: '텍스트 + 음성' },
+  { value: 'VOICE_ONLY', label: '음성만 듣기' },
+]
+
+/** 답변 시간을 "제한 없음"으로 둘 때 쓰는 값입니다. */
+export const NO_TIME_LIMIT = 'NONE'
+
+/**
+ * 답변 시간(초). 시안의 "질문당 90초" 가 기본값입니다.
+ *
+ * 기능명세서 INT-2 에 "질문당 응답 제한 시간 또는 제한 없음"으로 되어 있어
+ * 제한 없음을 넣었습니다. 나머지 값은 아직 확정이 아닙니다.
+ * (docs/90-open-questions.md Q10)
+ */
+export const ANSWER_SECONDS_CHOICES: Choice<string>[] = [
+  { value: '60', label: '질문당 60초' },
+  { value: '90', label: '질문당 90초' },
+  { value: '120', label: '질문당 120초' },
+  { value: NO_TIME_LIMIT, label: '제한 없음' },
+]
+
+/**
+ * 질문 수. 기능명세서 INT-2 에 **3 / 6 / 9** 로 확정되어 있습니다.
+ *
+ * 전에는 5 / 7 / 9 였습니다. 시안에 "9문항" 한 값만 보여서 프론트가 임시로
+ * 채운 값이었는데(PR #13), 명세서에 값이 적혀 있는 걸 뒤늦게 확인했습니다.
+ *
+ * 기본값은 `DEFAULT_QUESTION_COUNT`(6문항)입니다.
+ */
+export const QUESTION_COUNT_CHOICES: Choice<string>[] = [
+  { value: '3', label: '3문항' },
+  { value: '6', label: '6문항' },
+  { value: '9', label: '9문항' },
+]
+
+/** 답변 시간 기본값(초). 시안의 "질문당 90초" 입니다 */
+export const DEFAULT_ANSWER_SECONDS = 90
+
+/**
+ * 질문 수 기본값. 전에는 시안대로 9문항이었는데 6문항으로 바꿨습니다 (2026-10-01).
+ * 서버도 질문 수를 안 보내면 6문항으로 시작해서 값이 같습니다 (Cue-A/backend `InterviewStartRequest`).
+ */
+export const DEFAULT_QUESTION_COUNT = 6
+
+/** 목록에 없는 기업을 고를 때 쓰는 값입니다. 이때 인재상을 직접 받습니다. */
+export const CUSTOM_COMPANY = 'CUSTOM'
+
+export type Company = {
+  companyId: string
+  name: string
+}
+
+/**
+ * 보관함에서 고른 자기소개서. (이슈 #54 1-5)
+ *
+ * 파일이 아니라 **등록해둔 문서를 가리키는 값**입니다. 올리기는 보관함(C-02)이 하고,
+ * 여기서는 고르기만 합니다. 이름은 `document` 가 더 맞지만 화면 문구가 "자기소개서" 라
+ * `resume` 으로 둡니다.
+ */
+export type SelectedResume = {
+  /** 문서 UUID. 세션 생성에 `documentId` 로 그대로 싣습니다 */
+  documentId: string
+  title: string
+  /** 원본 파일명. 직접 작성한 문서면 null */
+  fileName: string | null
+  /** 바이트. 직접 작성한 문서면 null */
+  fileSize: number | null
+}
+
+export type SessionSetup = {
+  /** 적은 그대로입니다. 앞뒤 공백은 보낼 때 자릅니다 */
+  jobRole: string
+  /** 면접에 쓸 수 있는 문서만 고를 수 있어서, 값이 있으면 곧 시작 가능한 문서입니다 */
+  resume: SelectedResume | null
+
+  useCompanyQuestion: boolean
+  /** 기업 id. 목록에 없는 기업이면 CUSTOM */
+  companyId: string | null
+  /** companyId 가 CUSTOM 일 때만 씁니다 */
+  customCulture: string
+
+  /** 초. "제한 없음"이면 null */
+  answerSeconds: number | null
+  questionCount: number
+  interviewerStyle: InterviewerStyle | null
+  deliveryMode: DeliveryMode
+}
+
+/**
+ * 면접을 시작하려면 다 채워야 하는 항목의 이름입니다. 시안의 "필수" 배지가 붙는 셋입니다.
+ *
+ * 화면의 항목 이름과 "아직 안 고른 항목" 안내(useSessionSetup)가 **같은 글자**여야 해서 여기 한 곳에 둡니다.
+ * 따로 적으면 이름을 바꿀 때 한쪽만 바뀝니다. (PR #90 리뷰)
+ */
+export const REQUIRED_LABELS = {
+  jobRole: '직무 입력',
+  resume: '자기소개서 불러오기',
+  interviewerStyle: '면접관 스타일',
+} as const

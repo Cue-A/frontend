@@ -1,0 +1,153 @@
+import { api } from '@/shared/api/apiClient'
+
+import type { AnswerSubmission, InterviewOptions } from '../types/interview'
+import { CUSTOM_COMPANY, type Company, type InterviewerStyle, type SessionSetup } from '../types/sessionSetup'
+
+import { recallSessionOptions, rememberSessionOptions, toSessionOptions } from './sessionOptionsDraft'
+import './sessionMock'
+
+export function getCompanies() {
+  return api.get<Company[]>('/api/companies')
+}
+
+/**
+ * 세션 시작 요청 본문. (Cue-A/backend `InterviewStartRequest`, dev 머지됨 · #54 1-6)
+ *
+ * 문서 필드 이름은 `documentId` 입니다. 처음엔 `documentPublicId` 였는데 문서 API 와 맞춰 바뀌었습니다
+ * (Cue-A/backend#46). 값은 그대로 문서의 UUID 입니다.
+ *
+ * 화면의 설정 중 **서버가 받지 않는 값은 싣지 않습니다.** 받을 자리가 없어서 보내도 버려집니다.
+ * - `answerSeconds` — 서버 요청에 없습니다 (#54 확인 필요 1번, docs/90-open-questions.md Q10)
+ * - `customCulture`(목록에 없는 기업의 인재상 직접 입력) — 서버 요청에 없습니다. 서버는 등록된
+ *   기업 id 만 받고, 인재상은 그 기업 정보로 서버가 만듭니다
+ */
+type InterviewStartRequest = {
+  /** 보관함에서 고른 문서의 UUID. 필수 */
+  documentId: string
+  /** 등록된 기업의 숫자 id. 없으면 연습 모드 */
+  companyId: number | null
+  /** 자유 문자열(100자). 서버가 AI 에 그대로 넘깁니다. 사용자가 적은 직무를 앞뒤 공백만 잘라 보냅니다 */
+  jobRole: string
+  /** 이름만 다르고 값은 같습니다 (`FRIENDLY` · `PRESSURE`) */
+  persona: InterviewerStyle
+  /** 3 · 6 · 9 */
+  questionCount: number
+  /**
+   * 질문 글을 숨기고 음성만 들려줄지. 옵션 설정의 진행 방식 "음성만 듣기"(`VOICE_ONLY`)면 true 입니다
+   * (Cue-A/backend#70). 서버는 생략하면 false 로 봅니다
+   */
+  hideQuestionText: boolean
+}
+
+/**
+ * 기업 id 를 서버 모양(숫자)으로 바꿉니다. 바꿀 수 없으면 null — 연습 모드로 시작합니다.
+ *
+ * ⚠️ 지금 기업 목록(`GET /api/companies`)은 **백엔드에 없고 목업뿐**이라 id 가 `'naver'` 같은
+ * 문자열입니다. 서버는 `verified` 인 기업의 숫자 id 만 받고, 모르는 id 는 `INVALID_REQUEST` 로
+ * 거절합니다. 문자열 id 를 그대로 보내면 면접 시작이 통째로 실패하므로, 숫자가 아니면 빼고
+ * 보냅니다. 기업 목록 API 가 생기면 id 가 숫자로 와서 이 함수는 그대로 동작합니다.
+ * (#54 확인 필요 11번 — 프론트 · 백엔드 · AI 의 companyId 모양이 서로 다름)
+ */
+function toCompanyId(setup: SessionSetup): number | null {
+  if (!setup.useCompanyQuestion || !setup.companyId || setup.companyId === CUSTOM_COMPANY) return null
+
+  const id = Number(setup.companyId)
+  return Number.isSafeInteger(id) && id > 0 ? id : null
+}
+
+/**
+ * 화면의 설정을 요청 본문으로 바꿉니다. 서버 필드가 바뀌면 **이 함수만** 고칩니다.
+ *
+ * 필수 항목(문서 · 직무 · 면접관)이 비어 있으면 부르지 않는 게 맞습니다 — 화면이
+ * `canStart` 로 버튼을 잠급니다. 그래도 불렸다면 서버에 빈 값을 보내지 않고 여기서 멈춥니다.
+ */
+function toCreateBody(setup: SessionSetup): InterviewStartRequest {
+  const jobRole = setup.jobRole.trim()
+
+  if (!setup.resume || !jobRole || !setup.interviewerStyle) {
+    throw new Error('필수 항목(문서 · 직무 · 면접관)이 비어 있는 채로 세션 생성을 불렀습니다')
+  }
+
+  return {
+    documentId: setup.resume.documentId,
+    companyId: toCompanyId(setup),
+    jobRole,
+    persona: setup.interviewerStyle,
+    questionCount: setup.questionCount,
+    hideQuestionText: setup.deliveryMode === 'VOICE_ONLY',
+  }
+}
+
+export type CreatedSession = {
+  /** AI 가 발급한 세션 id. 이후 모든 면접 API 와 소켓 주소에 씁니다 */
+  sessionId: string
+  /** 고른 문항 수 (되묻기 제외). 진행률 "N / 전체" 의 전체입니다 */
+  questionTotal: number
+}
+
+/**
+ * 면접 세션 시작. `POST /api/interviews` → **202 Accepted**
+ *
+ * 첫 질문은 이 응답에 없고 WebSocket(`/ws/interviews/{sessionId}`)으로 따로 옵니다.
+ * 서버는 응답을 돌려준 **뒤** 백그라운드에서 첫 질문을 만들어 소켓으로 밀어 넣습니다.
+ *
+ * 걸리는 제한 — 서버가 다시 봅니다.
+ * - 문서: 본인 것 · 준비된 것 · 저장된 파일이 있는 것(직접 작성 문서도 파일로 저장됩니다 — Cue-A/backend#39).
+ *   아니면 `DOCUMENT_NOT_FOUND` · `UPLOAD_NOT_COMPLETED` · `UNSUPPORTED_FILE_FORMAT`
+ * - 문항 수: 3 · 6 · 9. 아니면 `INVALID_QUESTION_COUNT`
+ * - 분당 10회 (`RATE_LIMIT_EXCEEDED`)
+ */
+export async function createSession(setup: SessionSetup) {
+  const session = await api.post<CreatedSession>('/api/interviews', toCreateBody(setup))
+  // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 조회 API 가 없어서입니다 (`getInterviewOptions` · sessionOptionsDraft.ts)
+  rememberSessionOptions(session.sessionId, toSessionOptions(setup))
+  return session
+}
+
+/**
+ * 면접 진행 화면(B-01-2)이 필요로 하는 세션 옵션만 담는다. `InterviewOptions` 전체가
+ * 아니라 이 셋만 쓰는 이유: jobRole · resumeDocId · companyTalentProfile ·
+ * questionCountLabel · interviewerCount 는 지금까지 만들어진 B-01/B-01-2 UI 어디에서도
+ * 쓰이지 않는다.
+ *
+ * GET /api/interviews/{sessionId} 는 백엔드에 아직 없는 엔드포인트다. 그래서 **세션을 만들 때 남겨 둔 값을 먼저
+ * 쓴다** (`createSession` · sessionOptionsDraft.ts). 남긴 값이 없을 때만(다른 탭 · 기기에서 연 면접) 이 API 로
+ * 가고, 지금은 목업이 고정값을 돌려준다.
+ *
+ * 면접관 스타일은 옵션 설정이 대문자(FRIENDLY · PRESSURE), 면접 화면이 소문자(friendly · pressure)라
+ * `toSessionOptions` 에서 바꾼다. 백엔드에 조회 API 가 생기면 서버 값을 먼저 쓰도록 바꾸고 남겨 둔 값은 지운다.
+ */
+export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'>
+
+export async function getInterviewOptions(sessionId: string): Promise<InterviewSessionOptions> {
+  const remembered = recallSessionOptions(sessionId)
+  if (remembered) return remembered
+
+  return api.get<InterviewSessionOptions>(`/api/interviews/${sessionId}`)
+}
+
+/**
+ * 답변 제출 REST 엔드포인트입니다. 경로와 `questionId`/`audioObjectKey`/
+ * `videoObjectKey`/`isTimeout` 필드는 이슈 #54(`feat/24-interview-answer-flow`)로
+ * 확인됐다. `durationSec`/`transcript` 는 `AnswerSubmission` 타입엔 남아있지만
+ * 백엔드 요청 타입에 자리가 없어(#54 "확인이 필요한 것" 3번, 아직 미확정) 실제
+ * 요청 바디에는 넣지 않는다 — TODO 는 `types/interview.ts` 의 `AnswerSubmission` 참고.
+ */
+export function submitAnswer(sessionId: string, submission: AnswerSubmission) {
+  const { questionId, audioObjectKey, videoObjectKey, isTimeout } = submission
+  return api.post<void>(`/api/interviews/${sessionId}/answers`, { questionId, audioObjectKey, videoObjectKey, isTimeout })
+}
+
+/**
+ * 면접 중도 이탈. `POST /api/interviews/{sessionId}/abort` — 백엔드 `InterviewController.abort`
+ * 로 실제로 있다(Cue-A/backend#25, PR#43 로 머지됨). 경로 · 메서드 · 바디 없음까지 여기 모양과
+ * 그대로 맞는다.
+ *
+ * 그래도 여전히 mock 으로만 동작한다 — `interviews` 도메인 전체(세션 시작 · WS · 답변 제출 ·
+ * abort)가 `VITE_REAL_APIS` 로 한 번에 켜지는 구조라서(`shared/api/mock.ts`), abort 하나만 골라
+ * real 로 못 돌린다. 도메인 전체를 켤 준비(이슈 #54 섹션 2 나머지, 특히 WS 인증 미확정인
+ * 2-4)가 끝나야 의미 있게 켤 수 있다.
+ */
+export function abortSession(sessionId: string) {
+  return api.post<void>(`/api/interviews/${sessionId}/abort`)
+}

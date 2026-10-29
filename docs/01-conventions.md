@@ -78,14 +78,38 @@ if (error) return <ErrorView code={error.code} />
 서버의 `message` 를 그대로 뿌리지 않습니다 — 서버 문구는 개발자용이라 바뀔 수 있고,
 바뀌는 순간 사용자 화면이 같이 바뀝니다.
 
+매핑표는 `shared/api/errorMessage.ts` 한 곳에 있고, 화면은 `toUserMessage(code)` 로만 문구를 얻습니다.
+백엔드 `common/exception/ErrorCode.java` 의 코드를 **전부** 매핑해 둡니다. 백엔드에 코드가 추가되면
+같은 PR 에서, 늦어도 연동하는 PR 에서 매핑을 추가합니다.
+
 ```ts
 const ERROR_MESSAGE: Record<string, string> = {
   SESSION_NOT_FOUND: '면접 세션을 찾을 수 없어요.',
-  AI_TIMEOUT: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해주세요.',
+  AI_TIMEOUT: '질문을 만드는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해 주세요.',
 }
 ```
 
-매핑에 없는 코드는 공통 문구로 떨어뜨리고, 콘솔이 아니라 에러 리포팅으로 남깁니다.
+문구는 이렇게 씁니다.
+
+- **다음에 할 행동**을 적습니다. 다시 시도하면 풀리는 것만 "잠시 후 다시 시도해 주세요" 를 붙이고,
+  다시 해도 결과가 같은 것(형식 · 크기 · 상한 · 끝난 세션)에는 붙이지 않습니다
+- 여러 화면이 같이 쓰는 코드는 **어느 화면에서 떠도 맞는 말**로 적습니다. 예를 들어
+  `UNSUPPORTED_FILE_FORMAT` 은 문서 업로드와 답변 녹화 업로드가 같이 써서 공통 문구에는 허용 형식을
+  적지 않습니다
+- 화면에 맞춘 구체적인 문구가 필요하면 그 화면이 **덮어씁니다.** 공통 매핑을 화면 하나에 맞춰 고치지 않습니다
+
+```ts
+// domain/document/lib/documentErrorMessage.ts
+export const DOCUMENT_UPLOAD_MESSAGES: ErrorMessageOverrides = {
+  UNSUPPORTED_FILE_FORMAT: 'pdf · docx · txt 파일만 올릴 수 있어요.',
+}
+
+toUserMessage(code, DOCUMENT_UPLOAD_MESSAGES)
+```
+
+매핑에 없는 코드는 공통 문구("잠시 후 다시 시도해 주세요.")로 떨어뜨리고 `console.error` 로 남깁니다.
+에러 리포팅이 붙으면 그쪽으로 옮깁니다. 서버가 JSON 이 아닌 응답을 줘서 apiClient 가 만든
+`HTTP_{상태}` 코드는 상태별로 나눠 보여줍니다(404 · 405 → 쓸 수 없는 기능, 413 → 파일 크기, 5xx → 서버 문제).
 
 ### 화면을 따로 만들어야 하는 에러
 
@@ -154,6 +178,33 @@ function SessionPage() {
 }
 ```
 
+### 버튼 · 카드는 `shared/ui` 를 씁니다
+
+시안의 네모난 CTA 와 내용을 담는 판은 `shared/ui/Button` · `shared/ui/Card` 로 그립니다.
+화면마다 따로 만들면 같은 버튼인데 크기가 조금씩 달라집니다.
+
+예외는 **모양이 다른 것들**입니다. 문장 속에 섞인 전환 링크("계정이 없으신가요? 회원가입"),
+탭처럼 둘 중 하나만 켜지는 띠 — 이런 건 `Button` 의 모양이 아니라서 그리는 쪽에 둡니다.
+같은 모양이 두 번째 화면에 생기면 그때 `shared/ui` 로 올립니다.
+
+### 비활성 버튼의 이유는 글로 적습니다
+
+**`disabled` 버튼에 `title` 로 이유를 적지 마세요.** 브라우저는 비활성 요소에 마우스
+이벤트를 보내지 않아서 툴팁이 **뜨지 않습니다.** 결과적으로 멀쩡해 보이는데 눌리지 않고,
+이유도 아무도 못 보는 버튼이 됩니다.
+
+이유는 버튼 옆이나 아래에 짧은 글로 적습니다. `Button` 이 `disabled:opacity-50` 으로
+"지금은 못 누른다"를 보여주고, 글이 "왜 못 누르는지"를 말합니다.
+
+```tsx
+// 나쁨 — 툴팁이 안 뜹니다
+<Button disabled title="저장 기능은 준비 중이에요">리포트 저장하기</Button>
+
+// 좋음
+<Button disabled>리포트 저장하기</Button>
+<p className="text-body-sm text-neutral-400">리포트 저장은 아직 준비 중이에요</p>
+```
+
 ## 상태
 
 서버에서 온 데이터와 화면 상태를 섞지 않습니다.
@@ -188,8 +239,11 @@ function SessionPage() {
 
 `reask`(되묻기)는 **문항 수와 진행률 계산에서 제외합니다.**
 
-리포트 생성 대기의 단계 목록은 아직 정해지지 않았습니다 —
-`docs/90-open-questions.md` Q6b 를 보세요.
+**리포트 생성 대기는 면접과 소켓이 다릅니다.** 분석을 등록(`POST /api/interviews/{sessionId}/reports`)한 뒤
+받은 reportId 로 `/ws/reports/{reportId}` 에 붙습니다. 단계는 다섯 개(`TRANSCRIBING` · `ANALYZING_SPEECH` ·
+`ANALYZING_GAZE` · `ANALYZING_CONTENT` · `COMPOSING`)이고, 타임아웃은 **10분**입니다. (Cue-A/backend#50)
+소켓은 지난 메시지를 다시 보내주지 않으므로, **붙은 직후 상태 조회를 한 번** 불러 따라잡습니다 (backend#56).
+남은 공백은 `docs/90-open-questions.md` Q6b 를 보세요.
 
 ## 스타일
 

@@ -1,0 +1,156 @@
+import { IconCircleCheck } from '@tabler/icons-react'
+
+import Card from '@/shared/ui/Card'
+
+import type { AxisRetry } from '../hooks/useAxisRetry'
+import type { ScoreMetric, SubMetric } from '../types/report'
+
+import FailedMetricRow from './FailedMetricRow'
+
+type Props = {
+  metrics: ScoreMetric[]
+  subMetrics: SubMetric[]
+  comment: string | null
+  /** 실패한 축을 다시 분석하는 상태와 동작 (`useAxisRetry`) */
+  retry: AxisRetry
+}
+
+/** 다시 분석해서 점수를 받은 축 이름들. 방금 살아난 줄을 알려주는 데 씁니다 */
+function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
+  const recoveredAxes = Object.entries(retry.outcomes)
+    .filter(([, outcome]) => outcome?.kind === 'recovered')
+    .map(([axis]) => axis)
+
+  return metrics
+    .filter((metric) => metric.status === 'ok' && recoveredAxes.includes(metric.key))
+    .map((metric) => metric.label)
+}
+
+/**
+ * 세부 점수와 보조 지표입니다. (C-01 "세부 점수")
+ *
+ * 점수가 없는 항목은 막대를 비우고 사유를 보여줍니다. 시선 분석은 실제로
+ * 자주 실패하는데, 0점으로 그리면 "못했다"로 읽혀서 사실과 달라집니다.
+ *
+ * **실패와 미사용은 문구가 다릅니다.** 카메라를 안 켜서 시선을 안 잰 회차에
+ * "분석 실패" 가 뜨면 사용자는 서비스가 고장 난 줄 압니다. 문구는 변환층
+ * (`api/reportResponse.ts`)이 만들어 `unavailableLabel` 로 넘겨줍니다.
+ *
+ * `display`(1~5)는 타입에 들고만 있고 아직 그리지 않습니다. 시안에 자리가
+ * 없어서입니다. 프론트가 `score` 로 만들어내는 값이 아니라 서버가 따로 주는
+ * 값이라, 자리가 정해지면 그대로 쓰면 됩니다. (이슈 #46)
+ *
+ * 갈림길의 기준은 **`status`** 입니다. 전에는 `score === null` 로 갈랐는데,
+ * 변환층이 채워주는 `status` 를 화면이 한 번도 안 읽고 있었습니다. 계약의
+ * `score` 가 `Optional[int]` 라 `status: 'ok'` 인데 `score` 가 비는 응답을
+ * 타입이 막지 못하고, 그때는 `unavailableLabel` 도 없어서 사유 없이 빈 자리만
+ * 남습니다. 그건 계약 위반이라 0점으로 그리지 않고 문구로 드러냅니다.
+ * (PR #50 리뷰)
+ *
+ * **분석이 실패한 축**(`retryAxis` 가 있는 줄)은 `FailedMetricRow` 로 그립니다. 사유와 "다시 분석" 버튼이
+ * 그 줄에 같이 있습니다. 백엔드가 실패한 축을 한 번에 다시 돌려서, 어느 줄에서 눌러도 실패한 줄이 다 같이 돕니다.
+ * 다시 분석해서 점수를 받으면 리포트가 통째로 새 값으로 바뀌고,
+ * 무엇이 바뀌었는지 절 머리에 한 줄로 알려줍니다 — 총점도 같이 바뀌어서, 말없이 숫자만 바뀌면 왜 바뀌었는지 모릅니다.
+ *
+ * 막대 너비는 계산값이라 인라인 style 을 씁니다.
+ * (docs/01-conventions.md "스타일" 절)
+ */
+export default function ScoreSection({ metrics, subMetrics, comment, retry }: Props) {
+  const recovered = recoveredLabels(metrics, retry)
+  const retryLabels = metrics.filter((metric) => metric.retryAxis).map((metric) => metric.label)
+
+  return (
+    <Card label="세부 점수" padding="lg">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-h2 text-neutral-900">세부 점수</h2>
+          {comment && <p className="text-body-md text-neutral-500">{comment}</p>}
+        </div>
+
+        {recovered.length > 0 && (
+          <p role="status" className="flex items-center gap-2 text-body-md text-semantic-success">
+            <IconCircleCheck size={18} aria-hidden className="shrink-0" />
+            {recovered.join(' · ')} 점수를 다시 받았어요. 총점도 새로 계산했어요.
+          </p>
+        )}
+
+        <ul className="flex flex-col gap-3">
+          {metrics.map((metric) => {
+            if (metric.retryAxis) {
+              return (
+                <FailedMetricRow
+                  key={metric.key}
+                  metric={metric}
+                  axis={metric.retryAxis}
+                  running={retry.running}
+                  outcome={retry.outcomes[metric.retryAxis]}
+                  retryLabels={retryLabels}
+                  onRetry={retry.retry}
+                />
+              )
+            }
+
+            // 막대를 그릴 수 있는 줄인지 한 번만 판정합니다.
+            // `status` 가 `'ok'` 인데 `score` 가 비는 응답도 타입으로는 막히지 않아서
+            // 둘 다 봅니다. 그 경우는 계약 위반이라 조용히 0점으로 그리지 않습니다.
+            const score = metric.status === 'ok' ? metric.score : null
+
+            return (
+              <li key={metric.key} className="flex items-center gap-4">
+                <span className="w-24 shrink-0 text-body-md text-neutral-700">{metric.label}</span>
+
+                {/*
+                  점수가 없으면 빈 막대 대신 사유를 그 자리에 적습니다. 오른쪽 좁은
+                  칸에 넣으면 "카메라를 사용하지 않았습니다" 같은 문장이 줄바꿈되고,
+                  빈 막대는 어차피 아무것도 알려주지 않습니다.
+                */}
+                {score === null ? (
+                  <span className="min-w-0 flex-1 text-body-sm text-neutral-400">
+                    {metric.unavailableLabel ?? '점수를 받지 못했어요'}
+                  </span>
+                ) : (
+                  <div
+                    role="progressbar"
+                    aria-label={metric.label}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={score}
+                    className="h-2 min-w-0 flex-1 overflow-hidden rounded-xs bg-neutral-200"
+                  >
+                    <div className="h-full rounded-xs bg-primary-500" style={{ width: `${score}%` }} />
+                  </div>
+                )}
+
+                {score === null ? (
+                  <span className="w-24 shrink-0 text-right text-stat text-neutral-300">—</span>
+                ) : (
+                  <span className="w-24 shrink-0 text-right text-stat tabular-nums text-neutral-900">
+                    {score} <span className="text-body-sm text-neutral-400">/ 100</span>
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+
+        {subMetrics.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {subMetrics.map((sub) => (
+              <div
+                key={sub.key}
+                className="flex min-w-64 flex-1 flex-col gap-2 rounded-sm bg-neutral-50 p-5"
+              >
+                <div className="flex items-baseline justify-between gap-4">
+                  <h3 className="text-body-lg text-neutral-900">{sub.label}</h3>
+                  <span className="text-stat tabular-nums text-primary-600">{sub.value}</span>
+                </div>
+
+                <p className="text-body-sm text-neutral-500">{sub.description}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}

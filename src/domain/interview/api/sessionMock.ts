@@ -1,0 +1,123 @@
+import { ApiError } from '@/shared/api/apiError'
+import { registerMock } from '@/shared/api/mock'
+
+import type { Company } from '../types/sessionSetup'
+
+import { advanceMockSession } from './sessionSocketMock'
+
+/**
+ * 기업 목록 목업입니다. 시안에 "약 30개 기업의 인재상 데이터가 등록되어 있어요"
+ * 라고 되어 있는데, 실제 목록은 백엔드가 가지고 있습니다. 여기서는 드롭다운이
+ * 그려지는지 확인할 만큼만 넣어둡니다.
+ */
+const COMPANIES: Company[] = [
+  { companyId: 'naver', name: '네이버' },
+  { companyId: 'kakao', name: '카카오' },
+  { companyId: 'line', name: '라인' },
+  { companyId: 'coupang', name: '쿠팡' },
+  { companyId: 'baemin', name: '우아한형제들' },
+  { companyId: 'toss', name: '토스' },
+  { companyId: 'danggeun', name: '당근' },
+]
+
+registerMock('GET', '/api/companies', () => COMPANIES, {
+  missingInBackend: '기업 API 없음 (명세서 v0.2 `/v1/companies` 시작 전)',
+})
+
+/**
+ * 면접 세션 생성 목업입니다. 검사 순서와 에러 코드는 백엔드 `InterviewStartService` 를 따랐습니다.
+ *
+ * 문서가 실제로 준비된 파일 문서인지는 **보지 않습니다.** 그건 문서 목업(domain/document)이 들고
+ * 있는데, 다른 도메인의 api 를 가져다 쓰지 않는 규칙이라서입니다. A-05 가 못 쓰는 문서를 고르지
+ * 못하게 막고 있어서 화면에서는 이 경로로 올 일이 없습니다.
+ *
+ * sessionId 는 면접 진행 목업(sessionSocketMock)이 `s1` 시나리오를 돌려서 고정 값입니다.
+ *
+ * 진행 방식(`hideQuestionText`)은 기억해 뒀다가 아래 세션 옵션 목업이 돌려줍니다. 목업에서도 "음성만 듣기" 를 고르면
+ * 면접 화면에 질문 글이 숨겨집니다. 면접 화면에서 새로고침해도 남도록 sessionStorage 에 둡니다(막혀 있으면 메모리만).
+ */
+const HIDE_QUESTION_TEXT_KEY = 'cue-a:mock:hideQuestionText'
+let lastHideQuestionText = false
+
+function rememberHideQuestionText(value: boolean) {
+  lastHideQuestionText = value
+  try {
+    sessionStorage.setItem(HIDE_QUESTION_TEXT_KEY, String(value))
+  } catch {
+    // 저장소가 막힌 브라우저는 메모리 값만 씁니다.
+  }
+}
+
+function recallHideQuestionText(): boolean {
+  try {
+    const saved = sessionStorage.getItem(HIDE_QUESTION_TEXT_KEY)
+    if (saved !== null) return saved === 'true'
+  } catch {
+    // 위와 같습니다.
+  }
+  return lastHideQuestionText
+}
+
+registerMock('POST', '/api/interviews', (_params, body) => {
+  const request = (body ?? {}) as Partial<Record<string, unknown>>
+
+  if (typeof request.documentId !== 'string' || !request.documentId.trim()) {
+    throw new ApiError('INVALID_REQUEST', 'documentId 가 필요합니다')
+  }
+  if (typeof request.jobRole !== 'string' || !request.jobRole.trim() || request.jobRole.length > 100) {
+    throw new ApiError('INVALID_REQUEST', 'jobRole 은 1~100자여야 합니다')
+  }
+  if (request.persona !== 'FRIENDLY' && request.persona !== 'PRESSURE') {
+    throw new ApiError('INVALID_REQUEST', `persona 가 올바르지 않습니다 (${String(request.persona)})`)
+  }
+  if (request.companyId !== null && request.companyId !== undefined && typeof request.companyId !== 'number') {
+    // 서버는 Long 이라 문자열 id 는 요청 해석 단계에서 거절됩니다.
+    throw new ApiError('INVALID_REQUEST', `companyId 는 숫자여야 합니다 (${String(request.companyId)})`)
+  }
+
+  const questionCount = request.questionCount ?? 6
+  if (questionCount !== 3 && questionCount !== 6 && questionCount !== 9) {
+    throw new ApiError('INVALID_QUESTION_COUNT', '질문 수는 3, 6, 9 중 하나여야 합니다')
+  }
+  if (request.hideQuestionText !== undefined && request.hideQuestionText !== null && typeof request.hideQuestionText !== 'boolean') {
+    // 서버는 Boolean 이라 다른 값은 요청 해석 단계에서 거절됩니다. 생략하면 false 입니다.
+    throw new ApiError('INVALID_REQUEST', `hideQuestionText 는 true/false 여야 합니다 (${String(request.hideQuestionText)})`)
+  }
+
+  rememberHideQuestionText(request.hideQuestionText === true)
+  return { sessionId: 's1', questionTotal: questionCount }
+})
+
+/**
+ * 면접 진행 화면(B-01-2)이 쓰는 세션 옵션 목업입니다.
+ *
+ * 보통은 여기까지 오지 않습니다. 세션을 만들 때 고른 옵션을 이 탭에 남겨 두고 면접 화면이 그걸 먼저 읽기 때문입니다
+ * (sessionApi.getInterviewOptions · sessionOptionsDraft.ts). 남긴 값이 없을 때만(다른 탭에서 연 면접) 이 목업이
+ * 답하고, 그때 면접관 · 답변 시간은 고정값, `hideQuestionText` 는 위 세션 생성 목업이 받은 값입니다.
+ */
+registerMock(
+  'GET',
+  '/api/interviews/:sessionId',
+  () => ({
+    interviewerStyle: 'friendly',
+    hideQuestionText: recallHideQuestionText(),
+    answerTimeLimitSec: 90,
+  }),
+  { missingInBackend: '면접 옵션 조회 API 없음 (명세서 v0.2 에도 없음)' },
+)
+
+/**
+ * 답변 제출 목업입니다. 실제 WS 시나리오(sessionSocketMock)의 다음 턴(progress →
+ * 다음 질문 또는 session_end)을 이 제출이 트리거한다.
+ */
+registerMock('POST', '/api/interviews/:sessionId/answers', ({ sessionId }) => {
+  advanceMockSession(sessionId)
+})
+
+/**
+ * 면접 중도 이탈 목업입니다. 성공만 흉내낸다 — 실패 경로 확인은 수동으로 이 핸들러를
+ * 잠깐 throw 하도록 바꿔서 검증한다. 백엔드엔 실제 엔드포인트가 있지만(Cue-A/backend#25,
+ * PR#43) `interviews` 도메인 전체가 아직 mock 이라 이 목업이 계속 쓰인다 —
+ * sessionApi.abortSession 주석 참고.
+ */
+registerMock('POST', '/api/interviews/:sessionId/abort', () => {})

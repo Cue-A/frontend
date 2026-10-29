@@ -2,6 +2,24 @@
 @import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 @import "./styles/tokens.css";
 
+/*
+ * 로그인 이후 화면(AppLayout)의 세로 스크롤바 자리를 늘 비워 둡니다.
+ *
+ * Windows 처럼 스크롤바가 화면 폭을 차지하는 환경에서는, 본문이 화면보다 길 때만 스크롤바가 생깁니다.
+ * 그래서 보관함에서 포트폴리오 탭을 누르거나 검색으로 목록이 짧아지면 스크롤바가 사라지고, 그만큼
+ * 화면 폭이 넓어져 본문이 오른쪽으로 밀렸습니다 (Windows Chrome 에서 15px).
+ * 자리를 늘 비워 두면 스크롤바가 있든 없든 폭이 같습니다. 스크롤바가 화면 위에 겹쳐 그려지는
+ * macOS 기본 설정에서는 자리를 차지하지 않아 아무것도 바뀌지 않습니다.
+ *
+ * 비워 둔 자리는 html 배경으로 칠해져서, 레이아웃 배경(neutral-50)과 같은 색을 깔아 줄이 보이지 않게 합니다.
+ * 그래서 배경을 화면이 직접 까는 곳은 뺍니다 — 홈(fullBleed)은 보라 그라데이션이라, 본문이 화면보다 짧을 때
+ * 오른쪽에 회색 줄이 보입니다. 로그인 · 랜딩처럼 AppLayout 밖의 화면도 배경색이 제각각이라 건드리지 않습니다.
+ */
+html:has([data-app-layout]:not([data-full-bleed])) {
+  scrollbar-gutter: stable;
+  background-color: var(--color-neutral-50);
+}
+
 /* :root {
   --text: #6b6375;
   --text-h: #08060d;

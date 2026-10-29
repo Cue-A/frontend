@@ -97,7 +97,7 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
   | `progress` | `stage` (위 3종) |
   | `question` | `questionId` `questionType` `text` `audioUrl` `audioAvailable` `category` `difficulty` `questionNumber` `questionTotal` |
   | `error` | `errorCode` `message` `retryable` `needsRerecord` |
-  | `session-end` | 세션 종료 |
+  | `session_end` | 세션 종료 |
 
   `questionType` 은 `QUESTION` / `FOLLOWUP` / `REASK` 이고, **진행률은 `questionNumber`
   기준**입니다(되묻기에서는 올라가지 않습니다). `audioUrl` 이 null 이면 `audioAvailable`
@@ -113,27 +113,84 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
   - 무한 스피너 — 20초쯤이면 멈춘 줄 알고 새로고침하게 됩니다
   - 가짜 퍼센트 진행바 — 95%에서 멈추면 오히려 신뢰를 더 잃습니다
 
-### Q6b. 🔴 리포트 생성 대기 화면
+### Q6b. 🟡 리포트 생성 대기 화면
 
-- 필요한 결정: **진행 단계 값 목록.** 백엔드 `docs/13-report.md` 의 "계약 도착 시 확인할 것"
-  #4(진행률 `stage` 값 목록)가 아직 AI 계약 대기 중입니다. 면접 중 3단계와 같은지 다른지
-  정해지지 않았습니다.
-- 필요한 결정: 리포트 생성 소요 시간(같은 문서 #3) — 대기 화면 문구와 타임아웃이 여기 달림.
-- 걸리는 작업: 리포트 화면.
+분석 등록(Cue-A/backend#49 · #50)과 상태 조회(Cue-A/backend#56 · #60)로 대부분 정해졌습니다. 모두 dev 에 들어 있습니다.
+프론트는 그 계약에 맞춰 붙였습니다.
 
-### Q7. 🟡 `errorCode` → 사용자 문구 매핑표가 비어 있습니다
+- 정해진 것
+  - 통로: `POST /api/interviews/{sessionId}/reports` → 202 `{ reportId, … }` → WebSocket `/ws/reports/{reportId}`
+  - 메시지: `progress`(`stage` · `progress`) · `report`(`reportId` · `status` · `scoreTotal`) · `error`(`errorCode` · `message` · `retryable`)
+  - 단계 이름: AI 단계를 대문자로 (`TRANSCRIBING` → `ANALYZING_SPEECH` → `ANALYZING_GAZE` → `ANALYZING_CONTENT` → `COMPOSING`)
+  - 소요 시간 상한: 10분. 넘으면 백엔드가 `AI_TIMEOUT` 으로 끝냅니다
+  - 늦게 붙은 경우: 소켓에 붙은 직후 `GET /api/reports/{reportId}/status` 를 한 번 불러 따라잡습니다. 결과(완료 · 실패)는
+    소켓과 조회 중 먼저 준 쪽을 따르고 뒤에 온 것은 버립니다 (backend#56 "호출 순서"). 새로고침하면 sessionStorage 에 기억한 reportId 로
+    같은 순서를 밟습니다
+- 남은 것
+  - **다른 탭 · 기기에서 연 경우.** 기억해 둔 reportId 가 없으면 등록이 409 `REPORT_ALREADY_EXISTS` 이고, 상태 조회도
+    reportId 로만 물을 수 있어서 이어 볼 길이 없습니다. 리포트 목록이 생기면 풀립니다
+- 걸리는 작업: 리포트 화면, 분석 중 화면.
 
-백엔드 `docs/10-ai-client.md` "재시도 분류" 에 AI 연동 에러 코드는 나와 있습니다.
-아래 세 개는 **프론트가 반드시 화면을 따로 만들어야 하는** 케이스입니다.
+### Q14. ✅ 실패한 축만 다시 분석 (부분 재시도)
 
-| `errorCode` | 프론트 처리 |
-|---|---|
-| `STT_FAILED` | 즉시 재녹음 안내 (같은 오디오 재시도해도 결과가 같음) |
-| `TTS_FAILED` | 음성 없이 **텍스트로 계속 진행**. 중단하지 않음 |
-| `RESUME_PARSE_FAILED` | 다른 파일 안내 |
+백엔드에 들어왔습니다(Cue-A/backend#68). 프론트는 그 계약에 맞췄습니다(`domain/report/api/reportRetryApi.ts`).
 
-- 남은 결정: 인증·세션 등 나머지 도메인의 `ErrorCode` 전체 목록.
-- 임시 결정: 매핑에 없는 코드는 공통 문구로 떨어뜨립니다.
+- `POST /api/reports/{reportId}/retry` — **본문 없음.** 백엔드가 리포트의 실패 축(`overall.axesFailed`)을 전부
+  한 번에 다시 돌립니다. 202 `{ reportId, status: 'PARTIAL', retry: { status: 'PROCESSING', axes } }`
+- 진행 · 결과는 분석 등록과 같은 소켓 `/ws/reports/{reportId}` 의 `progress` · `report` · `error`
+- 재시도 중에도 리포트는 `PARTIAL` 로 조회되고, 상세 · 상태 조회의 `retry.status` 가 `PROCESSING` 입니다.
+  성공하면 리포트가 통째로 바뀌고 `retry` 가 null, 실패하면 리포트는 그대로이고 `retry.status` 가 `FAILED` 입니다
+- 409 `REPORT_NOT_RETRYABLE`(부분 실패 리포트가 아님) · `REPORT_RETRY_IN_PROGRESS`(이미 도는 중)
+- 화면: 실패한 줄마다 "다시 분석" 버튼이 있지만 어느 줄에서 눌러도 실패한 줄이 다 같이 돕니다(둘 이상이면 줄에 적어 둡니다).
+  새로고침하거나 다른 탭에서 열어도 리포트의 `retry` 를 보고 도는 중인 재시도를 이어 기다리고, 마지막 실패 사유도 보여줍니다
+
+### Q13. 🔴 카카오 인가 요청에 `state` 파라미터가 없습니다
+
+OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입니다. 지금 인가 URL
+(`domain/auth/lib/kakaoAuth.ts`)에 `state` 가 빠져 있어서, 공격자가 자기 `code` 를 담은
+콜백 URL 을 피해자에게 열게 만들면 피해자 계정이 공격자 카카오 계정에 묶일 수 있습니다
+(PR #56 리뷰).
+
+프론트만 붙여서는 소용이 없습니다 — 콜백에서 돌아온 `state` 를 요청 시 만든 값과
+대조해야 하는데, 그 대조를 프론트가 들고 있는 값(예: `sessionStorage`)과 하든 백엔드가
+하든 가인님과 먼저 정해야 합니다.
+
+- 남은 결정: `state` 를 누가 발급하고 어디서 검증할지 (프론트 `sessionStorage` 대조 /
+  백엔드가 발급해 대조).
+- 걸리는 작업: `domain/auth/lib/kakaoAuth.ts` (인가 URL), `POST /api/auth/oauth/kakao`
+  계약(`Cue-A/backend` `docs/03-auth.md`).
+- `POST /api/auth/oauth/kakao` 가 실제로 붙는 3단계 전에는 정해져야 합니다.
+
+### Q14. 🟡 회원 탈퇴 API 와 탈퇴 정책이 없습니다
+
+기능명세서 P0 에 "마이페이지 > 계정 설정 > 로그아웃 · 회원 탈퇴" 가 있는데, 백엔드(dev · #34)에는
+로그아웃과 내 정보 조회만 있고 탈퇴 API 가 없습니다. 계정 설정 시안도 아직 없습니다.
+
+- **임시 결정: 탈퇴 흐름(이유 고르기 → 최종 확인 창 → 완료)과 탈퇴 뒤 토큰 정리까지 만들고, API 는
+  `POST /api/users/me/withdrawal` (본문 `{ reason, detail? }`) 로 가정해 목업(`missingInBackend`)이 답하게
+  둡니다.** 계정 설정은 프로필 시안을, 탈퇴 흐름은 프레시코드 탈퇴 화면을 참고해 임시로 그렸습니다.
+- 남은 결정 (백엔드)
+  - 경로 · 응답. 탈퇴 뒤 그 사용자의 refresh token 을 모두 끊는지
+  - 탈퇴 이유(`reason` 7종 · `detail`)를 저장할지. 저장한다면 enum 값을 같이 맞춥니다
+  - 지워지는 범위. 최종 확인 창은 "면접 기록과 답변 녹화 · 리포트 · 보관함 문서 · 계정 정보가 지워진다" 고 안내합니다.
+    다르거나 재가입 제한 기간이 있으면 문구를 고칩니다
+  - 비밀번호 재확인을 받을지. 카카오로만 가입한 계정은 비밀번호가 없어서 받는다면 방법을 따로 정해야 합니다
+  - 카카오 계정 연결 끊기(unlink)를 백엔드가 같이 하는지
+- 남은 결정 (기획): 계정 설정 · 탈퇴 화면 시안, 탈퇴 이유 목록.
+- 걸리는 작업: `domain/user/api/userApi.ts` 의 `withdraw`, `domain/user/components/WithdrawPage.tsx` ·
+  `WithdrawConfirmDialog.tsx`, `domain/user/lib/withdrawReasons.ts`.
+
+### Q15. 🟡 직접 작성 문서의 본문 수정 · 제목 수정 창 시안
+
+문서 제목 수정은 백엔드에 생겨서(Cue-A/backend#76) 실제 서버에서도 됩니다. 계약은 `documentApi.ts` 의
+`updateDocumentTitle` 주석에 옮겨 적었습니다. 남은 것은 아래 둘입니다.
+
+- 남은 결정 (프론트 · 백엔드): 직접 작성 문서의 **본문 수정**. 백엔드는 이슈만 있고(Cue-A/backend#75) API 가 없어서,
+  지금 화면은 제목만 바꿉니다.
+- 남은 결정 (기획): 제목 수정 창 시안. 지금은 지우기 확인 창과 같은 모양으로 임시로 그렸습니다.
+- 알아둘 것: 옵션 설정(A-05)에 골라 둔 자기소개서는 고른 시점의 제목을 들고 있어서, 보관함에서 제목을 바꿔도
+  다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
+- 걸리는 작업: `domain/document/components/DocumentRenameDialog.tsx`.
 
 ---
 
@@ -143,3 +200,40 @@ Figma 카드에 `neutral-900` 과 `neutral-1000` 둘 다 "제목 · 본문 기�
 
 - 필요한 결정: Vitest + Testing Library 로 갈지, 어느 시점에 붙일지.
 - 지금은 PR 체크리스트에서 테스트 항목이 비어 있습니다.
+
+### Q9. 🟡 마이크·카메라 사용 불가 시 면접 시작을 차단할지
+
+기능명세서 INT-4 "정책 미확정" 항목입니다. 마이크는 없으면 STT 가 돌지 않아
+답변이 아예 남지 않으므로 필수 쪽으로 의견이 모였습니다. 카메라는 없어도 면접
+자체는 성립하고 시선 점수만 제외되며(INT-7), 리포트 화면(#8)이 이미 시선 점수
+`null` 을 처리하도록 되어 있어 선택으로 두자는 의견입니다(PR #10 리뷰).
+
+- **결정: 임시로 "마이크만 필수" 를 적용합니다.** `canStartInterview` 에 들어가
+  있고, 카메라 실패 시 시선 점수가 제외된다는 안내 문구도 이 전제로 추가했습니다.
+- 남은 결정: 팀 확정 — 카메라도 필수로 갈지, 선택으로 남길지.
+- 걸리는 작업: `domain/interview/lib/canStartInterview.ts` 만 고치면 됩니다.
+
+### Q10. 🟡 답변 시간 선택지가 확정되지 않았습니다
+
+A-05 시안에는 "질문당 90초" 한 값만 보입니다. 드롭다운인데 나머지 선택지가 시안에 없어서
+프론트가 임시로 채웠습니다. (PR #13)
+
+- **임시 값**: 답변 시간 60 / 90 / 120초 + 제한 없음
+- **서버가 이 값을 받지 않습니다.** 세션 시작 요청(`InterviewStartRequest`)에 답변 시간 자리가
+  없어서 PR #66 에서 요청 본문에서 뺐습니다. 지금은 A-05 화면(설정 요약 · 예상 소요 시간)에만
+  쓰입니다. 면접 진행(B-01)의 카운트다운은 이 값이 아니라 세션 옵션 목업의 고정값(90초)을 씁니다
+  (이슈 #54 "확인이 필요한 것" 1번)
+- 남은 결정: 답변 시간을 서버가 받을지, 받는다면 허용 범위. 기대하던
+  `GET /api/v1/interviews/options/defaults` (INT-2)는 api 명세서 v0.2 에 없습니다
+- 걸리는 작업: `domain/interview/types/sessionSetup.ts` 의 `ANSWER_SECONDS_CHOICES`
+
+### Q11. 🟡 총 예상 소요 시간 계산 기준
+
+A-05 시안이 "9문항 × 질문당 90초 → 15분"인데 답변 시간만 더하면 13.5분입니다.
+답변 제출 후 다음 질문까지 5~15초가 걸린다는 걸 확인해(PR #13 리뷰) 질문당
+여유 10초를 얹었고, 시안 값과 맞아떨어집니다.
+
+- **임시 값**: 질문당 여유 10초 (5~15초의 중간값)
+- 남은 결정: 실제 기준. 서버가 예상 소요를 내려주는지도 확인이 필요합니다
+- 걸리는 작업: `domain/interview/lib/estimateDuration.ts`
+- 어림값이라 화면에는 "약 N분"으로 표시합니다. "제한 없음"이면 계산하지 않습니다
