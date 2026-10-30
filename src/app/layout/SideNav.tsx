@@ -60,7 +60,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: '질문 은행' },
     ],
   },
-  { label: '성장 관리', Icon: IconChartLine },
+  { label: '성장 관리', Icon: IconChartLine, to: ROUTES.GROWTH },
   {
     label: '마이페이지',
     Icon: IconUser,

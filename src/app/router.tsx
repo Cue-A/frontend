@@ -6,6 +6,7 @@ import DeviceCheckPage from '@/domain/interview/components/DeviceCheckPage'
 import InterviewPage from '@/domain/interview/components/InterviewPage'
 import InterviewSessionPreview from '@/domain/interview/components/InterviewSessionPreview'
 import LibraryDocumentsPage from '@/domain/document/components/LibraryDocumentsPage'
+import GrowthPage from '@/domain/growth/components/GrowthPage'
 import HomePage from '@/domain/home/components/HomePage'
 import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
           { path: ROUTES.LIBRARY_DOCUMENTS, element: <LibraryDocumentsPage /> },
           { path: ROUTES.LIBRARY_PRACTICE, element: <PracticeRecordsPage /> },
+          { path: ROUTES.GROWTH, element: <GrowthPage /> },
           { path: ROUTES.MYPAGE, element: <MyPage /> },
           { path: ROUTES.MYPAGE_ACCOUNT, element: <AccountSettingsPage /> },
           { path: ROUTES.MYPAGE_WITHDRAW, element: <WithdrawPage /> },

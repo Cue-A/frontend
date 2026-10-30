@@ -19,6 +19,8 @@ export const ROUTES = {
   LIBRARY_DOCUMENTS: '/library/documents',
   /** 내 보관함 > 연습 기록. 지난 모의면접을 폴더 · 상태로 거르고 리포트를 다시 봅니다 */
   LIBRARY_PRACTICE: '/library/practice',
+  /** C-04 성장 관리 — 회차별 점수 추이 · 이번 주 목표 · 배지 · 면접 캘린더 (이슈 #136) */
+  GROWTH: '/growth',
   /** 마이페이지 메뉴 목록. 지금은 계정 설정만 열려 있습니다 */
   MYPAGE: '/mypage',
   /** 마이페이지 > 계정 설정 — 로그아웃 · 회원 탈퇴 */
