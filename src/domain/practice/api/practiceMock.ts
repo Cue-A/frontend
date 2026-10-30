@@ -23,7 +23,7 @@ const DEFAULT_PAGE_SIZE = 10
 const MAX_PAGE_SIZE = 100
 
 type StoredFolder = { folderId: string; folderName: string; createdAt: string }
-type StoredSession = Omit<InterviewSessionSummaryResponse, 'createdAt' | 'completedAt'> & { daysAgo: number }
+type StoredSession = Omit<InterviewSessionSummaryResponse, 'createdAt'> & { daysAgo: number }
 
 const FOLDER_SAMSUNG = '6f1c2a40-1b7e-4b8e-9a31-5d0c2e7a9b01'
 const FOLDER_KAKAO = '6f1c2a40-1b7e-4b8e-9a31-5d0c2e7a9b02'
@@ -71,13 +71,7 @@ function startedAt(daysAgo: number): string {
 }
 
 function toResponse({ daysAgo, ...stored }: StoredSession): InterviewSessionSummaryResponse {
-  const createdAt = startedAt(daysAgo)
-  // 질문 수 × 약 2분 뒤에 끝났다고 둡니다. 목록 화면은 쓰지 않는 값입니다
-  const completedAt =
-    stored.status === 'COMPLETED'
-      ? new Date(new Date(createdAt).getTime() + stored.questionCount * 2 * 60_000).toISOString()
-      : null
-  return { ...stored, createdAt, completedAt }
+  return { ...stored, createdAt: startedAt(daysAgo) }
 }
 
 function parsePositiveInt(value: string | null): number | null {

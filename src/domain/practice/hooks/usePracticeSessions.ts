@@ -24,7 +24,7 @@ export type UsePracticeSessionsResult = (
 
 type State =
   | { status: 'loading' }
-  | { status: 'error'; error: ApiError }
+  | { status: 'error'; error: ApiError; key: string }
   | { status: 'ready'; page: PracticePage; key: string }
 
 function keyOf(query: PracticeListQuery) {
@@ -35,6 +35,9 @@ function keyOf(query: PracticeListQuery) {
  * 연습 기록 목록입니다. 조건이 바뀌면 다시 받습니다. (`GET /api/interviews` — 백엔드에 없어 목업이 답합니다)
  *
  * 늦게 온 응답이 새 조건의 목록을 덮지 않게, 조건이 바뀌면 앞선 요청의 결과는 버립니다.
+ *
+ * 오류가 난 뒤 조건을 바꾸면 새 응답이 올 때까지 **불러오는 중**으로 둡니다. 오류 안내는 앞선 조건의 결과라, 탭 ·
+ * 폴더를 바꿨는데 그대로 남아 있으면 새 조건도 실패한 것처럼 읽힙니다. (PR #128 리뷰)
  */
 export function usePracticeSessions(query: PracticeListQuery): UsePracticeSessionsResult {
   const [state, setState] = useState<State>({ status: 'loading' })
@@ -55,7 +58,7 @@ export function usePracticeSessions(query: PracticeListQuery): UsePracticeSessio
         if (cancelled) return
         const apiError = error instanceof ApiError ? error : new ApiError('UNKNOWN', '알 수 없는 오류가 발생했어요.')
         console.error('연습 기록 조회 실패 code=%s', apiError.code)
-        setState({ status: 'error', error: apiError })
+        setState({ status: 'error', error: apiError, key: requestKey })
       })
 
     return () => {
@@ -71,5 +74,8 @@ export function usePracticeSessions(query: PracticeListQuery): UsePracticeSessio
   if (state.status === 'ready') {
     return { status: 'ready', page: state.page, updating: state.key !== key, reload }
   }
-  return { ...state, reload }
+  if (state.status === 'error' && state.key === key) {
+    return { status: 'error', error: state.error, reload }
+  }
+  return { status: 'loading', reload }
 }

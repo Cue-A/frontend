@@ -2,7 +2,7 @@ import { IconPlayerPlay, IconVideo } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-import { ROUTES, toAnalyzing, toDeviceCheck, toReport } from '@/app/routes'
+import { ROUTES, toAnalyzing, toReport } from '@/app/routes'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import ListCard from '@/shared/ui/ListCard'
@@ -44,25 +44,18 @@ function Notice({ children }: { children: ReactNode }) {
  * - **다시보기** (완료 · 리포트 있음) — 리포트로 갑니다. 답변 영상 · 점수 · 개선 답변이 거기 있습니다
  * - **분석하기** (완료 · 리포트 없음) — 면접은 끝냈지만 분석 화면에서 나가 리포트를 맡기지 않은 세션입니다. 분석 중
  *   화면으로 가면 분석을 등록하고 끝나면 리포트로 넘어갑니다. 시안에 없는 경우라 시안의 버튼 모양을 따랐습니다
- * - **이어하기** (진행 중) — 그 세션의 장치 테스트로 갑니다. ⚠️ 백엔드에 "이어서 보기" API 가 없어서, 목업에서는
- *   첫 질문부터 다시 나옵니다. 실제 서버에 붙이면 AI 서버가 그 세션을 아직 들고 있는지에 달려 있습니다
  * - 중단한 세션은 버튼이 없습니다. 리포트를 만들지 않는 세션입니다(`SessionStatus.ABORTED`)
+ *
+ * 시안의 **이어하기**(진행 중)는 아직 두지 않습니다. 진행 중인 세션을 장치 테스트로 다시 보내면 실서버에서 어떻게
+ * 되는지 확인되지 않았습니다 — 백엔드에 "이어서 보기" API 가 없고, AI 서버가 그 세션을 아직 들고 있는지에 달려
+ * 있습니다. 첫 질문부터 다시 나오거나 연결이 끊기면 사용자가 헷갈려서, 백엔드와 확인한 뒤 엽니다. (PR #128 리뷰)
+ * 그때까지 진행 중 세션은 중단한 세션처럼 버튼 없이 상태만 보입니다.
  *
  * 시안의 "영상 만료됨"(버튼 잠김)은 뺐습니다. 답변 영상을 언제까지 두는지 백엔드에 정해진 게 없어서(S3 보관 기간 ·
  * 만료 여부 필드 없음) 화면이 만료를 알 수 없습니다. 정해지면 이 자리에 상태를 하나 더합니다.
  */
 function RowAction({ session }: { session: PracticeSession }) {
   const title = titleOf(session)
-
-  if (session.status === 'IN_PROGRESS') {
-    return (
-      <Link to={toDeviceCheck(session.sessionId)} className={`${ACTION_BASE} text-primary-500`}>
-        이어하기
-        <IconPlayerPlay size={16} stroke={2} aria-hidden />
-        <span className="sr-only"> — {title}</span>
-      </Link>
-    )
-  }
 
   if (session.status === 'COMPLETED') {
     const to = session.reportId ? toReport(session.reportId) : toAnalyzing(session.sessionId)

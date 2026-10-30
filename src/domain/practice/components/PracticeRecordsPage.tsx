@@ -24,7 +24,8 @@ const SEARCH_DELAY_MS = 300
 /**
  * 내 보관함 > 연습 기록.
  *
- * 지금까지 본 모의면접을 폴더 · 상태 · 검색어로 거르고, 리포트를 다시 보거나 진행 중인 면접을 이어 봅니다.
+ * 지금까지 본 모의면접을 폴더 · 상태 · 검색어로 거르고, 리포트를 다시 봅니다. 진행 중인 면접 이어하기는 아직 열지
+ * 않았습니다 (PracticeList 의 `RowAction`).
  * 위쪽 폴더 카드와 아래 목록은 따로 받습니다 — 목록 조건이 바뀔 때마다 폴더 숫자까지 다시 받을 이유가 없습니다.
  *
  * 시안에는 아이콘 레일 옆에 "내 보관함" 두 번째 패널이 붙어 있지만, 자소서 · 포트폴리오처럼 패널 없이 사이드바의
@@ -38,26 +39,20 @@ export default function PracticeRecordsPage() {
   const [folder, setFolder] = useState<FolderSelection>(ALL_FOLDERS)
   const [status, setStatus] = useState<PracticeStatusTab>('ALL')
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(0)
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const keyword = useDebouncedValue(query, SEARCH_DELAY_MS)
-  const sessions = usePracticeSessions({ folder, status, keyword, page, size: PRACTICE_PAGE_SIZE })
 
   // 조건을 바꾸면 첫 쪽부터 봅니다. 3쪽을 보다가 폴더를 바꿨는데 그 폴더에 1쪽뿐이면 빈 목록이 됩니다.
-  const changeFolder = (next: FolderSelection) => {
-    setFolder(next)
-    setPage(0)
-  }
-  const changeStatus = (next: PracticeStatusTab) => {
-    setStatus(next)
-    setPage(0)
-  }
-  const changeQuery = (next: string) => {
-    setQuery(next)
-    setPage(0)
-  }
+  // 쪽 번호는 그 쪽을 고른 조건과 함께 들고 있다가, 조건이 달라지면 0 으로 봅니다. 검색어는 **0.3초 늦게 반영된 값**
+  // (`keyword`)을 기준으로 삼습니다 — 칠 때 바로 0 으로 돌리면 "이전 검색어 + 1쪽" 요청이 한 번 더 나갑니다. (PR #128 리뷰)
+  const filterKey = JSON.stringify([folder, status, keyword.trim()])
+  const [paging, setPaging] = useState({ filterKey, page: 0 })
+  const page = paging.filterKey === filterKey ? paging.page : 0
+  const changePage = (next: number) => setPaging({ filterKey, page: next })
+
+  const sessions = usePracticeSessions({ folder, status, keyword, page, size: PRACTICE_PAGE_SIZE })
 
   const openCreateFolder = () => {
     setNotice(null)
@@ -102,16 +97,16 @@ export default function PracticeRecordsPage() {
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center gap-3">
-            <SearchField label="세션 검색" placeholder="기업 · 직무 검색" value={query} onChange={changeQuery} />
+            <SearchField label="세션 검색" placeholder="기업 · 직무 검색" value={query} onChange={setQuery} />
             <Button variant="primary" size="sm" to={ROUTES.SESSION_SETUP} className="whitespace-nowrap">
               <IconPlus size={16} stroke={2} aria-hidden />새 연습 시작
             </Button>
           </div>
         </div>
 
-        <FolderCards folders={folders} value={folder} onChange={changeFolder} onCreate={openCreateFolder} />
+        <FolderCards folders={folders} value={folder} onChange={setFolder} onCreate={openCreateFolder} />
 
-        <SegmentedTabs label="진행 상태" options={PRACTICE_STATUS_TABS} value={status} onChange={changeStatus} />
+        <SegmentedTabs label="진행 상태" options={PRACTICE_STATUS_TABS} value={status} onChange={setStatus} />
 
         {notice && (
           <p role="status" className="text-body-sm text-badge-success-text">
@@ -123,7 +118,7 @@ export default function PracticeRecordsPage() {
           body={body}
           count={ready ? sessions.page.totalElements : 0}
           pagination={
-            ready ? { page: sessions.page.page, totalPages: sessions.page.totalPages, onChange: setPage } : undefined
+            ready ? { page: sessions.page.page, totalPages: sessions.page.totalPages, onChange: changePage } : undefined
           }
           updating={ready && sessions.updating}
         />

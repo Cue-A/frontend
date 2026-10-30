@@ -52,7 +52,9 @@ export async function getPracticeFolders() {
  * 폴더 만들기. `POST /api/folders` (본문 `{ folderName }`)
  *
  * **백엔드에 없는 API 입니다.** 이름은 앞뒤 공백을 자른 뒤 1~50자(`folder.folder_name VARCHAR(50)`)이고, 비었거나
- * 넘으면 `INVALID_REQUEST` 로 봅니다. 같은 이름 막기는 화면이 합니다 (FolderCreateDialog).
+ * 넘으면 `INVALID_REQUEST` 로 봅니다. 같은 이름 막기는 지금 화면이 합니다 (FolderCreateDialog). 화면은 이미 받은
+ * 목록과만 견줘서 다른 탭에서 방금 만든 이름은 못 막습니다 — 백엔드에 요청할 때 서버도 같은 이름을 거절해 달라고
+ * 적습니다. (PR #128 리뷰)
  */
 export async function createPracticeFolder(name: string) {
   const response = await api.post<FolderResponse>('/api/folders', { folderName: name })

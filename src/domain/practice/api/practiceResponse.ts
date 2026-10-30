@@ -5,6 +5,12 @@ import type { PracticeFolder, PracticeFolders, PracticePage, PracticeSession } f
  *
  * 필드는 백엔드 엔티티(`InterviewSession` · `Folder`)의 이름을 따랐습니다. 백엔드가 만들 때 그대로 쓰거나,
  * 바뀌면 이 파일과 변환 함수만 고치면 됩니다.
+ *
+ * **세션 테이블에 그대로 있지 않은 값**은 백엔드가 계산해서 내려줘야 합니다. 요청할 때 이 셋을 따로 적습니다.
+ * - `round` — `retry_of_session_id` 를 거슬러 올라가 센 회차
+ * - `reportId` · `totalScore` — 그 세션의 리포트를 붙여서(join) 꺼낸 값
+ *
+ * 화면이 쓰지 않는 값(끝난 시각 등)은 넣지 않았습니다. 필요해지면 그때 더합니다.
  */
 
 /** `GET /api/interviews` 목록 한 줄 */
@@ -14,14 +20,15 @@ export type InterviewSessionSummaryResponse = {
   companyName: string | null
   jobRole: string
   persona: 'FRIENDLY' | 'PRESSURE'
-  /** 회차. 루트 세션(`retry_of_session_id` 가 null)이 1 입니다 */
+  /** 회차. 루트 세션(`retry_of_session_id` 가 null)이 1 입니다. **백엔드 계산 값** */
   round: number
   status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED'
   questionCount: number
   createdAt: string
-  completedAt: string | null
   folderId: string | null
+  /** 리포트를 등록하지 않았으면 null. **리포트 조인 값** */
   reportId: string | null
+  /** 리포트 종합 점수. 분석이 안 끝났거나 실패했으면 null. **리포트 조인 값** */
   totalScore: number | null
 }
 
