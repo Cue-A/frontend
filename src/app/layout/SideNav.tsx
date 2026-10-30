@@ -40,7 +40,8 @@ type NavItem = {
  * 갈 곳 없는 링크를 눌러 404 로 떨어지는 것보다 준비 중이라고 보이는 편이 낫습니다.
  *
  * "내 보관함" 의 하위 항목은 전에 보관함 화면 안의 두 번째 패널(LibraryPanel)에 있던 것입니다. 패널을 없애고
- * 사이드바로 옮겼습니다 — 하위 항목 셋 중 둘이 준비 중이라 패널이 화면 폭만 차지했습니다.
+ * 사이드바로 옮겼습니다 — 하위 항목 셋 중 둘이 준비 중이라 패널이 화면 폭만 차지했습니다. 연습 기록 시안에도 같은
+ * 패널이 있지만 같은 이유로 이 하위 메뉴를 씁니다.
  *
  * 아이콘은 Tabler outline 입니다 (docs/design-system.md §7).
  */
@@ -53,7 +54,11 @@ const NAV_ITEMS: NavItem[] = [
     // 하위 항목이 있어서 이 줄은 여닫기 버튼입니다. `to` 는 이동이 아니라 "켜진 메뉴" 판단에만 씁니다.
     to: ROUTES.LIBRARY_DOCUMENTS,
     matchPrefix: LIBRARY_PREFIX,
-    children: [{ label: '자소서 · 포트폴리오', to: ROUTES.LIBRARY_DOCUMENTS }, { label: '연습 기록' }, { label: '질문 은행' }],
+    children: [
+      { label: '자소서 · 포트폴리오', to: ROUTES.LIBRARY_DOCUMENTS },
+      { label: '연습 기록', to: ROUTES.LIBRARY_PRACTICE },
+      { label: '질문 은행' },
+    ],
   },
   { label: '성장 관리', Icon: IconChartLine },
   {
