@@ -1,6 +1,15 @@
 import { api } from '@/shared/api/apiClient'
 
-import type { LoginProvider, Me, WithdrawRequest } from '../types/user'
+import type {
+  BusinessCard,
+  BusinessCardInput,
+  CompanyInterest,
+  LoginProvider,
+  Me,
+  NotificationSettings,
+  ProfileUpdateInput,
+  WithdrawRequest,
+} from '../types/user'
 
 import './userMock'
 
@@ -10,6 +19,8 @@ type UserResponse = {
   nickname: string
   email: string | null
   providers: LoginProvider[]
+  /** 실제 서버는 아직 이 필드를 안 줍니다 — 없으면 null 로 둡니다 */
+  jobTitle?: string | null
 }
 
 /**
@@ -25,7 +36,66 @@ export async function getMe(): Promise<Me> {
     nickname: response.nickname,
     email: response.email,
     providers: response.providers,
+    jobTitle: response.jobTitle ?? null,
   }
+}
+
+/**
+ * 프로필 수정. `PATCH /users/me/profile` — **백엔드에 아직 없습니다** (API 명세서 시작 전).
+ * 실제 계약이 정해지면 이름 · 직무만 보낼지, 이메일(지금은 별도 `PATCH /api/users/me/email`)도
+ * 같이 받을지 다시 맞춰야 합니다. 지금은 화면을 완성해두려고 셋을 한 번에 보냅니다.
+ */
+export async function updateProfile(input: ProfileUpdateInput): Promise<Me> {
+  const response = await api.patch<UserResponse>('/users/me/profile', input)
+  return {
+    userId: response.userId,
+    nickname: response.nickname,
+    email: response.email,
+    providers: response.providers,
+    jobTitle: response.jobTitle ?? null,
+  }
+}
+
+/** 관심 기업 목록. `GET /v1/users/me/company-interests` — 백엔드 시작 전, 목업만 있습니다. */
+export function getCompanyInterests() {
+  return api.get<CompanyInterest[]>('/v1/users/me/company-interests')
+}
+
+/** 관심 기업 등록. `PUT /v1/users/me/company-interests/{companyId}` — 백엔드 시작 전. */
+export function addCompanyInterest(companyId: string) {
+  return api.put<void>(`/v1/users/me/company-interests/${encodeURIComponent(companyId)}`)
+}
+
+/** 관심 기업 해제. `DELETE /v1/users/me/company-interests/{companyId}` — 백엔드 시작 전. */
+export function removeCompanyInterest(companyId: string) {
+  return api.delete<void>(`/v1/users/me/company-interests/${encodeURIComponent(companyId)}`)
+}
+
+/**
+ * 알림 설정. API 명세서에 알림 도메인 자체가 없어서 경로는 임시로 정했습니다 — 목업 전용입니다.
+ * 백엔드 계약이 생기면 맞춰 고칩니다.
+ */
+export function getNotificationSettings() {
+  return api.get<NotificationSettings>('/api/users/me/notification-settings')
+}
+
+export function updateNotificationSettings(input: NotificationSettings) {
+  return api.patch<NotificationSettings>('/api/users/me/notification-settings', input)
+}
+
+/** 명함 조회. `GET /api/users/me/business-card` — 백엔드 시작 전, 목업만 있습니다. */
+export function getBusinessCard() {
+  return api.get<BusinessCard | null>('/api/users/me/business-card')
+}
+
+/** 명함 생성. `POST /api/users/me/business-card` — 백엔드 시작 전. */
+export function createBusinessCard(input: BusinessCardInput) {
+  return api.post<BusinessCard>('/api/users/me/business-card', input)
+}
+
+/** 명함 수정. `PATCH /api/users/me/business-card` — 백엔드 시작 전. */
+export function updateBusinessCard(input: BusinessCardInput) {
+  return api.patch<BusinessCard>('/api/users/me/business-card', input)
 }
 
 /**
