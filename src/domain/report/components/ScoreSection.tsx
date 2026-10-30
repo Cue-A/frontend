@@ -1,12 +1,14 @@
 import { IconCircleCheck } from '@tabler/icons-react'
+import { useRef } from 'react'
 
 import Card from '@/shared/ui/Card'
 
 import type { AxisRetry } from '../hooks/useAxisRetry'
+import { retryAnnouncementOf, type FailedAxis } from '../lib/retryView'
 import type { ScoreMetric, SubMetric } from '../types/report'
 
 import FailedMetricRow from './FailedMetricRow'
-import RetryPanel, { type FailedAxis } from './RetryPanel'
+import RetryPanel from './RetryPanel'
 
 type Props = {
   metrics: ScoreMetric[]
@@ -54,6 +56,10 @@ function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
  * 다시 분석해서 점수를 받으면 리포트가 통째로 새 값으로 바뀌고,
  * 무엇이 바뀌었는지 절 머리에 한 줄로 알려줍니다 — 총점도 같이 바뀌어서, 말없이 숫자만 바뀌면 왜 바뀌었는지 모릅니다.
  *
+ * 다시 분석 상태(분석 중 · 실패 · 점수가 나옴)는 **늘 그려 두는 보이지 않는 안내 줄 하나**(`role="status"`)가 읽습니다.
+ * 눈에 보이는 "점수가 나왔어요" 줄과 다시 분석 칸은 그때그때 새로 그려져서, 그 안에 안내 줄을 두면 새로 그려진
+ * 안내 줄을 읽지 않는 화면 읽기 프로그램이 있습니다. 절 머리는 다시 분석 칸이 숨는 동안 포커스를 맡습니다. (PR #134 리뷰)
+ *
  * 막대 너비는 계산값이라 인라인 style 을 씁니다.
  * (docs/01-conventions.md "스타일" 절)
  */
@@ -62,19 +68,33 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
   const failed: FailedAxis[] = metrics.flatMap((metric) =>
     metric.retryAxis ? [{ axis: metric.retryAxis, label: metric.label }] : [],
   )
+  const headingRef = useRef<HTMLHeadingElement | null>(null)
+
+  const recoveredMessage =
+    recovered.length > 0 ? `${recovered.join(' · ')} 점수가 나왔어요. 총점을 새로 계산했어요.` : null
+  const retryMessage = retryAnnouncementOf({ failed, running: retry.running, outcomes: retry.outcomes })
+  // 분석하는 동안에는 그 소식만 읽습니다. 앞서 살아난 축을 상태가 바뀔 때마다 다시 읽으면 시끄럽습니다
+  const announcement =
+    retry.running.length > 0 ? retryMessage : [recoveredMessage, retryMessage].filter(Boolean).join(' ')
 
   return (
     <Card label="세부 점수" padding="lg">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1">
-          <h2 className="text-h2 text-neutral-900">세부 점수</h2>
+          <h2 ref={headingRef} tabIndex={-1} className="text-h2 text-neutral-900 outline-none">
+            세부 점수
+          </h2>
           {comment && <p className="text-body-md text-neutral-500">{comment}</p>}
         </div>
 
-        {recovered.length > 0 && (
-          <p role="status" className="flex items-center gap-2 text-body-md text-semantic-success">
+        <p role="status" className="sr-only">
+          {announcement}
+        </p>
+
+        {recoveredMessage && (
+          <p className="flex items-center gap-2 text-body-md text-semantic-success">
             <IconCircleCheck size={18} aria-hidden className="shrink-0" />
-            {recovered.join(' · ')} 점수가 나왔어요. 총점을 새로 계산했어요.
+            {recoveredMessage}
           </p>
         )}
 
@@ -133,7 +153,13 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
           })}
         </ul>
 
-        <RetryPanel failed={failed} running={retry.running} outcomes={retry.outcomes} onRetry={retry.retry} />
+        <RetryPanel
+          failed={failed}
+          running={retry.running}
+          outcomes={retry.outcomes}
+          onRetry={retry.retry}
+          focusFallbackRef={headingRef}
+        />
 
         {subMetrics.length > 0 && (
           <div className="flex flex-wrap gap-3">

@@ -30,7 +30,7 @@ function titleOf(isRunning: boolean) {
  * 서비스 고장으로 읽습니다 — 그 줄은 `ScoreSection` 이 사유 문구만 적습니다.
  *
  * 줄의 칸은 다른 점수 줄과 같습니다(이름 · 가운데 · 오른쪽). 막대 자리에 상태를 적고, 점수 자리는 점수가 없는
- * 다른 줄처럼 `—` 로 둡니다. 상태가 바뀌었다는 소리 안내는 `RetryPanel` 이 한 번만 합니다.
+ * 다른 줄처럼 `—` 로 둡니다. 상태가 바뀌었다는 소리 안내는 `ScoreSection` 의 안내 줄이 한 번만 합니다.
  */
 export default function FailedMetricRow({ metric, isRunning }: Props) {
   return (
