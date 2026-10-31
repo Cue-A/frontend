@@ -15,12 +15,12 @@ export type ComparisonAxis = 'content' | 'speech' | 'gaze'
 export type ComparisonRound = {
   /** 연습 기록 목록의 회차와 같은 번호(중단된 재면접은 세지 않음). 중간이 빌 수 있습니다 */
   round: number
-  /** 그 회차 리포트. 막대를 누르면 이 리포트로 갑니다 */
-  reportId: string
+  /** 그 회차 리포트. 막대를 누르면 이 리포트로 갑니다. 응답에서 못 찾으면 null — 막대만 그리고 링크는 걸지 않습니다 */
+  reportId: string | null
   /** 부분 리포트(`PARTIAL`)였던 회차. 이 회차의 종합 점수는 null 입니다 */
   partial: boolean
-  /** 그 회차 면접 시작 시각 (ISO 8601) */
-  startedAt: string
+  /** 그 회차 면접 시작 시각 (ISO 8601). 응답에서 못 찾으면 null */
+  startedAt: string | null
   /** 종합 점수. 부분 리포트 회차는 null — 0점이 아닙니다 */
   overall: number | null
   /** 축별 점수. 실패 · 미사용 축은 null */
@@ -49,7 +49,7 @@ export type RoundComparison = {
   /** 기준 리포트(= 마지막 회차) */
   reportId: string
   latestRound: number
-  /** 회차 오름차순 */
+  /** 회차 오름차순. 비교한 회차가 없으면 빈 배열입니다 */
   rounds: ComparisonRound[]
   /** 비교할 이전 회차가 없으면(이 리포트 하나뿐) null — 오류가 아닙니다 */
   previous: PreviousComparison | null

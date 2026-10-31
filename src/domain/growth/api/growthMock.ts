@@ -21,6 +21,8 @@ import type {
  * - `first` — 첫 회차만 본 사용자. 이전 회차 대비 변화가 비고, 이번 주 목표를 아직 안 정했습니다
  * - `partial` — 1 · 2 · 4회차 (3회차는 리포트가 없어 빠지고, 2회차는 부분 리포트)
  * - `compare-error` — 회차 비교가 AI 서버 연결 실패(503)로 실패. 목표 · 배지 · 캘린더는 그대로 보입니다
+ * - `compare-loose` — 회차 비교 응답에 값이 빠지거나 null 인 칸이 섞여 옴 (이슈 #140)
+ * - `compare-empty` — 회차 비교 응답에 비교한 회차가 0개 (이슈 #140)
  * - `empty` — 막 가입해서 아무 기록이 없는 사용자
  *
  * 점수 추이 · 이전 회차 대비 변화는 리포트 도메인의 회차 비교 목업(`report/api/reportComparisonMock.ts`)이 답합니다.
@@ -37,7 +39,7 @@ import type {
 
 const SCENARIO_KEY = 'cue-a:mock:growth'
 
-const SCENARIOS = ['sample', 'first', 'partial', 'compare-error', 'empty'] as const
+const SCENARIOS = ['sample', 'first', 'partial', 'compare-error', 'compare-loose', 'compare-empty', 'empty'] as const
 
 type Scenario = (typeof SCENARIOS)[number]
 
@@ -76,6 +78,8 @@ const LATEST_REPORT_ID: Record<Exclude<Scenario, 'empty'>, string> = {
   first: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa001',
   partial: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa104',
   'compare-error': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa503',
+  'compare-loose': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa777',
+  'compare-empty': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa000',
 }
 
 /** 목표 수정은 시나리오마다 따로 기억합니다. 시나리오를 바꿔도 앞서 고친 값이 섞이지 않게 */
