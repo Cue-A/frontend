@@ -17,6 +17,8 @@ type Props = {
   /** 오늘 (YYYY-MM-DD) */
   today: string
   calendar: UseCalendarMonthResult
+  /** 일정을 등록했다는 알림. 없으면 null */
+  notice: string | null
   onMonthChange: (month: string) => void
   onAddEvent: () => void
 }
@@ -111,7 +113,7 @@ function EventList({ events }: { events: CalendarEvent[] }) {
  * 날짜 칸은 표(`table`)로 그려서 화면 읽기 프로그램이 요일과 함께 읽습니다. 칸마다 "8월 14일 금요일, 면접 일정 1개" 처럼
  * 한 문장을 따로 붙입니다.
  */
-export default function InterviewCalendarCard({ month, today, calendar, onMonthChange, onAddEvent }: Props) {
+export default function InterviewCalendarCard({ month, today, calendar, notice, onMonthChange, onAddEvent }: Props) {
   const captionId = useId()
   const previousMonth = shiftMonth(month, -1)
   const nextMonth = shiftMonth(month, 1)
@@ -156,6 +158,11 @@ export default function InterviewCalendarCard({ month, today, calendar, onMonthC
       <div className="mt-2">
         <Legend />
       </div>
+
+      {/* 알림 줄은 늘 붙여 둡니다. 새로 그려진 안내 줄은 화면 읽기 프로그램이 읽지 않는 경우가 있습니다 */}
+      <p role="status" className={notice ? 'mt-4 text-body-sm text-badge-success-text' : 'sr-only'}>
+        {notice}
+      </p>
 
       {calendar.status === 'error' && (
         <div role="alert" className="mt-4 flex flex-wrap items-center gap-3">

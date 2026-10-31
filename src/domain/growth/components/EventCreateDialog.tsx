@@ -16,6 +16,16 @@ type Props = {
 }
 
 const LABEL_CLASS = 'text-body-sm font-semibold text-neutral-700'
+
+/**
+ * 날짜 칸이 받는 범위. 브라우저에 따라 연도 칸에 6자리까지 들어가서(`+020260-…`) 달 계산(`monthOf`)이 깨집니다.
+ * 칸에 범위를 걸고, 값도 4자리 연도 형식인지 한 번 더 봅니다 — 범위는 직접 타이핑하면 넘길 수 있습니다. (PR #137 리뷰)
+ */
+const DATE_MIN = '2000-01-01'
+const DATE_MAX = '2099-12-31'
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+const isValidDate = (value: string) => DATE_PATTERN.test(value) && value >= DATE_MIN && value <= DATE_MAX
 const FIELD_CLASS =
   'w-full rounded-sm border border-neutral-300 bg-neutral-0 px-4 text-body-md text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none read-only:bg-neutral-50'
 
@@ -71,7 +81,14 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
   const trimmedMemo = memo.trim()
 
   // 처음 연 빈 칸은 틀린 게 아니라서 빨간 글씨로 쓰지 않습니다.
-  const blockReason = !trimmedTitle ? '일정 제목을 적으면 등록할 수 있어요.' : !date ? '날짜를 골라 주세요.' : null
+  const invalidDate = date !== '' && !isValidDate(date)
+  const blockReason = !trimmedTitle
+    ? '일정 제목을 적으면 등록할 수 있어요.'
+    : !date
+      ? '날짜를 골라 주세요.'
+      : invalidDate
+        ? '날짜를 다시 확인해 주세요. 2000년부터 2099년까지 고를 수 있어요.'
+        : null
   const canSubmit = blockReason === null && !creating
 
   const edit = (apply: () => void) => {
@@ -150,6 +167,10 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
               onChange={(event) => edit(() => setDate(event.target.value))}
               readOnly={creating}
               required
+              min={DATE_MIN}
+              max={DATE_MAX}
+              aria-invalid={invalidDate || undefined}
+              aria-describedby={hintId}
               className={`${FIELD_CLASS} h-12`}
             />
           </label>
@@ -187,7 +208,11 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
 
         {/* 줄 수가 바뀌어도 창 높이가 흔들리지 않게 자리를 늘 잡아둡니다 */}
         <div className="-mt-2 flex min-h-5 flex-col gap-1">
-          <p id={hintId} className="break-keep text-body-sm text-neutral-500">
+          {/* 빈 칸은 틀린 게 아니라 회색, 잘못 적은 날짜는 빨간 글씨입니다 */}
+          <p
+            id={hintId}
+            className={`break-keep text-body-sm ${invalidDate && trimmedTitle ? 'text-semantic-danger' : 'text-neutral-500'}`}
+          >
             {blockReason ?? ' '}
           </p>
           {error && (

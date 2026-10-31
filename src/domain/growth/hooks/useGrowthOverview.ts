@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '@/shared/api/apiError'
 
 import { getGrowthOverview } from '../api/growthApi'
-import type { GrowthOverview } from '../types/growth'
+import type { GrowthOverview, WeeklyGoal } from '../types/growth'
 
 export type UseGrowthOverviewResult = (
   | { status: 'loading' }
@@ -12,8 +12,11 @@ export type UseGrowthOverviewResult = (
 ) & {
   /** 오류 안내의 "다시 시도" 에 씁니다. 불러오는 중으로 바꾼 뒤 다시 받습니다 */
   reload: () => void
-  /** 화면을 그대로 둔 채 뒤에서 다시 받습니다. 목표를 고친 직후에 씁니다 */
-  refresh: () => void
+  /**
+   * 목표를 저장한 응답을 그대로 화면에 넣습니다. 다시 받지 않습니다 — 다시 받다가 실패하면 보던 카드가 통째로 오류
+   * 카드로 바뀌고, 목표 하나 바꿨다고 요약 전체를 다시 받을 이유도 없습니다. (PR #137 리뷰)
+   */
+  applyWeeklyGoal: (goal: WeeklyGoal) => void
 }
 
 type State =
@@ -56,7 +59,11 @@ export function useGrowthOverview(): UseGrowthOverviewResult {
     setAttempt((value) => value + 1)
   }, [])
 
-  const refresh = useCallback(() => setAttempt((value) => value + 1), [])
+  const applyWeeklyGoal = useCallback((goal: WeeklyGoal) => {
+    setState((previous) =>
+      previous.status === 'ready' ? { status: 'ready', overview: { ...previous.overview, weeklyGoal: goal } } : previous,
+    )
+  }, [])
 
-  return { ...state, reload, refresh }
+  return { ...state, reload, applyWeeklyGoal }
 }

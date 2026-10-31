@@ -44,25 +44,36 @@ export default function GrowthPage() {
   const [month, setMonth] = useState(() => toMonthKey(new Date()))
   const calendar = useCalendarMonth(month)
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  // 저장 · 등록 알림은 그 일을 한 카드 안에 띄웁니다. 맨 위에 두면 눈에 띄지 않습니다. (PR #137 리뷰)
+  const [goalNotice, setGoalNotice] = useState<string | null>(null)
+  const [eventNotice, setEventNotice] = useState<string | null>(null)
 
   const ready = overview.status === 'ready' ? overview.overview : undefined
   const interview = ready?.latestInterview
   const comparison = useReportComparison(interview?.reportId ?? null)
 
+  // 창을 열면 앞서 남은 알림은 지웁니다
   const openGoal = () => {
-    setNotice(null)
+    setGoalNotice(null)
+    setEventNotice(null)
     setOpenDialog('goal')
   }
   const openEvent = () => {
-    setNotice(null)
+    setGoalNotice(null)
+    setEventNotice(null)
     setOpenDialog('event')
   }
 
-  // 등록한 일정이 다른 달이면 그 달로 넘겨서 바로 보이게 합니다. 같은 달이면 뒤에서 다시 받습니다.
+  // 사용자가 달을 넘기면 일정 알림을 지웁니다. 다른 달의 일정 알림이 남아 있으면 지금 보는 달 이야기로 읽힙니다.
+  const changeMonth = (next: string) => {
+    setEventNotice(null)
+    setMonth(next)
+  }
+
+  // 같은 달이면 등록 응답을 바로 끼워 넣고(다시 받지 않음), 다른 달이면 그 달로 넘겨 새로 받습니다. 이때는 알림을 남겨 둡니다.
   const handleEventCreated = (event: CalendarEvent) => {
-    setNotice(`‘${event.title}’ 일정을 ${shortDate(event.date)}에 등록했어요.`)
-    if (monthOf(event.date) === month) calendar.refresh()
+    setEventNotice(`‘${event.title}’ 일정을 ${shortDate(event.date)}에 등록했어요.`)
+    if (monthOf(event.date) === month) calendar.addEvent(event)
     else setMonth(monthOf(event.date))
   }
 
@@ -81,12 +92,6 @@ export default function GrowthPage() {
           </p>
         </div>
 
-        {notice && (
-          <p role="status" className="text-body-sm text-badge-success-text">
-            {notice}
-          </p>
-        )}
-
         {overview.status === 'error' ? (
           <Card label="성장 기록" padding="lg">
             <div role="alert" className="flex flex-col items-center gap-2 py-8 text-center">
@@ -101,7 +106,7 @@ export default function GrowthPage() {
           <>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
               <ScoreRoundsCard interview={interview} comparison={comparison} />
-              <WeeklyGoalCard goal={ready?.weeklyGoal} onEdit={openGoal} />
+              <WeeklyGoalCard goal={ready?.weeklyGoal} notice={goalNotice} onEdit={openGoal} />
               <BadgesCard badges={ready?.badges} />
             </div>
             <RoundChangeCard interview={interview} comparison={comparison} />
@@ -112,7 +117,8 @@ export default function GrowthPage() {
           month={month}
           today={today}
           calendar={calendar}
-          onMonthChange={setMonth}
+          notice={eventNotice}
+          onMonthChange={changeMonth}
           onAddEvent={openEvent}
         />
       </div>
@@ -121,8 +127,8 @@ export default function GrowthPage() {
         <GoalEditDialog
           goal={ready.weeklyGoal}
           onSaved={(goal) => {
-            setNotice(`이번 주 목표를 ${goal.target}회로 정했어요.`)
-            overview.refresh()
+            setGoalNotice(`이번 주 목표를 ${goal.target}회로 정했어요.`)
+            overview.applyWeeklyGoal(goal)
           }}
           onClose={() => setOpenDialog(null)}
         />

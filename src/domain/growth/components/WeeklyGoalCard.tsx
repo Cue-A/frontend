@@ -39,6 +39,8 @@ function GoalRing({ done, target }: WeeklyGoal) {
 type Props = {
   /** undefined 면 불러오는 중, null 이면 이번 주 목표를 안 정함 */
   goal: WeeklyGoal | null | undefined
+  /** 목표를 저장했다는 알림. 없으면 null */
+  notice: string | null
   /** 목표 수정 창을 엽니다 */
   onEdit: () => void
 }
@@ -47,7 +49,7 @@ type Props = {
  * 이번 주 목표 (시안 954:2415). "목표 수정" 은 목표 수정 창(`GoalEditDialog`)을 엽니다 — 창은 시안이 없어 임시 디자인입니다.
  * 목표를 아직 안 정했으면 같은 창을 "목표 정하기" 로 엽니다.
  */
-export default function WeeklyGoalCard({ goal, onEdit }: Props) {
+export default function WeeklyGoalCard({ goal, notice, onEdit }: Props) {
   return (
     <Card label="이번 주 목표" padding="lg" className="min-w-0">
       <GrowthCardHeader
@@ -84,6 +86,11 @@ export default function WeeklyGoalCard({ goal, onEdit }: Props) {
           </div>
         </div>
       )}
+
+      {/* 알림 줄은 늘 붙여 둡니다. 새로 그려진 안내 줄은 화면 읽기 프로그램이 읽지 않는 경우가 있습니다 */}
+      <p role="status" className={notice ? 'mt-4 text-body-sm text-badge-success-text' : 'sr-only'}>
+        {notice}
+      </p>
     </Card>
   )
 }
