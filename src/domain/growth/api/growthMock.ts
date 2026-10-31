@@ -19,7 +19,12 @@ import type {
  *
  * - `sample` (기본) — 시안 그대로. 같은 면접을 5회차까지 봤고, 이번 주 목표 3회 중 2회
  * - `first` — 첫 회차만 본 사용자. 이전 회차 대비 변화가 비고, 이번 주 목표를 아직 안 정했습니다
+ * - `partial` — 1 · 2 · 4회차 (3회차는 리포트가 없어 빠지고, 2회차는 부분 리포트)
+ * - `compare-error` — 회차 비교가 AI 서버 연결 실패(503)로 실패. 목표 · 배지 · 캘린더는 그대로 보입니다
  * - `empty` — 막 가입해서 아무 기록이 없는 사용자
+ *
+ * 점수 추이 · 이전 회차 대비 변화는 리포트 도메인의 회차 비교 목업(`report/api/reportComparisonMock.ts`)이 답합니다.
+ * 여기서는 시나리오마다 그 목업이 알아보는 "가장 최근 리포트" id 를 내려줍니다 (`LATEST_REPORT_ID`).
  *
  * 주소 뒤에 `?mock=first` 처럼 붙여 바꿉니다. 고른 값은 이 탭(sessionStorage)에 남습니다 (홈 목업과 같은 방식).
  *
@@ -32,17 +37,21 @@ import type {
 
 const SCENARIO_KEY = 'cue-a:mock:growth'
 
-type Scenario = 'sample' | 'first' | 'empty'
+const SCENARIOS = ['sample', 'first', 'partial', 'compare-error', 'empty'] as const
+
+type Scenario = (typeof SCENARIOS)[number]
+
+const isScenario = (value: string | null): value is Scenario => SCENARIOS.some((scenario) => scenario === value)
 
 function currentScenario(): Scenario {
   try {
     const fromUrl = new URLSearchParams(window.location.search).get('mock')
-    if (fromUrl === 'sample' || fromUrl === 'first' || fromUrl === 'empty') {
+    if (isScenario(fromUrl)) {
       sessionStorage.setItem(SCENARIO_KEY, fromUrl)
       return fromUrl
     }
     const stored = sessionStorage.getItem(SCENARIO_KEY)
-    return stored === 'first' || stored === 'empty' ? stored : 'sample'
+    return isScenario(stored) ? stored : 'sample'
   } catch {
     // 저장소를 막아둔 브라우저면 기본값으로 갑니다. 목업 전환이 안 될 뿐 화면은 그려집니다.
     return 'sample'
@@ -58,41 +67,39 @@ const BADGES: GrowthOverviewResponse['badges'] = [
   { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', tone: 'success', earnedAt: null },
 ]
 
-const ROUND_CHANGE = [
-  '4회차(78점) 대비 4점 올라 82점을 기록했어요. 내용 구성이 76점에서 84점으로 가장 크게 좋아졌고, 필러워드는 18회에서 9회로 절반 줄었습니다.',
-  '반면 압박 질문 대응은 71점으로 5회차 중 가장 낮았고, 3회차에 한 번 떨어진 뒤 아직 회복되지 않았어요.',
-  '다음 연습에서는 압박 강도를 유지한 채 결론부터 말하는 연습을 해보면 좋겠습니다.',
-]
+/**
+ * 시나리오별 가장 최근 리포트. 회차 비교 목업(`report/api/reportComparisonMock.ts` 의 `MOCK_COMPARISON_REPORT_IDS`)과
+ * 같은 글자여야 그 경우의 응답이 옵니다. 도메인끼리 api 를 가져다 쓰지 않는 규칙이라 여기 다시 적습니다.
+ */
+const LATEST_REPORT_ID: Record<Exclude<Scenario, 'empty'>, string> = {
+  sample: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa005',
+  first: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa001',
+  partial: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa104',
+  'compare-error': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa503',
+}
 
 /** 목표 수정은 시나리오마다 따로 기억합니다. 시나리오를 바꿔도 앞서 고친 값이 섞이지 않게 */
 const goalOverride = new Map<Scenario, number>()
 
 function weeklyGoalOf(scenario: Scenario): WeeklyGoalResponse | null {
-  const doneCount = scenario === 'sample' ? 2 : scenario === 'first' ? 1 : 0
-  const target = goalOverride.get(scenario) ?? (scenario === 'sample' ? 3 : null)
+  const doneCount = scenario === 'empty' ? 0 : scenario === 'first' ? 1 : 2
+  const target = goalOverride.get(scenario) ?? (scenario === 'empty' || scenario === 'first' ? null : 3)
   return target === null ? null : { targetValue: target, doneCount }
 }
 
 function buildOverview(scenario: Scenario): GrowthOverviewResponse {
   if (scenario === 'empty') {
     return {
-      scoreRounds: null,
+      latestReport: null,
       weeklyGoal: weeklyGoalOf(scenario),
       badges: BADGES.map((badge) => ({ ...badge, earnedAt: null })),
-      roundChange: null,
     }
   }
 
-  const scores = scenario === 'sample' ? [68, 72, 71, 78, 82] : [68]
   return {
-    scoreRounds: {
-      companyName: '네이버',
-      jobRole: '기획 직무',
-      rounds: scores.map((totalScore, index) => ({ round: index + 1, totalScore })),
-    },
+    latestReport: { reportId: LATEST_REPORT_ID[scenario], companyName: '네이버', jobRole: '기획 직무' },
     weeklyGoal: weeklyGoalOf(scenario),
-    badges: scenario === 'sample' ? BADGES : BADGES.map((badge, index) => (index === 0 ? badge : { ...badge, earnedAt: null })),
-    roundChange: scenario === 'sample' ? ROUND_CHANGE : null,
+    badges: scenario === 'first' ? BADGES.map((badge, index) => (index === 0 ? badge : { ...badge, earnedAt: null })) : BADGES,
   }
 }
 

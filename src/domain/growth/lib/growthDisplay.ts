@@ -1,3 +1,5 @@
+import type { ComparisonAxis } from '@/domain/report/types/comparison'
+
 import type { WeeklyGoal } from '../types/growth'
 
 /**
@@ -15,6 +17,29 @@ export const MAX_EVENT_TITLE_LENGTH = 50
 
 /** 메모 상한(글자 수) */
 export const MAX_EVENT_MEMO_LENGTH = 300
+
+/** 축 이름. 리포트 세부 점수와 같은 말입니다 */
+export const AXIS_LABEL: Record<ComparisonAxis, string> = {
+  content: '내용',
+  speech: '말하기',
+  gaze: '시선',
+}
+
+/** 변화량 한 칸. 오름 · 내림 · 변화 없음 · 비교 불가를 글자와 색으로 함께 나눕니다 (명세 「표시 규칙」) */
+export type DeltaView = { text: string; tone: 'up' | 'down' | 'flat' | 'unknown' }
+
+export function deltaView(delta: number | null): DeltaView {
+  if (delta === null) return { text: '비교 불가', tone: 'unknown' }
+  if (delta === 0) return { text: '변화 없음', tone: 'flat' }
+  return delta > 0 ? { text: `▲${delta}`, tone: 'up' } : { text: `▼${Math.abs(delta)}`, tone: 'down' }
+}
+
+/** 화면 읽기 프로그램용 변화량. ▲ ▼ 기호는 읽어 주지 않는 경우가 있어 말로 바꿉니다 */
+export function spokenDelta(delta: number | null): string {
+  if (delta === null) return '비교 불가'
+  if (delta === 0) return '변화 없음'
+  return delta > 0 ? `${delta}점 오름` : `${Math.abs(delta)}점 내림`
+}
 
 /**
  * 막대 차트의 세로축입니다. 맨 위는 늘 100점이고, 맨 아래는 가장 낮은 점수보다 한 칸 아래의 20점 단위입니다.

@@ -21,7 +21,11 @@ import './growthMock'
  * 목업(`missingInBackend`)이 답합니다. 엔티티는 있습니다 — growth(Goal · Badge · UserBadge · Streak) · calendar(CalendarEvent).
  */
 
-/** 회차별 점수 추이 · 이번 주 목표 · 배지 · 이전 회차 대비 변화. `GET /api/growth` */
+/**
+ * 이번 주 목표 · 배지 · 가장 최근 리포트. `GET /api/growth`
+ *
+ * 점수 추이 · 이전 회차 대비 변화는 가장 최근 리포트로 회차 비교(`GET /api/reports/{reportId}/comparison`)를 따로 부릅니다.
+ */
 export async function getGrowthOverview() {
   const response = await api.get<GrowthOverviewResponse>('/api/growth')
   return toGrowthOverview(response)

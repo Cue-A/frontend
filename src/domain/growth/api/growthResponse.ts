@@ -13,22 +13,19 @@ import type {
  * 바뀌면 이 파일과 변환 함수만 고치면 됩니다.
  *
  * **테이블에 그대로 있지 않은 값**은 백엔드가 계산해서 내려줘야 합니다. 요청할 때 따로 적습니다.
- * - `scoreRounds` — 가장 최근 세션의 `retry_of_session_id` 체인을 거슬러 올라가 회차별 리포트 종합 점수를 모은 값
+ * - `latestReport` — 가장 최근 세션의 리포트 중 **완료 · 부분(COMPLETED · PARTIAL)** 인 것. 분석 중 · 실패 리포트는 건너뜁니다
+ *   — 그래야 이 id 로 부르는 회차 비교가 202 `REPORT_NOT_READY` · 409 `REPORT_FAILED` 로 막히지 않습니다
  * - `weeklyGoal.doneCount` — 이번 주(월 ~ 일) 연습 횟수
- * - `roundChange` — 이전 회차 대비 변화 문장(GRW-2). 누가 만드는지(AI · 서버 계산)는 정해지지 않았습니다
  * - `practicedDates` — 그 달의 `streak.activity_date`
+ *
+ * 점수 추이 · 이전 회차 대비 변화는 리포트 도메인의 회차 비교 API 가 줍니다 (`report/api/reportComparisonApi.ts`).
  */
 
 /** `GET /api/growth` */
 export type GrowthOverviewResponse = {
-  scoreRounds: {
-    companyName: string | null
-    jobRole: string
-    rounds: Array<{ round: number; totalScore: number }>
-  } | null
+  latestReport: { reportId: string; companyName: string | null; jobRole: string } | null
   weeklyGoal: WeeklyGoalResponse | null
   badges: Array<{ badgeCode: string; badgeName: string; tone: BadgeTone; earnedAt: string | null }>
-  roundChange: string[] | null
 }
 
 /** `GET /api/growth` 의 `weeklyGoal`, `PATCH /api/growth/weekly-goal` 의 응답 */
@@ -68,8 +65,8 @@ export type CalendarEventCreateRequest = {
   memo: string | null
 }
 
-/** 그룹 이름. 기업을 고르지 않은 면접은 직무만 씁니다 */
-function roundsTitle(companyName: string | null, jobRole: string) {
+/** 면접 묶음 이름. 기업을 고르지 않은 면접은 직무만 씁니다 */
+function interviewTitle(companyName: string | null, jobRole: string) {
   return [companyName, `${jobRole} 면접`].filter(Boolean).join(' · ')
 }
 
@@ -78,15 +75,11 @@ export function toWeeklyGoal(response: WeeklyGoalResponse): WeeklyGoal {
 }
 
 export function toGrowthOverview(response: GrowthOverviewResponse): GrowthOverview {
-  const rounds = response.scoreRounds
+  const latest = response.latestReport
   return {
-    scoreRounds:
-      rounds && rounds.rounds.length > 0
-        ? {
-            title: roundsTitle(rounds.companyName, rounds.jobRole),
-            rounds: rounds.rounds.map((item) => ({ round: item.round, score: item.totalScore })),
-          }
-        : null,
+    latestInterview: latest
+      ? { reportId: latest.reportId, title: interviewTitle(latest.companyName, latest.jobRole) }
+      : null,
     weeklyGoal: response.weeklyGoal ? toWeeklyGoal(response.weeklyGoal) : null,
     badges: response.badges.map((badge) => ({
       code: badge.badgeCode,
@@ -94,7 +87,6 @@ export function toGrowthOverview(response: GrowthOverviewResponse): GrowthOvervi
       tone: badge.tone,
       earned: badge.earnedAt !== null,
     })),
-    roundChange: response.roundChange && response.roundChange.length > 0 ? response.roundChange : null,
   }
 }
 

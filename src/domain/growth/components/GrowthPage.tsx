@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { useReportComparison } from '@/domain/report/hooks/useReportComparison'
 import { toUserMessage } from '@/shared/api/errorMessage'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
@@ -24,8 +25,12 @@ type OpenDialog = 'goal' | 'event' | null
  * 성장 관리 (C-04).
  *
  * 회차를 거치며 무엇이 달라졌는지(점수 추이 · 이전 회차 대비 변화)와 이번 주 목표 · 배지를 보고, 면접 일정을 관리합니다.
- * 위쪽 네 카드는 한 번에 받고(`useGrowthOverview`), 캘린더는 달을 넘길 때마다 따로 받습니다(`useCalendarMonth`) —
- * 달을 넘길 때마다 점수 추이까지 다시 받을 이유가 없습니다.
+ *
+ * 세 가지를 따로 받습니다.
+ * - `useGrowthOverview` — 이번 주 목표 · 배지 · 가장 최근 리포트
+ * - `useReportComparison` — 그 리포트의 회차 비교(점수 추이 · 이전 회차 대비 변화). AI 가 계산해서 몇 초 걸리고 60초에
+ *   10회 제한이 있어서, 목표를 고쳐 요약을 새로 받아도 리포트가 같으면 다시 부르지 않습니다
+ * - `useCalendarMonth` — 캘린더 한 달치. 달을 넘길 때마다 받습니다
  *
  * 본문 폭은 시안대로 1040px 입니다 (왼쪽 688 · 오른쪽 336 · 사이 16).
  *
@@ -42,6 +47,8 @@ export default function GrowthPage() {
   const [notice, setNotice] = useState<string | null>(null)
 
   const ready = overview.status === 'ready' ? overview.overview : undefined
+  const interview = ready?.latestInterview
+  const comparison = useReportComparison(interview?.reportId ?? null)
 
   const openGoal = () => {
     setNotice(null)
@@ -93,11 +100,11 @@ export default function GrowthPage() {
         ) : (
           <>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-              <ScoreRoundsCard scoreRounds={ready?.scoreRounds} />
+              <ScoreRoundsCard interview={interview} comparison={comparison} />
               <WeeklyGoalCard goal={ready?.weeklyGoal} onEdit={openGoal} />
               <BadgesCard badges={ready?.badges} />
             </div>
-            <RoundChangeCard roundChange={ready?.roundChange} />
+            <RoundChangeCard interview={interview} comparison={comparison} />
           </>
         )}
 

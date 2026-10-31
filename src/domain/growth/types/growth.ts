@@ -8,25 +8,21 @@
 
 /* ---------------------------------------------------------------------------
  * 성장 요약 — `GET /api/growth`
+ *
+ * 회차별 점수 추이 · 이전 회차 대비 변화는 여기 없습니다. 리포트 도메인의 회차 비교 API
+ * (`GET /api/reports/{reportId}/comparison`)를 `latestInterview.reportId` 로 따로 부릅니다 — AI 가 계산해서 몇 초 걸리고
+ * 60초에 10회 제한이 있어서, 목표 · 배지와 한 번에 받으면 목표를 고칠 때마다 AI 를 다시 부르게 됩니다.
  * ------------------------------------------------------------------------- */
 
-/** 회차 막대 하나 */
-export type ScoreRound = {
-  /** 1 부터. 같은 면접을 다시 본 순서입니다 */
-  round: number
-  /** 종합 점수(0~100) */
-  score: number
-}
-
 /**
- * 회차별 종합 점수 추이. **가장 최근에 연습한 면접 묶음**(다시 본 회차 체인) 하나입니다.
+ * 가장 최근에 연습한 면접 묶음(다시 본 회차 체인)의 마지막 리포트. 점수 추이 · 이전 회차 대비 변화의 기준입니다.
  * 시안에 묶음을 고르는 칸이 없어서 하나만 받습니다.
  */
-export type ScoreRounds = {
-  /** `네이버 · 기획 직무 면접` */
+export type LatestInterview = {
+  /** 회차 비교를 부를 기준 리포트. 분석이 끝난(완료 · 부분) 리포트만 옵니다 */
+  reportId: string
+  /** `네이버 · 기획 직무 면접` — 회차 비교 응답에는 회사 · 직무 이름이 없어서 여기서 받습니다 */
   title: string
-  /** 회차 순서대로. 점수가 나온 회차만 들어 있습니다 */
-  rounds: ScoreRound[]
 }
 
 export type WeeklyGoal = {
@@ -49,16 +45,11 @@ export type GrowthBadge = {
 }
 
 export type GrowthOverview = {
-  /** 점수가 나온 회차가 하나도 없으면 null */
-  scoreRounds: ScoreRounds | null
+  /** 분석이 끝난 리포트가 하나도 없으면 null */
+  latestInterview: LatestInterview | null
   /** 이번 주 목표를 안 정했으면 null */
   weeklyGoal: WeeklyGoal | null
   badges: GrowthBadge[]
-  /**
-   * 이전 회차 대비 변화(GRW-2). 문단 단위입니다. 비교할 이전 회차가 없으면(첫 회차) null 입니다.
-   * 서버가 만든 문장을 그대로 보여줍니다.
-   */
-  roundChange: string[] | null
 }
 
 /* ---------------------------------------------------------------------------
