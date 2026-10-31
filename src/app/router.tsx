@@ -10,6 +10,7 @@ import HomePage from '@/domain/home/components/HomePage'
 import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
 import PracticeRecordsPage from '@/domain/practice/components/PracticeRecordsPage'
+import QuestionBankPage from '@/domain/question/components/QuestionBankPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
 import ReportPage from '@/domain/report/components/ReportPage'
 import AccountSettingsPage from '@/domain/user/components/AccountSettingsPage'
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
           { path: ROUTES.LIBRARY_DOCUMENTS, element: <LibraryDocumentsPage /> },
           { path: ROUTES.LIBRARY_PRACTICE, element: <PracticeRecordsPage /> },
+          { path: ROUTES.LIBRARY_QUESTIONS, element: <QuestionBankPage /> },
           { path: ROUTES.MYPAGE, element: <MyPage /> },
           { path: ROUTES.MYPAGE_ACCOUNT, element: <AccountSettingsPage /> },
           { path: ROUTES.MYPAGE_WITHDRAW, element: <WithdrawPage /> },

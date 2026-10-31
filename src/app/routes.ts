@@ -19,6 +19,8 @@ export const ROUTES = {
   LIBRARY_DOCUMENTS: '/library/documents',
   /** 내 보관함 > 연습 기록. 지난 모의면접을 폴더 · 상태로 거르고 리포트를 다시 봅니다 */
   LIBRARY_PRACTICE: '/library/practice',
+  /** 내 보관함 > 질문 은행. 공통 질문과 면접에서 쌓인 질문을 보고, 다시 볼 질문은 북마크합니다 (이슈 #138) */
+  LIBRARY_QUESTIONS: '/library/questions',
   /** 마이페이지 메뉴 목록. 지금은 계정 설정만 열려 있습니다 */
   MYPAGE: '/mypage',
   /** 마이페이지 > 계정 설정 — 로그아웃 · 회원 탈퇴 */
@@ -31,7 +33,7 @@ export const ROUTES = {
 
 /**
  * 내 보관함 아래 화면들의 공통 앞부분. 사이드바가 "내 보관함" 칸을 켤지 정할 때 씁니다.
- * 자소서 · 포트폴리오 · 연습 기록이 이 아래에 있고, 질문 은행이 생기면 같은 앞부분 아래에 둡니다.
+ * 자소서 · 포트폴리오 · 연습 기록 · 질문 은행이 이 아래에 있습니다.
  */
 export const LIBRARY_PREFIX = '/library'
 

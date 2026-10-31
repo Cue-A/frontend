@@ -57,7 +57,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { label: '자소서 · 포트폴리오', to: ROUTES.LIBRARY_DOCUMENTS },
       { label: '연습 기록', to: ROUTES.LIBRARY_PRACTICE },
-      { label: '질문 은행' },
+      { label: '질문 은행', to: ROUTES.LIBRARY_QUESTIONS },
     ],
   },
   { label: '성장 관리', Icon: IconChartLine },
