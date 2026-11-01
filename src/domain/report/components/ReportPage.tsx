@@ -169,7 +169,7 @@ export default function ReportPage() {
           <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
         )}
 
-        <ReportActions />
+        <ReportActions sessionId={data.sessionId} />
       </div>
     </div>
   )

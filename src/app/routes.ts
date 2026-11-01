@@ -12,6 +12,8 @@ export const ROUTES = {
   HOME: '/home',
   SESSION_SETUP: '/interviews/new',
   DEVICE_CHECK: '/interviews/:sessionId/device-check',
+  /** 재연습 설정. `sessionId` 는 다시 볼 면접(몇 회차든)입니다 (이슈 #152) */
+  REPLAY: '/interviews/:sessionId/replay',
   INTERVIEW: '/interviews/:sessionId',
   ANALYZING: '/interviews/:sessionId/analyzing',
   REPORT: '/reports/:reportId',
@@ -41,6 +43,10 @@ export const LIBRARY_PREFIX = '/library'
 
 export function toDeviceCheck(sessionId: string) {
   return `/interviews/${sessionId}/device-check`
+}
+
+export function toReplay(sessionId: string) {
+  return `/interviews/${sessionId}/replay`
 }
 
 export function toInterview(sessionId: string) {

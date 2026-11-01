@@ -8,6 +8,7 @@ import InterviewSessionPreview from '@/domain/interview/components/InterviewSess
 import LibraryDocumentsPage from '@/domain/document/components/LibraryDocumentsPage'
 import GrowthPage from '@/domain/growth/components/GrowthPage'
 import HomePage from '@/domain/home/components/HomePage'
+import ReplaySetupPage from '@/domain/interview/components/ReplaySetupPage'
 import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
 import PracticeRecordsPage from '@/domain/practice/components/PracticeRecordsPage'
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
             handle: { fullBleed: true } satisfies AppLayoutHandle,
           },
           { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
+          { path: ROUTES.REPLAY, element: <ReplaySetupPage /> },
           { path: ROUTES.LIBRARY_DOCUMENTS, element: <LibraryDocumentsPage /> },
           { path: ROUTES.LIBRARY_PRACTICE, element: <PracticeRecordsPage /> },
           { path: ROUTES.LIBRARY_QUESTIONS, element: <QuestionBankPage /> },

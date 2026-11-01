@@ -22,6 +22,13 @@ type Props = {
   isStarting: boolean
   error: string | null
   onStart: () => void
+  /**
+   * 고른 값은 다 있지만 시작할 수 없을 때 true. 재연습 조건이 막혔을 때 씁니다 (이슈 #152).
+   * 못 누르는 이유는 부르는 쪽이 글로 적습니다
+   */
+  startBlocked?: boolean
+  /** "임시저장" 줄을 보일지. 재연습은 고를 게 두 칸뿐이라 뺍니다. 기본은 보입니다 */
+  showDraftSave?: boolean
 }
 
 /**
@@ -40,6 +47,8 @@ export default function SetupSummary({
   isStarting,
   error,
   onStart,
+  startBlocked = false,
+  showDraftSave = true,
 }: Props) {
   const minutes = estimateDurationMinutes(setup.questionCount, setup.answerSeconds)
 
@@ -103,18 +112,20 @@ export default function SetupSummary({
       )}
 
       {/* 못 누르는 이유는 툴팁이 아니라 글로 적습니다 (이슈 #32). */}
-      <p className="text-right text-body-sm text-neutral-400">임시저장은 아직 준비 중이에요</p>
+      {showDraftSave && <p className="text-right text-body-sm text-neutral-400">임시저장은 아직 준비 중이에요</p>}
 
       <div className="flex flex-wrap justify-end gap-3">
-        <Button size="sm" disabled>
-          임시저장
-        </Button>
+        {showDraftSave && (
+          <Button size="sm" disabled>
+            임시저장
+          </Button>
+        )}
 
         <Button
           variant="primary"
           size="sm"
           onClick={onStart}
-          disabled={missing.length > 0 || isStarting}
+          disabled={missing.length > 0 || isStarting || startBlocked}
         >
           {isStarting ? '준비하는 중…' : '장치 테스트하러 가기'}
         </Button>

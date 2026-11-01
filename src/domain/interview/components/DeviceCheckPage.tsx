@@ -9,13 +9,14 @@ import {
   IconX,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { ROUTES, toInterview } from '@/app/routes'
 
 import { useDeviceCheck } from '../hooks/useDeviceCheck'
 import { clearSavedSessionSetup, loadSavedSessionSetup } from '../hooks/useSessionSetup'
 import { canStartInterview } from '../lib/canStartInterview'
+import { readReplayDeviceCheckState } from '../lib/replayDeviceCheckState'
 import { setupSummaryValues } from '../lib/setupSummaryValues'
 import type {
   DeviceCheckState,
@@ -199,7 +200,12 @@ export default function DeviceCheckPage() {
   // TODO(session-detail-api): 세션 조회 API(GET /api/interviews/{sessionId})가 생기면 이 탭 저장값 대신
   // 서버값으로 바꾼다. 면접 화면은 "면접 시작하기" 에서 저장값이 지워지므로 이 값을 읽을 수 없다 —
   // "음성만 듣기" 일 때 질문 글을 숨기는 것도 임시로 저장값을 읽지 말고 이 API 를 기다린다.
-  const [savedSetup] = useState(loadSavedSessionSetup)
+  //
+  // 재연습(이슈 #152)은 옵션 설정을 거치지 않아서 이 탭 저장값이 재연습 조건이 아닙니다. 재연습 화면이 화면 이동 값으로
+  // 넘긴 조건을 먼저 쓰고, "← 옵션" 도 재연습 화면으로 돌려보냅니다.
+  const location = useLocation()
+  const [replay] = useState(() => readReplayDeviceCheckState(location.state))
+  const [savedSetup] = useState(() => replay?.replaySetup ?? loadSavedSessionSetup())
 
   const {
     camera,
@@ -264,7 +270,8 @@ export default function DeviceCheckPage() {
     // 고른 장치의 deviceId(이슈 #97)도 같이 넘겨, 면접 화면이 새로 스트림을 받을 때
     // 여기서 고른 장치가 아니라 브라우저 기본 장치를 여는 일이 없게 한다.
     // 옵션 설정에서 고른 값은 "← 옵션" 으로 돌아갈 때를 위해 남겨 뒀는데, 면접을 시작하면 쓸 일이 끝나서 지운다.
-    clearSavedSessionSetup()
+    // 재연습은 옵션 설정 값을 쓰지 않았으니 지우지 않습니다 — 옵션 설정에서 고르던 값이 있으면 그대로 둡니다.
+    if (!replay) clearSavedSessionSetup()
     navigate(toInterview(sessionId), {
       state: {
         initialDeviceStatus: { camera, mic },
@@ -544,7 +551,7 @@ export default function DeviceCheckPage() {
               세션이 새로 만들어진다 — 지금 세션은 쓰이지 않은 채 남는다.
             */}
             <div className="flex items-center gap-3">
-              <Button to={ROUTES.SESSION_SETUP} size="lg">
+              <Button to={replay?.backTo ?? ROUTES.SESSION_SETUP} size="lg">
                 ← 옵션
               </Button>
               <Button variant="primary" size="lg" disabled={!canStart} onClick={handleStart} className="flex-1">

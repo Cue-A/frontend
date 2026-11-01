@@ -3,6 +3,7 @@ import { registerMock } from '@/shared/api/mock'
 
 import type { Company } from '../types/sessionSetup'
 
+import { mockReplayOptionsOf } from './replayMock'
 import { advanceMockSession } from './sessionSocketMock'
 
 /**
@@ -58,6 +59,31 @@ function recallHideQuestionText(): boolean {
   return lastHideQuestionText
 }
 
+/**
+ * 재연습 요청을 백엔드 `InterviewStartService.resolveReplayPlan` 처럼 거릅니다. (이슈 #152)
+ * - 끝나지 않은 원래 면접 — `SESSION_NOT_COMPLETED`
+ * - 지워진 자기소개서 — `DOCUMENT_NOT_FOUND`, 쓸 수 없게 된 기업 — `INVALID_REQUEST`
+ * - 고정 옵션 다섯 개 중 하나라도 최초 면접과 다름 — `INVALID_REQUEST`
+ */
+function checkMockReplay(sourceSessionId: string, request: Partial<Record<string, unknown>>) {
+  const root = mockReplayOptionsOf(sourceSessionId)
+  const blocked = root.replayBlockReasons.map((reason) => reason.code)
+
+  if (blocked.includes('DOCUMENT_DELETED')) throw new ApiError('DOCUMENT_NOT_FOUND', '문서를 찾을 수 없습니다')
+  if (blocked.includes('COMPANY_UNVERIFIED')) throw new ApiError('INVALID_REQUEST', '사용할 수 없는 기업입니다')
+
+  const same =
+    request.documentId === root.documentId &&
+    (request.companyId ?? null) === root.companyId &&
+    request.jobRole === root.jobRole &&
+    request.questionCount === root.questionCount &&
+    request.persona === root.persona
+
+  if (!same) {
+    throw new ApiError('INVALID_REQUEST', '재연습은 최초 면접과 같은 조건으로만 시작할 수 있습니다')
+  }
+}
+
 registerMock('POST', '/api/interviews', (_params, body) => {
   const request = (body ?? {}) as Partial<Record<string, unknown>>
 
@@ -84,8 +110,11 @@ registerMock('POST', '/api/interviews', (_params, body) => {
     throw new ApiError('INVALID_REQUEST', `hideQuestionText 는 true/false 여야 합니다 (${String(request.hideQuestionText)})`)
   }
 
+  const replayApplied = typeof request.sourceSessionId === 'string' && request.sourceSessionId.trim() !== ''
+  if (replayApplied) checkMockReplay(request.sourceSessionId as string, { ...request, questionCount })
+
   rememberHideQuestionText(request.hideQuestionText === true)
-  return { sessionId: 's1', questionTotal: questionCount }
+  return { sessionId: 's1', questionTotal: questionCount, replayApplied }
 })
 
 /**

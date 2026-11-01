@@ -37,6 +37,12 @@ type InterviewStartRequest = {
    * (Cue-A/backend#70). 서버는 생략하면 false 로 봅니다
    */
   hideQuestionText: boolean
+  /**
+   * 재연습이면 원래 면접의 세션 id (몇 회차든 상관없음). 없으면 새 면접입니다. (Cue-A/backend#78 · 이슈 #152)
+   * 재연습이면 위 고정 옵션 다섯 개(`documentId` · `companyId` · `jobRole` · `questionCount` · `persona`)가
+   * 최초 면접과 같아야 합니다. 다르면 `INVALID_REQUEST` 입니다
+   */
+  sourceSessionId?: string
 }
 
 /**
@@ -83,6 +89,8 @@ export type CreatedSession = {
   sessionId: string
   /** 고른 문항 수 (되묻기 제외). 진행률 "N / 전체" 의 전체입니다 */
   questionTotal: number
+  /** 재연습이 실제로 적용됐는지. 새 면접이면 false 입니다 (Cue-A/backend#78) */
+  replayApplied?: boolean
 }
 
 /**
@@ -96,9 +104,12 @@ export type CreatedSession = {
  *   아니면 `DOCUMENT_NOT_FOUND` · `UPLOAD_NOT_COMPLETED` · `UNSUPPORTED_FILE_FORMAT`
  * - 문항 수: 3 · 6 · 9. 아니면 `INVALID_QUESTION_COUNT`
  * - 분당 10회 (`RATE_LIMIT_EXCEEDED`)
+ *
+ * 재연습은 `sourceSessionId` 를 같이 넘깁니다. 고정 옵션은 재연습 조건 조회(`getReplayOptions`) 값 그대로여야 합니다.
  */
-export async function createSession(setup: SessionSetup) {
-  const session = await api.post<CreatedSession>('/api/interviews', toCreateBody(setup))
+export async function createSession(setup: SessionSetup, { sourceSessionId }: { sourceSessionId?: string } = {}) {
+  const body: InterviewStartRequest = sourceSessionId ? { ...toCreateBody(setup), sourceSessionId } : toCreateBody(setup)
+  const session = await api.post<CreatedSession>('/api/interviews', body)
   // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 조회 API 가 없어서입니다 (`getInterviewOptions` · sessionOptionsDraft.ts)
   rememberSessionOptions(session.sessionId, toSessionOptions(setup))
   return session
