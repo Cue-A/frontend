@@ -8,10 +8,15 @@ import type { Question, QuestionPage } from '../types/question'
  *
  * ERD 와 어긋나서 백엔드에 같이 적어 보낼 것
  * - TODO(백엔드): 기본 공통 질문을 담는 테이블이 ERD 에 없습니다. `question` 은 면접 세션에 속합니다
- * - TODO(백엔드): `bookmarked_question` 이 `(question_id, session_id)` 로 질문을 가리킵니다. 이 계약은 `questionId`
- *   하나로 가정했습니다 (공통 질문에는 세션이 없습니다)
+ * - TODO(백엔드): `bookmarked_question` 이 `(question_id, session_id)` 로 질문을 가리킵니다. **프론트 제안: 북마크는
+ *   질문 하나(`questionId`)로 식별합니다.** 등록 · 해제 · 목록의 `bookmarked` 모두 `questionId` 하나만 씁니다
+ *   (공통 질문에는 세션이 없습니다). 세션별로 따로 북마크해야 한다면 알려 주세요 — 화면 규칙이 달라집니다
  * - TODO(백엔드): `question.is_bookmarked` 와 `bookmarked_question` 이 둘 다 있습니다. 어느 쪽이 기준인지
- * - TODO(백엔드): `companyName` 은 `session → company` 를 거쳐야 하고, `practiceCount` 에 해당하는 값은 ERD 에 없습니다
+ * - TODO(백엔드): `companyName` 은 `session → company` 를 거쳐야 합니다
+ * - TODO(백엔드): `practiceCount` 에 해당하는 값은 ERD 에 없습니다. 화면에는 "연습 N회" 로 보이는 값이라 **무엇을
+ *   세는지 백엔드가 기준을 정해 주세요.** 프론트 제안은 "그 질문이 나온 면접 세션 수" 입니다 (같은 세션에서 꼬리질문 ·
+ *   재질문으로 여러 번 답해도 1회). "답변 수" 로 세면 재질문만큼 부풀어서 "연습 횟수" 로 읽기 어렵습니다. 아직 세지 못하면
+ *   null 로 내려 주세요 (화면은 그 줄을 숨깁니다)
  * - TODO(백엔드): `category` 는 화면에 그대로 보여 줄 한글 이름으로 가정했습니다. `question.category` 가 코드
  *   값(PERSONALITY 등)이면 이 파일에 이름표(변환표)를 더해야 합니다
  * - TODO(백엔드): 목록은 **본 질문만** 내려줘야 합니다. 꼬리질문 · 재질문(`question.type` · `is_replay`)은

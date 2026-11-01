@@ -18,14 +18,25 @@ const SELECTED_CLASS: Record<Fill, string> = {
 const UNSELECTED_CLASS = 'border-neutral-200 bg-neutral-0 text-neutral-700 hover:bg-neutral-50'
 
 /** 칩은 `radius-full` 입니다 (docs/design-system.md §4). */
-const BASE_CLASS =
-  'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-body-md transition-colors'
+const BASE_CLASS = 'items-center gap-2 rounded-full border py-2 text-body-md transition-colors'
+
+/**
+ * 칩의 폭. 보통은 글자만큼(`inline-flex px-4`)이고, `fullWidth` 면 칸을 꽉 채우고 글자를 가운데 둡니다.
+ * 같은 칸(grid)에 칩을 여러 개 늘어놓아 한 줄에 맞춰야 할 때 씁니다 — 이때는 좌우 여백을 칸 폭이 대신합니다.
+ * 여백 클래스를 className 으로 덮어쓰지 않고 여기서 고르는 이유는 Card 와 같습니다 (Card.tsx 상단 주석).
+ */
+const WIDTH_CLASS = {
+  auto: 'inline-flex px-4',
+  full: 'flex w-full justify-center px-2',
+}
 
 type Props = {
   children: ReactNode
   selected?: boolean
   /** 고른 상태의 모양. 기본은 옵션 고르기에 쓰는 soft 입니다 */
   fill?: Fill
+  /** 칸을 꽉 채울지. 기본은 글자만큼입니다 */
+  fullWidth?: boolean
 }
 
 /**
@@ -44,8 +55,9 @@ type Props = {
  *     <Chip selected={…} fill="solid">3회차 (최신)</Chip>
  *   </Link>
  */
-export default function Chip({ children, selected = false, fill = 'soft' }: Props) {
-  const classes = [BASE_CLASS, selected ? SELECTED_CLASS[fill] : UNSELECTED_CLASS].join(' ')
+export default function Chip({ children, selected = false, fill = 'soft', fullWidth = false }: Props) {
+  const width = WIDTH_CLASS[fullWidth ? 'full' : 'auto']
+  const classes = [BASE_CLASS, width, selected ? SELECTED_CLASS[fill] : UNSELECTED_CLASS].join(' ')
 
   return <span className={classes}>{children}</span>
 }

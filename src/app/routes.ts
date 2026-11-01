@@ -21,6 +21,8 @@ export const ROUTES = {
   LIBRARY_PRACTICE: '/library/practice',
   /** 내 보관함 > 질문 은행. 공통 질문과 면접에서 쌓인 질문을 보고, 다시 볼 질문은 북마크합니다 (이슈 #138) */
   LIBRARY_QUESTIONS: '/library/questions',
+  /** C-04 성장 관리 — 회차별 점수 추이 · 이번 주 목표 · 배지 · 면접 캘린더 (이슈 #136) */
+  GROWTH: '/growth',
   /** 마이페이지 메뉴 목록. 지금은 계정 설정만 열려 있습니다 */
   MYPAGE: '/mypage',
   /** 마이페이지 > 계정 설정 — 로그아웃 · 회원 탈퇴 */
