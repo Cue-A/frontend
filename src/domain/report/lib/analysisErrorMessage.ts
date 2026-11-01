@@ -15,7 +15,7 @@ export const ANALYSIS_MESSAGES: ErrorMessageOverrides = {
   AI_TIMEOUT: '분석이 제시간에 끝나지 않았어요. 다시 분석해 주세요.',
   CONTENT_FAILED: '답변 내용을 분석하지 못했어요. 다시 분석해 주세요.',
   MEDIA_FETCH_FAILED: '답변 녹화를 불러오지 못했어요. 다시 분석해 주세요.',
-  STT_FAILED: '답변 녹음을 글로 옮기지 못해 리포트를 만들지 못했어요. 새 면접으로 다시 연습해 주세요.',
+  STT_FAILED: '답변 녹음을 글로 옮기지 못해 리포트를 만들지 못했어요. 같은 질문으로 다시 연습해 주세요.',
   // 이 탭에 기억해 둔 reportId 가 없을 때만 납니다(다른 탭 · 기기). 409 에는 reportId 가 없고, 상태 조회
   // (Cue-A/backend#56)도 reportId 로만 물을 수 있어서 이어 볼 방법이 없습니다. 리포트 목록이 생기면 그리로 보냅니다.
   REPORT_ALREADY_EXISTS:
@@ -26,6 +26,13 @@ export const ANALYSIS_MESSAGES: ErrorMessageOverrides = {
  * 등록이 이 코드로 실패하면 다시 요청해도 결과가 같습니다. 나머지(연결 실패 · 시간 초과 · 요청 과다 · 서버 오류)는
  * 다시 요청할 수 있게 둡니다. 소켓 `error` 는 서버가 `retryable` 을 같이 주므로 이 목록을 쓰지 않습니다.
  */
+/**
+ * 이 코드로 실패하면 재연습으로 보내지 않습니다. 면접 자체가 없거나 끝나지 않아서 재연습도 같은 이유로 막힙니다
+ * (재연습 조건 조회가 `SESSION_NOT_FOUND` · `SESSION_NOT_COMPLETED`). 나머지 실패는 세션이 끝난 면접이라
+ * 리포트가 실패했어도 재연습할 수 있습니다 — 재연습은 리포트가 아니라 저장된 질문으로 만듭니다(Cue-A/backend 확인).
+ */
+export const NO_REPLAY_ERRORS = new Set(['SESSION_NOT_FOUND', 'SESSION_NOT_COMPLETED', 'SESSION_ABORTED'])
+
 export const FINAL_REQUEST_ERRORS = new Set([
   'SESSION_NOT_FOUND',
   'SESSION_NOT_COMPLETED',
@@ -38,8 +45,8 @@ export const FINAL_REQUEST_ERRORS = new Set([
  * 리포트 화면의 "다시 분석"(부분 재시도)이 쓰는 문구입니다. `toUserMessage(code, RETRY_MESSAGES)` 로 넘깁니다.
  *
  * 분석 중 화면 문구를 그대로 쓰되, 리포트가 이미 있는 상황과 맞지 않는 말만 바꿉니다.
- * - `STT_FAILED` — 분석 중 화면은 "리포트를 만들지 못했어요 · 새 면접으로" 인데, 재시도는 지금 리포트가 있고
- *   새 면접을 할 이유도 없습니다
+ * - `STT_FAILED` — 분석 중 화면은 "리포트를 만들지 못했어요 · 같은 질문으로 다시 연습" 인데, 재시도는 지금 리포트가
+ *   있고 다시 연습할 이유도 없습니다
  */
 export const RETRY_MESSAGES: ErrorMessageOverrides = {
   ...ANALYSIS_MESSAGES,

@@ -4,7 +4,7 @@ import { registerMock } from '@/shared/api/mock'
 import { ANALYSIS_STAGES } from '../types/analysis'
 import type { ReportDonePush, ReportErrorPush, ReportProgressPush } from '../types/analysis'
 
-import { MOCK_REPORT_IDS } from './reportMock'
+import { MOCK_FAILED_REPORT, MOCK_REPORT_IDS } from './reportMock'
 
 /**
  * 리포트 분석 등록과 소켓 목업입니다. (Cue-A/backend#50)
@@ -88,6 +88,23 @@ registerMock('POST', '/api/interviews/:sessionId/reports', ({ sessionId }) => {
 })
 
 registerMock('GET', '/api/reports/:reportId/status', ({ reportId }) => {
+  if (reportId === MOCK_FAILED_REPORT.reportId) {
+    // 리포트 화면에서 바로 연 실패 리포트입니다. 등록 기록 없이도 실패 상태와 세션 id 를 줍니다 (이슈 #152)
+    const at = '2026-07-24T10:12:00+09:00'
+    return {
+      reportId,
+      sessionId: MOCK_FAILED_REPORT.sessionId,
+      status: 'FAILED',
+      createdAt: at,
+      stage: null,
+      progress: null,
+      errorCode: 'STT_FAILED',
+      message: '음성 인식에 실패했습니다',
+      retryable: false,
+      completedAt: at,
+    }
+  }
+
   const scenario = scenarios.get(reportId)
   if (!scenario) throw new ApiError('REPORT_NOT_FOUND', '리포트를 찾을 수 없습니다')
 

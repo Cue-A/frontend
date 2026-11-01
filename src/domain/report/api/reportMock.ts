@@ -1,3 +1,4 @@
+import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
 import type { RetryAxis } from '../types/report'
@@ -427,4 +428,18 @@ export function mockRetryTarget(reportId: string) {
   }
 }
 
-registerMock('GET', '/api/reports/:reportId', ({ reportId }) => mockDetailOf(reportId))
+/**
+ * **분석이 실패한** 리포트입니다. 조회는 409 `REPORT_FAILED` 이고, 상태 조회(`reportRequestMock.ts`)는 `FAILED` 와
+ * 세션 id 를 줍니다. 리포트 실패 화면의 "다시 연습하기" 가 재연습으로 이어지는지 이 리포트로 봅니다. (이슈 #152)
+ */
+export const MOCK_FAILED_REPORT = {
+  reportId: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c09',
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e09',
+} as const
+
+registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
+  if (reportId === MOCK_FAILED_REPORT.reportId) {
+    throw new ApiError('REPORT_FAILED', '리포트 생성에 실패했습니다')
+  }
+  return mockDetailOf(reportId)
+})

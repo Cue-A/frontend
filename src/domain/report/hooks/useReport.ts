@@ -11,6 +11,8 @@ type ReportState = {
   isLoading: boolean
   /** 사용자에게 보여줄 문구. 없으면 null */
   error: string | null
+  /** 실패 코드. 리포트 분석이 실패한 회차(`REPORT_FAILED`)인지 화면이 알아야 할 때 씁니다. 없으면 null */
+  errorCode: string | null
   /**
    * 화면을 비우지 않고 다시 불러옵니다. 부분 재시도가 끝나 리포트가 통째로 바뀌었을 때 씁니다.
    * 새 리포트를 돌려주고, 불러오지 못했으면 null 입니다.
@@ -23,6 +25,7 @@ type Settled = {
   reportId: string
   data: Report | null
   error: string | null
+  errorCode: string | null
 }
 
 const NOT_FOUND_MESSAGE = '리포트를 찾을 수 없어요.'
@@ -45,15 +48,16 @@ export function useReport(reportId: string | undefined): ReportState {
 
     getReport(reportId)
       .then((data) => {
-        if (alive) setSettled({ reportId, data, error: null })
+        if (alive) setSettled({ reportId, data, error: null, errorCode: null })
       })
       .catch((cause: unknown) => {
         if (!alive) return
 
+        const errorCode = cause instanceof ApiError ? cause.code : 'UNKNOWN'
         const error =
           cause instanceof ApiError ? toUserMessage(cause.code) : '잠시 후 다시 시도해 주세요.'
 
-        setSettled({ reportId, data: null, error })
+        setSettled({ reportId, data: null, error, errorCode })
       })
 
     return () => {
@@ -74,7 +78,7 @@ export function useReport(reportId: string | undefined): ReportState {
     try {
       const data = await getReport(reportId)
       setSettled((previous) =>
-        previous && previous.reportId !== reportId ? previous : { reportId, data, error: null },
+        previous && previous.reportId !== reportId ? previous : { reportId, data, error: null, errorCode: null },
       )
       return data
     } catch (cause: unknown) {
@@ -85,13 +89,13 @@ export function useReport(reportId: string | undefined): ReportState {
   }, [reportId])
 
   if (!reportId) {
-    return { data: null, isLoading: false, error: NOT_FOUND_MESSAGE, reload }
+    return { data: null, isLoading: false, error: NOT_FOUND_MESSAGE, errorCode: null, reload }
   }
 
   // id 가 바뀌면 이전 결과는 버리고 다시 로딩으로 봅니다.
   if (settled?.reportId !== reportId) {
-    return { data: null, isLoading: true, error: null, reload }
+    return { data: null, isLoading: true, error: null, errorCode: null, reload }
   }
 
-  return { data: settled.data, isLoading: false, error: settled.error, reload }
+  return { data: settled.data, isLoading: false, error: settled.error, errorCode: settled.errorCode, reload }
 }
