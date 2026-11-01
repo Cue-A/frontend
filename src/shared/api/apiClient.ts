@@ -268,6 +268,8 @@ export const api = {
    * 목업 핸들러에는 이 `FormData` 가 본문으로 그대로 갑니다.
    */
   postForm: <T>(path: string, form: FormData) => request<T>('POST', path, form),
+  /** 같은 요청을 여러 번 보내도 결과가 같은 "등록" 에 씁니다 (질문 북마크). */
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
 }

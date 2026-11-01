@@ -1,3 +1,4 @@
+import { ROUTES } from '@/app/routes'
 import Card from '@/shared/ui/Card'
 
 import ComingSoonLink from './ComingSoonLink'
@@ -6,7 +7,7 @@ import SkeletonBlock from './SkeletonBlock'
 
 /**
  * 읽기만 하는 태그 모양. `shared/ui/Chip` 은 고르는 칩이라 마우스를 올리면 배경이 바뀌는데, 여기 태그는
- * 눌러도 갈 곳이 없어서(인재상 · 질문은행 화면 없음) 그 반응을 빼고 따로 그립니다.
+ * 눌러도 갈 곳이 없어서(인재상 화면 없음, 질문은행은 질문 하나를 여는 화면 없음) 그 반응을 빼고 따로 그립니다.
  */
 function TagList({ items }: { items: string[] }) {
   return (
@@ -35,7 +36,7 @@ export default function DiscoverCard({ talentKeywords, popularQuestions }: Props
 
       <hr className="my-5 border-neutral-200" />
 
-      <CardHeader title="질문은행" aside={<ComingSoonLink label="전체보기" />} />
+      <CardHeader title="질문은행" aside={<ComingSoonLink label="전체보기" to={ROUTES.LIBRARY_QUESTIONS} />} />
       {popularQuestions ? <TagList items={popularQuestions} /> : <SkeletonBlock className="mt-4 h-8 w-full" />}
     </Card>
   )
