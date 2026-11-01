@@ -85,6 +85,10 @@ export const DEFAULT_QUESTION_COUNT = 6
 export const CUSTOM_COMPANY = 'CUSTOM'
 
 export type Company = {
+  /**
+   * 기업 id. 서버는 숫자로 주는데 화면에서는 **문자열**로 씁니다 — 드롭다운 값과 바로 비교하려고 받을 때 바꿉니다
+   * (`sessionApi.ts` 의 `toCompany`). 서버로 보낼 때 다시 숫자가 됩니다
+   */
   companyId: string
   name: string
 }

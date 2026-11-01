@@ -6,8 +6,32 @@ import { CUSTOM_COMPANY, type Company, type InterviewerStyle, type SessionSetup 
 import { recallSessionOptions, rememberSessionOptions, toSessionOptions } from './sessionOptionsDraft'
 import './sessionMock'
 
-export function getCompanies() {
-  return api.get<Company[]>('/api/companies')
+/**
+ * 기업 목록 응답 한 건입니다. (Cue-A/backend#86 `CompanyResponse`)
+ *
+ * `companyId` 는 기업의 숫자 PK 입니다. 세션 시작 요청(`InterviewStartRequest.companyId`)에도 숫자로 보냅니다.
+ */
+export type CompanyResponse = {
+  companyId: number
+  name: string
+}
+
+/**
+ * 화면에서는 id 를 **문자열로 바꿔** 씁니다. (이슈 #149)
+ *
+ * 기업 드롭다운(`<select>`)의 값은 브라우저가 늘 문자열로 돌려줍니다. id 를 숫자 그대로 두면 고른 값(`"1"`)과 목록의
+ * id(`1`)가 `===` 로 맞지 않아서, 설정 요약에 기업명 대신 "선택 안 함" 이 나옵니다. 그래서 응답을 받는 이 자리에서만
+ * 바꾸고, 화면(드롭다운 · 설정 요약 · 이 탭에 남기는 설정값)은 문자열 하나로 씁니다. 서버로 보낼 때는 `toCompanyId` 가
+ * 다시 숫자로 바꿉니다.
+ */
+function toCompany(response: CompanyResponse): Company {
+  return { companyId: String(response.companyId), name: response.name }
+}
+
+/** 기업 목록입니다. 백엔드는 `verified` 인 기업만 이름순으로 주고, 등록된 기업이 없으면 빈 배열입니다 */
+export async function getCompanies(): Promise<Company[]> {
+  const list = await api.get<CompanyResponse[]>('/api/companies')
+  return list.map(toCompany)
 }
 
 /**
@@ -40,13 +64,11 @@ type InterviewStartRequest = {
 }
 
 /**
- * 기업 id 를 서버 모양(숫자)으로 바꿉니다. 바꿀 수 없으면 null — 연습 모드로 시작합니다.
+ * 기업 id 를 서버 모양(숫자)으로 되돌립니다. 바꿀 수 없으면 null — 연습 모드로 시작합니다.
  *
- * ⚠️ 지금 기업 목록(`GET /api/companies`)은 **백엔드에 없고 목업뿐**이라 id 가 `'naver'` 같은
- * 문자열입니다. 서버는 `verified` 인 기업의 숫자 id 만 받고, 모르는 id 는 `INVALID_REQUEST` 로
- * 거절합니다. 문자열 id 를 그대로 보내면 면접 시작이 통째로 실패하므로, 숫자가 아니면 빼고
- * 보냅니다. 기업 목록 API 가 생기면 id 가 숫자로 와서 이 함수는 그대로 동작합니다.
- * (#54 확인 필요 11번 — 프론트 · 백엔드 · AI 의 companyId 모양이 서로 다름)
+ * 화면은 기업 id 를 문자열로 들고 있습니다(`toCompany` 참고). 서버는 `verified` 인 기업의 숫자 id 만 받고, 모르는
+ * id 는 `INVALID_REQUEST` 로 거절합니다. 숫자로 못 바꾸는 값(예: 예전 목업 id `'naver'` 가 이 탭에 남은 경우)을
+ * 그대로 보내면 면접 시작이 통째로 실패하므로 빼고 보냅니다.
  */
 function toCompanyId(setup: SessionSetup): number | null {
   if (!setup.useCompanyQuestion || !setup.companyId || setup.companyId === CUSTOM_COMPANY) return null
