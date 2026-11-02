@@ -41,6 +41,23 @@ export const ROUTES = {
  */
 export const LIBRARY_PREFIX = '/library'
 
+/** 성장 관리 주소에 붙여 이번 주 목표 창을 바로 엽니다. `/growth?open=goal` (이슈 #142) */
+export const GROWTH_OPEN_PARAM = 'open'
+export const GROWTH_OPEN_GOAL = 'goal'
+/** 성장 관리의 면접 캘린더 자리. `/growth#calendar` 로 들어오면 그 자리로 내려갑니다 (이슈 #142) */
+export const GROWTH_CALENDAR_ID = 'calendar'
+
+/**
+ * 성장 관리로 가는 주소입니다. 홈에서 들어올 때 어디를 보여줄지 고릅니다. (이슈 #142)
+ * - `goal` — 이번 주 목표 창을 열어서 (홈 "목표 수정 · 목표 정하기")
+ * - `calendar` — 면접 캘린더로 내려가서 (홈 "다가오는 면접일 · 전체보기")
+ */
+export function toGrowth(focus?: 'goal' | 'calendar') {
+  if (focus === 'goal') return `${ROUTES.GROWTH}?${GROWTH_OPEN_PARAM}=${GROWTH_OPEN_GOAL}`
+  if (focus === 'calendar') return `${ROUTES.GROWTH}#${GROWTH_CALENDAR_ID}`
+  return ROUTES.GROWTH
+}
+
 export function toDeviceCheck(sessionId: string) {
   return `/interviews/${sessionId}/device-check`
 }

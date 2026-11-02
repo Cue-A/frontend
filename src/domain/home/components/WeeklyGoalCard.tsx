@@ -1,9 +1,10 @@
+import { toGrowth } from '@/app/routes'
 import Card from '@/shared/ui/Card'
 
 import type { WeeklyGoal } from '../types/home'
 
 import CardHeader from './CardHeader'
-import ComingSoonLink from './ComingSoonLink'
+import CardLink from './CardLink'
 import SkeletonBlock from './SkeletonBlock'
 
 const RING_SIZE = 80
@@ -53,13 +54,16 @@ type Props = {
   goal: WeeklyGoal | null | undefined
 }
 
-/** 이번 주 목표. 목표를 고치는 화면(모달)은 아직 없어서 "목표 수정" 은 준비 중입니다 */
+/**
+ * 이번 주 목표. "목표 수정 · 목표 정하기" 는 성장 관리로 가서 목표 수정 창을 바로 엽니다 (이슈 #142).
+ * 목표를 고치는 창이 성장 관리에 있어서, 홈에 같은 창을 하나 더 두지 않고 그리로 보냅니다.
+ */
 export default function WeeklyGoalCard({ goal }: Props) {
   return (
     <Card label="이번 주 목표" padding="lg" surface="glass-soft">
       <CardHeader
         title="이번 주 목표"
-        aside={<ComingSoonLink label={goal === null ? '목표 정하기' : '목표 수정'} withArrow={false} />}
+        aside={<CardLink label={goal === null ? '목표 정하기' : '목표 수정'} withArrow={false} to={toGrowth('goal')} />}
       />
 
       {goal === undefined ? (

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { toReport } from '@/app/routes'
+import { ROUTES, toReport } from '@/app/routes'
 import Card from '@/shared/ui/Card'
 import Chip from '@/shared/ui/Chip'
 import Switch from '@/shared/ui/Switch'
@@ -38,9 +38,8 @@ type Props = {
  * 표시 옵션은 서버에 저장하지 않습니다. 지금 이 화면에서 뭘 볼지의 문제라
  * 새로고침하면 기본값으로 돌아가는 게 맞다고 봤습니다.
  *
- * 시안 첫 줄 왼쪽의 `성장 추이 보기` 가 가는 곳은 **C-04 성장관리** 라는 별도
- * 화면인데 아직 없습니다. 갈 곳 없는 링크를 걸면 눌렀을 때 404 가 떠서,
- * 자리만 두고 왜 못 누르는지 옆에 적었습니다. (이슈 #38)
+ * 시안 첫 줄 왼쪽의 `성장 추이 보기` 는 **C-04 성장 관리** 로 갑니다 (이슈 #142). 화면이 없던 동안은 자리만 두고
+ * 준비 중이라고 적어 뒀습니다 (이슈 #38).
  */
 export default function ReportOptions({
   attempts,
@@ -59,13 +58,9 @@ export default function ReportOptions({
           <div className="flex flex-wrap items-center gap-2">
             <Chip selected>이번 회차 리포트</Chip>
 
-            <span className="opacity-50">
+            <Link to={ROUTES.GROWTH}>
               <Chip>성장 추이 보기</Chip>
-            </span>
-
-            <span className="text-body-sm text-neutral-400">
-              성장 추이 화면은 아직 준비 중이에요
-            </span>
+            </Link>
           </div>
 
           {/*

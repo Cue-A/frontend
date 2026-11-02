@@ -10,7 +10,7 @@ import { formatDotDate } from '../lib/homeDate'
 import { INTERVIEW_KIND_DISPLAY, scoreTone } from '../lib/homeDisplay'
 import type { RecentReport } from '../types/home'
 
-import ComingSoonLink from './ComingSoonLink'
+import CardLink from './CardLink'
 import SkeletonBlock from './SkeletonBlock'
 
 /** 왼쪽 네모 아이콘 색. 배지 토큰의 배경 · 글자 짝을 그대로 씁니다 (docs/design-system.md §2.4) */
@@ -58,7 +58,7 @@ type Props = {
 
 /**
  * 최근 리포트 요약. 시안대로 카드 하나가 아니라 줄마다 판이 따로 있습니다.
- * 줄을 누르면 그 리포트(C-01)로 갑니다. 전체 목록 화면(보관함 > 연습 기록)은 아직 없습니다.
+ * 줄을 누르면 그 리포트(C-01)로 갑니다. "전체보기" 는 보관함 > 연습 기록으로 갑니다 (이슈 #142).
  */
 export default function RecentReports({ reports }: Props) {
   return (
@@ -67,7 +67,7 @@ export default function RecentReports({ reports }: Props) {
         <h2 id="home-recent-reports" className="text-h2 text-neutral-900">
           최근 리포트 요약
         </h2>
-        <ComingSoonLink label="전체보기" />
+        <CardLink label="전체보기" to={ROUTES.LIBRARY_PRACTICE} />
       </div>
 
       {reports === null ? (
