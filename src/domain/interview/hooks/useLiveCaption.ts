@@ -36,8 +36,11 @@ function getSpeechRecognition(): SpeechRecognitionConstructor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-/** 재시작해도 소용없는 에러 — 권한 거부·서비스 불가. 이때는 조용히 자막만 포기한다. */
-const FATAL_ERRORS = new Set(['not-allowed', 'service-not-allowed', 'audio-capture'])
+/** 재시작해도 소용없는 에러 — 권한 거부·서비스 불가·네트워크 단절·미지원 언어. 이때는 조용히 자막만 포기한다. */
+const FATAL_ERRORS = new Set(['not-allowed', 'service-not-allowed', 'audio-capture', 'network', 'language-not-supported'])
+
+/** onend 직후 바로 start() 하면 실패가 빠르게 반복될 수 있어, 재시작 앞에 두는 짧은 지연. */
+const RESTART_DELAY_MS = 300
 
 export type UseLiveCaptionResult = {
   /** 이번 답변에서 지금까지 인식된 텍스트(확정 + 중간 결과). 아직 없으면 null. */
@@ -56,13 +59,16 @@ export type UseLiveCaptionResult = {
 export function useLiveCaption(enabled: boolean, resetKey: string | null | undefined): UseLiveCaptionResult {
   const [caption, setCaption] = useState<string | null>(null)
   const [prevResetKey, setPrevResetKey] = useState(resetKey)
+  const [prevEnabled, setPrevEnabled] = useState(enabled)
   const isSupported = getSpeechRecognition() !== null
 
-  // 렌더 중 상태 보정(React 권장 패턴) — 질문이 바뀌면 이전 답변의 자막을 버린다.
-  if (prevResetKey !== resetKey) {
-    setPrevResetKey(resetKey)
+  // 렌더 중 상태 보정(React 권장 패턴) — 질문이 바뀌거나, 같은 질문에서 답변을 다시 시작하면
+  // (업로드 실패 후 재답변 등 질문 id 가 그대로인 경우) 이전 답변의 자막을 버린다.
+  if (prevResetKey !== resetKey || (enabled && !prevEnabled)) {
     setCaption(null)
   }
+  if (prevResetKey !== resetKey) setPrevResetKey(resetKey)
+  if (prevEnabled !== enabled) setPrevEnabled(enabled)
 
   useEffect(() => {
     const Recognition = getSpeechRecognition()
@@ -77,6 +83,7 @@ export function useLiveCaption(enabled: boolean, resetKey: string | null | undef
     let committed = ''
     let shown = ''
     let active = true
+    let restartTimer: ReturnType<typeof setTimeout> | undefined
 
     recognition.onresult = (event) => {
       let interim = ''
@@ -99,12 +106,15 @@ export function useLiveCaption(enabled: boolean, resetKey: string | null | undef
       if (!active) return
       // 재시작 후 results 가 비워지므로, 지금까지 보인 텍스트를 확정분으로 넘긴다.
       committed = shown ? `${shown} ` : ''
-      try {
-        recognition.start()
-      } catch {
-        // 이미 시작된 상태 등 — 자막은 보조 기능이라 면접 진행을 막지 않는다.
-        active = false
-      }
+      restartTimer = setTimeout(() => {
+        if (!active) return
+        try {
+          recognition.start()
+        } catch {
+          // 이미 시작된 상태 등 — 자막은 보조 기능이라 면접 진행을 막지 않는다.
+          active = false
+        }
+      }, RESTART_DELAY_MS)
     }
 
     try {
@@ -115,6 +125,7 @@ export function useLiveCaption(enabled: boolean, resetKey: string | null | undef
 
     return () => {
       active = false
+      clearTimeout(restartTimer)
       recognition.onresult = null
       recognition.onend = null
       recognition.onerror = null
