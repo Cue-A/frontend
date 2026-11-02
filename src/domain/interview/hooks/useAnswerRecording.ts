@@ -48,6 +48,8 @@ function stopRecorder(active: ActiveRecorder): Promise<Blob> {
 
 export type UseAnswerRecordingResult = {
   uploadStatus: RecordingUploadStatus
+  /** 현재 답변 녹화를 시작한 시각(epoch ms). 녹화 중이 아니면 null. */
+  recordingStartedAt: number | null
   /** 질문 하나에 대한 녹화를 시작한다. 스트림이 없거나 이미 녹화 중이면 무시한다. */
   startRecording: () => void
   /** 녹화를 멈추고 오디오(필수)·영상(선택)을 presigned URL 로 올린다. */
@@ -75,6 +77,7 @@ export function useAnswerRecording(
   videoRecordingStream: MediaStream | null,
 ): UseAnswerRecordingResult {
   const [uploadStatus, setUploadStatus] = useState<RecordingUploadStatus>({ status: 'idle' })
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null)
 
   const audioRef = useRef<ActiveRecorder | null>(null)
   const videoRef = useRef<ActiveRecorder | null>(null)
@@ -91,6 +94,7 @@ export function useAnswerRecording(
       videoRef.current = startRecorder(videoRecordingStream, pickMimeType(PREFERRED_VIDEO_MIME_TYPES, 'video/webm'))
     }
 
+    setRecordingStartedAt(Date.now())
     setUploadStatus({ status: 'recording' })
   }, [audioRecordingStream, videoRecordingStream])
 
@@ -100,6 +104,7 @@ export function useAnswerRecording(
       const video = videoRef.current
       audioRef.current = null
       videoRef.current = null
+      setRecordingStartedAt(null)
 
       if (!audio) {
         // 오디오는 필수다(백엔드 요청 타입에 audioFileName 등이 optional 이 아니다) —
@@ -176,5 +181,5 @@ export function useAnswerRecording(
     [sessionId],
   )
 
-  return { uploadStatus, startRecording, stopAndUpload }
+  return { uploadStatus, recordingStartedAt, startRecording, stopAndUpload }
 }
