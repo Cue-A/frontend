@@ -1,14 +1,13 @@
 import { api } from '@/shared/api/apiClient'
 
-import type { ComparisonAxis, RoundComparison } from '../types/comparison'
+import type { ComparisonAxis, QuestionChange, RoundComparison } from '../types/comparison'
 
 import './reportComparisonMock'
 
 /**
- * 회차 비교 · 성장 추이 응답입니다. (API 명세서 v0.2 「회차 비교·성장 추이 조회」)
+ * 회차 비교 · 성장 추이 응답입니다. (Cue-A/backend#104 `ReportComparisonResponse`)
  *
- * ⚠️ **백엔드에 아직 없는 API 입니다.** 명세는 있지만 "시작 전" 이고, AI 파트 확인(응답 모양 · 질문 ID 기준 · 응답 시간)이
- * 남아 있어 바뀔 수 있습니다. 목업(`missingInBackend`)이 답합니다.
+ * ⚠️ 백엔드 PR(#104)이 아직 머지 · 배포 전이라 목업(`missingInBackend`)이 답합니다. 배포되면 목업 옵션을 지웁니다.
  */
 type AxisScores = Partial<Record<ComparisonAxis, number | null>>
 
@@ -28,6 +27,10 @@ export type ReportComparisonResponse = {
   partialRounds?: number[] | null
   rounds?: Array<{ round: number; reportId: string; status: 'COMPLETED' | 'PARTIAL'; createdAt: string }> | null
   vsPrevious?: {
+    /** 비교 대상 직전 회차. `latestRound - 1` 이 아닙니다 */
+    fromRound?: number | null
+    /** 기준 회차(이 리포트) */
+    toRound?: number | null
     overallDelta?: number | null
     axisDelta?: AxisScores | null
     improved?: string[] | null
@@ -42,8 +45,16 @@ export type ReportComparisonResponse = {
     stalledAxes?: ComparisonAxis[] | null
     bestRound?: number | null
   } | null
-  /** 문항별 변화. 성장 관리 화면은 쓰지 않습니다 — 리포트 화면 「회차 비교」 섹션을 만들 때 옮겨 담습니다 */
-  byQuestion?: unknown[] | null
+  /** 문항별 변화. 리포트 화면 「회차 비교」 섹션이 씁니다 (이슈 #157) */
+  byQuestion?: Array<{
+    questionId?: string | null
+    questionText?: string | null
+    category?: string | null
+    scores?: Array<number | null> | null
+    deltaFromPrevious?: number | null
+    deltaFromFirst?: number | null
+    comment?: string | null
+  }> | null
 }
 
 const textOrNull = (value: string | null | undefined) => (value && value.trim() ? value : null)
@@ -51,6 +62,26 @@ const textOrNull = (value: string | null | undefined) => (value && value.trim() 
 /** 숫자가 아니면(undefined · null · NaN) null — 화면이 "비교 불가" 로 그립니다. 그대로 두면 "▼NaN" 이 됩니다 */
 const numberOrNull = (value: number | null | undefined) =>
   typeof value === 'number' && Number.isFinite(value) ? value : null
+
+/** 문항별 변화를 화면 값으로 바꿉니다. 문항 id 가 없는 줄은 짝을 맞출 수 없어 뺍니다 */
+function toQuestionChanges(response: ReportComparisonResponse, roundCount: number): QuestionChange[] {
+  return (response.byQuestion ?? []).flatMap((item) => {
+    if (!item.questionId) return []
+    // 점수는 회차 수만큼 맞춥니다. 모자라면 null, 넘치면 버려서 화면이 회차와 짝을 맞출 수 있게 합니다
+    const scores = Array.from({ length: roundCount }, (_, index) => numberOrNull(item.scores?.[index]))
+    return [
+      {
+        questionId: item.questionId,
+        questionText: textOrNull(item.questionText),
+        category: textOrNull(item.category),
+        scores,
+        deltaFromPrevious: numberOrNull(item.deltaFromPrevious),
+        deltaFromFirst: numberOrNull(item.deltaFromFirst),
+        comment: textOrNull(item.comment),
+      },
+    ]
+  })
+}
 
 export function toRoundComparison(response: ReportComparisonResponse): RoundComparison {
   const comparedRounds = response.comparedRounds ?? []
@@ -89,7 +120,9 @@ export function toRoundComparison(response: ReportComparisonResponse): RoundComp
     previous:
       vs && comparedRounds.length >= 2
         ? {
-            previousRound: comparedRounds[comparedRounds.length - 2],
+            // 백엔드가 주는 값을 먼저 씁니다. 없으면 비교한 회차 중 끝에서 두 번째로 셉니다
+            previousRound: numberOrNull(vs.fromRound) ?? comparedRounds[comparedRounds.length - 2],
+            currentRound: numberOrNull(vs.toRound) ?? comparedRounds[comparedRounds.length - 1],
             overallDelta: numberOrNull(vs.overallDelta),
             axisDelta: {
               content: numberOrNull(axisDelta.content),
@@ -105,6 +138,7 @@ export function toRoundComparison(response: ReportComparisonResponse): RoundComp
     trendComment: textOrNull(trend.comment),
     bestRound: numberOrNull(trend.bestRound),
     stalledAxes: trend.stalledAxes ?? [],
+    questions: toQuestionChanges(response, comparedRounds.length),
   }
 }
 
@@ -112,7 +146,10 @@ export function toRoundComparison(response: ReportComparisonResponse): RoundComp
  * 같은 면접을 다시 본 회차들(1회차 + 재면접)을 이 리포트의 회차까지 비교합니다. `GET /api/reports/{reportId}/comparison`
  *
  * 결과를 저장하지 않고 부를 때마다 AI 가 계산해서 **몇 초 걸릴 수 있고**, 60초에 10회까지입니다. 화면은 이 응답을
- * 기다리는 동안 다른 내용을 막지 말고, 같은 리포트로 거듭 부르지 마세요.
+ * 기다리는 동안 다른 내용을 막지 말고, 같은 리포트로 거듭 부르지 마세요 (`useReportComparison` 이 리포트별로 들고 있습니다).
+ *
+ * 1회차 리포트에서 부르면 뒤에 재연습이 있어도 1회차까지만 옵니다 — "이 리포트의 회차까지" 비교입니다. 재연습 이력이 없는
+ * 리포트도 200 이고 `comparedRounds` 가 하나입니다.
  *
  * 실패
  * - 202 `REPORT_NOT_READY` — 아직 분석 중인 리포트 / 409 `REPORT_FAILED` — 만들지 못한 리포트

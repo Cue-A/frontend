@@ -3,12 +3,14 @@ import { useParams } from 'react-router-dom'
 
 import { useAxisRetry } from '../hooks/useAxisRetry'
 import { useReport } from '../hooks/useReport'
+import { useReportComparison } from '../hooks/useReportComparison'
 import { useReportExport } from '../hooks/useReportExport'
 import { reportFileBaseName } from '../lib/reportExport'
 import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
 
 import AnswerVideoSection from './AnswerVideoSection'
 import CompanyCommentSection from './CompanyCommentSection'
+import ComparisonSection from './ComparisonSection'
 import ExportExclude from './ExportExclude'
 import ImprovedAnswerSection from './ImprovedAnswerSection'
 import ReportActions from './ReportActions'
@@ -43,6 +45,11 @@ export default function ReportPage() {
   const { reportId } = useParams()
   const { data, isLoading, error, reload } = useReport(reportId)
   const retry = useAxisRetry(reportId, data, reload)
+  // 회차 비교는 리포트를 먼저 그린 뒤 따로 부릅니다(AI 가 계산해서 몇 초 걸림). 다시 분석으로 점수가 바뀌면 새로 부릅니다
+  const comparison = useReportComparison(data ? data.reportId : null, {
+    subject: '이 리포트',
+    version: data ? `${data.status}:${data.totalScore}` : undefined,
+  })
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
   // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
   const sheetRef = useRef<HTMLDivElement | null>(null)
@@ -174,6 +181,8 @@ export default function ReportPage() {
           comment={data.metricsComment}
           retry={retry}
         />
+
+        <ComparisonSection comparison={comparison} />
 
         {data.video && (
           <ExportExclude>

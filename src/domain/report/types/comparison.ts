@@ -30,10 +30,12 @@ export type ComparisonRound = {
 /** 직전 회차 대비 (`vsPrevious`) */
 export type PreviousComparison = {
   /**
-   * 비교 대상인 직전 회차 번호. **`latestRound - 1` 이 아니라** 비교한 회차 중 끝에서 두 번째입니다
+   * 비교 대상인 직전 회차 번호(`vsPrevious.fromRound`). **`latestRound - 1` 이 아니라** 비교한 회차 중 바로 앞 회차입니다
    * (2회차 리포트가 없으면 3회차 vs 1회차).
    */
   previousRound: number
+  /** 비교 기준 회차(`vsPrevious.toRound`) — 이 리포트의 회차입니다 */
+  currentRound: number
   /** 종합 점수 변화. 두 회차 중 하나가 부분 리포트면 null(비교 불가) */
   overallDelta: number | null
   /** 축별 점수 변화. 한쪽 축이 실패 · 미사용이면 null(비교 불가) */
@@ -42,6 +44,24 @@ export type PreviousComparison = {
   declinedCount: number
   unchangedCount: number
   /** 직전 대비 코멘트. 비어 오면 null */
+  comment: string | null
+}
+
+/**
+ * 문항별 변화 한 줄 (`byQuestion`). **모든 회차에서 다시 받은 주질문만** 옵니다 — 꼬리질문 · 되묻기 · 대체 질문은 없고,
+ * 회차가 하나면 빈 배열입니다.
+ */
+export type QuestionChange = {
+  questionId: string
+  /** 질문 원문. 백엔드가 못 찾으면 null — 화면은 "질문 N" 으로 둡니다 */
+  questionText: string | null
+  category: string | null
+  /** 회차별 점수. `RoundComparison.rounds` 와 같은 순서입니다 */
+  scores: Array<number | null>
+  /** 직전 회차 대비 변화. 값이 없으면 null */
+  deltaFromPrevious: number | null
+  /** 비교한 첫 회차 대비 변화. 값이 없으면 null */
+  deltaFromFirst: number | null
   comment: string | null
 }
 
@@ -59,4 +79,6 @@ export type RoundComparison = {
   bestRound: number | null
   /** 최근 3회차 동안 정체된 축 */
   stalledAxes: ComparisonAxis[]
+  /** 문항별 변화. 회차가 하나면 빈 배열입니다 */
+  questions: QuestionChange[]
 }
