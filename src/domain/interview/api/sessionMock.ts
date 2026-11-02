@@ -1,7 +1,7 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
-import type { Company } from '../types/sessionSetup'
+import type { CompanyResponse } from '../types/sessionSetup'
 
 import { mockReplayOptionsOf } from './replayMock'
 import { advanceMockSession } from './sessionSocketMock'
@@ -10,15 +10,19 @@ import { advanceMockSession } from './sessionSocketMock'
  * 기업 목록 목업입니다. 시안에 "약 30개 기업의 인재상 데이터가 등록되어 있어요"
  * 라고 되어 있는데, 실제 목록은 백엔드가 가지고 있습니다. 여기서는 드롭다운이
  * 그려지는지 확인할 만큼만 넣어둡니다.
+ *
+ * **백엔드 응답 모양 그대로** 숫자 id 입니다(Cue-A/backend#86). 전에는 `'naver'` 같은 문자열이라 화면 비교는
+ * 맞았지만, 세션 시작 때 숫자로 못 바꿔서 기업 맞춤 질문이 목업에서 한 번도 실리지 않았습니다. (이슈 #149)
+ * 순서도 백엔드처럼 이름 오름차순입니다.
  */
-const COMPANIES: Company[] = [
-  { companyId: 'naver', name: '네이버' },
-  { companyId: 'kakao', name: '카카오' },
-  { companyId: 'line', name: '라인' },
-  { companyId: 'coupang', name: '쿠팡' },
-  { companyId: 'baemin', name: '우아한형제들' },
-  { companyId: 'toss', name: '토스' },
-  { companyId: 'danggeun', name: '당근' },
+const COMPANIES: CompanyResponse[] = [
+  { companyId: 1, name: '네이버' },
+  { companyId: 2, name: '당근' },
+  { companyId: 3, name: '라인' },
+  { companyId: 4, name: '우아한형제들' },
+  { companyId: 5, name: '카카오' },
+  { companyId: 6, name: '쿠팡' },
+  { companyId: 7, name: '토스' },
 ]
 
 registerMock('GET', '/api/companies', () => COMPANIES, {
@@ -99,6 +103,10 @@ registerMock('POST', '/api/interviews', (_params, body) => {
   if (request.companyId !== null && request.companyId !== undefined && typeof request.companyId !== 'number') {
     // 서버는 Long 이라 문자열 id 는 요청 해석 단계에서 거절됩니다.
     throw new ApiError('INVALID_REQUEST', `companyId 는 숫자여야 합니다 (${String(request.companyId)})`)
+  }
+  if (typeof request.companyId === 'number' && !COMPANIES.some((company) => company.companyId === request.companyId)) {
+    // 서버는 등록된(verified) 기업만 받습니다. 목록에 없는 id 는 INVALID_REQUEST 입니다.
+    throw new ApiError('INVALID_REQUEST', `등록되지 않은 기업입니다 (${request.companyId})`)
   }
 
   const questionCount = request.questionCount ?? 6

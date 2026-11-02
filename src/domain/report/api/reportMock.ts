@@ -113,6 +113,15 @@ const CONTENT_EVIDENCE: EvidenceResponse[] = [
     label: '근거 부족',
     comment: '선택 이유를 설명했으나 비교 대상이 제시되지 않았습니다.',
   },
+  {
+    // 내용 근거는 문항마다 최대 2개라 아쉬운 점만으로 3칸을 넘기기 쉽습니다. 시선이 밀려나지 않는지 보려고 하나 더 둡니다
+    questionId: 'q2',
+    tStart: 20.5,
+    tEnd: 34,
+    kind: 'weakness',
+    label: '일반론',
+    comment: '지원 동기가 회사 소개 문구에 머물러 본인 경험과 이어지지 않았습니다.',
+  },
 ]
 
 const SPEECH_EVIDENCE: EvidenceResponse[] = [
@@ -123,6 +132,26 @@ const SPEECH_EVIDENCE: EvidenceResponse[] = [
     kind: 'weakness',
     label: '침묵',
     comment: '예상 밖 질문에서 8초 동안 말이 멈췄습니다.',
+  },
+]
+
+/** 시선 근거. AI 는 화면 밖을 본 구간을 문장으로 줍니다 */
+const GAZE_EVIDENCE: EvidenceResponse[] = [
+  {
+    questionId: 'q2',
+    tStart: 12,
+    tEnd: 18,
+    kind: 'weakness',
+    label: '시선 회피',
+    comment: '12초~18초 구간에서 화면 밖을 응시했습니다.',
+  },
+  {
+    questionId: 'q1',
+    tStart: 0,
+    tEnd: 40,
+    kind: 'strength',
+    label: '시선 안정',
+    comment: '답변 내내 화면을 안정적으로 바라봤습니다.',
   },
 ]
 
@@ -146,6 +175,16 @@ const SPEECH_OK: AxisResponse = {
   // 말하기 축만 키가 확정됐습니다. 백엔드가 키 이름을 camelCase 로 바꿔 보냅니다
   metrics: { hesitationScore: 32, speechRateCv: 0.284, repetitionCount: 3 },
   evidence: SPEECH_EVIDENCE,
+}
+
+const GAZE_OK: AxisResponse = {
+  status: 'ok',
+  errorCode: null,
+  reason: null,
+  score: 74,
+  display: 4,
+  metrics: {},
+  evidence: GAZE_EVIDENCE,
 }
 
 function failedAxis(errorCode: string): AxisResponse {
@@ -191,6 +230,7 @@ export const MOCK_REPORT_IDS = {
   noCamera: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c02',
   latest: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c03',
   bothFailed: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c04',
+  allAxes: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c05',
 } as const
 
 /**
@@ -325,6 +365,32 @@ const BOTH_FAILED: ReportDetailResponse = {
 }
 
 /**
+ * **세 축이 모두 분석된** 회차입니다. 잘한 점 · 아쉬운 점에 축마다 하나씩 들어가는지 이 회차로 봅니다. (이슈 #147)
+ * 내용 근거만으로 아쉬운 점 3칸이 넘치지만, 말하기 · 시선 근거가 한 칸씩 먼저 들어가야 합니다.
+ */
+const ALL_AXES: ReportDetailResponse = {
+  ...LATEST,
+  reportId: MOCK_REPORT_IDS.allAxes,
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e05',
+  status: 'COMPLETED',
+  overall: {
+    score: 80,
+    display: 4,
+    gated: false,
+    gateReason: null,
+    partial: false,
+    axesUsed: ['content', 'speech', 'gaze'],
+    axesFailed: [],
+  },
+  axes: { content: CONTENT_OK, speech: SPEECH_OK, gaze: GAZE_OK },
+  questions: toQuestions({
+    axes: (score) => ({ content: score + 2, speech: score - 4, gaze: score - 6 }),
+    comments: 'all',
+  }),
+  createdAt: '2026-07-22T11:10:00+09:00',
+}
+
+/**
  * 리포트별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
  * 목록에 없는 id 는 `latest` 모양에 id 만 바꿔 돌려줍니다 — 분석 중 화면(B-02)이 목업에서 여는 리포트가 이것입니다.
  */
@@ -333,6 +399,7 @@ const SCENARIOS: Record<string, ReportDetailResponse> = {
   [MOCK_REPORT_IDS.noCamera]: NO_CAMERA,
   [MOCK_REPORT_IDS.noExtras]: NO_EXTRAS,
   [MOCK_REPORT_IDS.bothFailed]: BOTH_FAILED,
+  [MOCK_REPORT_IDS.allAxes]: ALL_AXES,
 }
 
 /**
@@ -356,7 +423,8 @@ const RECOVERED_AXIS: Record<RetryAxis, AxisResponse> = {
     metrics: { hesitationScore: 35, speechRateCv: 0.31, repetitionCount: 4 },
     evidence: [],
   },
-  gaze: { status: 'ok', errorCode: null, reason: null, score: 74, display: 4, metrics: {}, evidence: [] },
+  // 세 축 회차(`ALL_AXES`)와 같은 객체를 쓰면 한쪽을 고칠 때 다른 쪽도 같이 바뀝니다. 값만 복사해 따로 둡니다 (PR #148 리뷰)
+  gaze: { ...GAZE_OK, evidence: [...GAZE_EVIDENCE] },
 }
 
 const AXIS_KEYS: AxisKey[] = ['content', 'speech', 'gaze']

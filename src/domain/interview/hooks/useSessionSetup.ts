@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { loadDraft, removeDraft, saveDraft } from '@/shared/lib/draftStorage'
 
@@ -55,6 +55,11 @@ export type UseSessionSetupResult = {
   setup: SessionSetup
   /** 한 항목만 바꿉니다. patch({ jobRole: '프론트엔드 개발자' }) */
   patch: (changes: Partial<SessionSetup>) => void
+  /**
+   * 고른 기업이 받아 온 기업 목록에 없으면 비웁니다. 기업 목록을 **받은 뒤에만** 부릅니다 (못 받았을 때 부르면 멀쩡한 값이
+   * 지워집니다)
+   */
+  dropUnknownCompany: (knownCompanyIds: string[]) => void
   /** 아직 안 고른 필수 항목 이름들. 비어 있으면 시작할 수 있습니다 */
   missing: string[]
   canStart: boolean
@@ -80,6 +85,21 @@ export function useSessionSetup(): UseSessionSetupResult {
     setSetup((previous) => ({ ...previous, ...changes }))
   }
 
+  /*
+    이 탭에 남겨 둔 기업이 지금 목록에 없을 수 있습니다 — 예전 목업 id(`'naver'`)이거나, 서버에서 그 기업이 내려갔을 때.
+    그대로 두면 설정 요약은 "미선택" 인데 시작 버튼은 켜져 있어서,
+    - 숫자로 못 바꾸는 id 는 연습 모드로 조용히 시작하고
+    - 숫자로 바뀌는 낡은 id(`'5'`)는 서버가 `INVALID_REQUEST` 로 시작을 거절합니다
+    그래서 목록을 받으면 없는 기업은 비웁니다. 비우면 "기업 선택" 이 빠진 항목으로 잡혀 다시 고르게 됩니다. (PR #150 리뷰)
+  */
+  const dropUnknownCompany = useCallback((knownCompanyIds: string[]) => {
+    setSetup((previous) => {
+      const { companyId } = previous
+      if (!companyId || companyId === CUSTOM_COMPANY || knownCompanyIds.includes(companyId)) return previous
+      return { ...previous, companyId: null }
+    })
+  }, [])
+
   const missing: string[] = []
 
   // 띄어쓰기만 적은 건 적지 않은 것으로 봅니다. 서버도 `@NotBlank` 로 거절합니다.
@@ -101,6 +121,7 @@ export function useSessionSetup(): UseSessionSetupResult {
   return {
     setup,
     patch,
+    dropUnknownCompany,
     missing,
     canStart: missing.length === 0,
   }

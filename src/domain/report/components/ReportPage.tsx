@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { useAxisRetry } from '../hooks/useAxisRetry'
 import { useFailedReportSession } from '../hooks/useFailedReportSession'
 import { useReport } from '../hooks/useReport'
+import { useReportExport } from '../hooks/useReportExport'
+import { reportFileBaseName } from '../lib/reportExport'
 import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
 
 import AnswerVideoSection from './AnswerVideoSection'
 import CompanyCommentSection from './CompanyCommentSection'
+import ExportExclude from './ExportExclude'
 import ImprovedAnswerSection from './ImprovedAnswerSection'
 import ReportActions from './ReportActions'
 import ReportDocActions from './ReportDocActions'
@@ -27,6 +30,10 @@ import TimelineSection from './TimelineSection'
  *
  * 인재상 코멘트는 기업을 고른 면접에서만 나옵니다. 시안에 없던 자리라 요약 바로 아래에 붙였습니다.
  *
+ * 리포트 본문 판(`sheetRef`)은 이미지 · PDF 로 저장할 수 있습니다(이슈 #143). 화면을 다루는 도구(옵션 카드 ·
+ * 다시 분석 버튼 · 다음 단계)와 파일에서 볼 수 없는 답변 영상 자리는 `ExportExclude` 로 감싸 저장에서 뺍니다.
+ * 켜 둔 표시 옵션과 인쇄용 흑백은 저장에도 그대로 들어갑니다.
+ *
  * 사이드바 없이 혼자 그립니다. 시안에 사이드바가 없고 자체 상단바를 쓰기 때문에
  * AppLayout 밖에 두었습니다. (router.tsx)
  *
@@ -40,6 +47,9 @@ export default function ReportPage() {
   const failedReport = useFailedReportSession(reportId, errorCode === 'REPORT_FAILED')
   const retry = useAxisRetry(reportId, data, reload)
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
+  // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
+  const sheetRef = useRef<HTMLDivElement | null>(null)
+  const exporter = useReportExport(sheetRef, data ? reportFileBaseName(data) : '큐앤에이_리포트')
 
   if (isLoading) {
     return (
@@ -93,13 +103,13 @@ export default function ReportPage() {
     : data.metrics.filter((metric) => metric.key !== 'gaze' || keepGazeRow(metric))
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 print:min-h-0 print:bg-neutral-0">
       {/*
         유틸리티 줄은 리포트 내용이 아니라 이 화면을 다루는 도구라, 시안에서도
         인쇄 영역(`sheet`) 바깥에 있습니다. 흑백으로 바꿔도 여기는 그대로 둡니다.
       */}
       <div className="mx-auto w-full max-w-5xl px-6 pt-6">
-        <ReportDocActions />
+        <ReportDocActions exporter={exporter} />
       </div>
 
       {/*
@@ -107,23 +117,27 @@ export default function ReportPage() {
         토큰을 흑백 세트로 따로 만들면 화면마다 두 벌을 관리해야 합니다.
       */}
       <div
-        className={`mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 ${
+        ref={sheetRef}
+        data-report-sheet
+        className={`mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 print:max-w-none print:p-0 ${
           options.printMono ? 'grayscale' : ''
         }`}
       >
         <ReportHeader report={data} />
 
-        <ReportOptions
-          attempts={data.attempts}
-          currentAttempt={data.attempt}
-          options={options}
-          onChange={setOptions}
-          available={{
-            showTimeline: data.summary.turns.length > 0,
-            showImprovedAnswer: data.improvedAnswer !== null,
-            showGaze: data.metrics.some((metric) => metric.key === 'gaze'),
-          }}
-        />
+        <ExportExclude>
+          <ReportOptions
+            attempts={data.attempts}
+            currentAttempt={data.attempt}
+            options={options}
+            onChange={setOptions}
+            available={{
+              showTimeline: data.summary.turns.length > 0,
+              showImprovedAnswer: data.improvedAnswer !== null,
+              showGaze: data.metrics.some((metric) => metric.key === 'gaze'),
+            }}
+          />
+        </ExportExclude>
 
         {/*
           총점 상한은 일반 안내보다 먼저 보여줍니다. "왜 점수가 낮지" 는 리포트를
@@ -164,7 +178,11 @@ export default function ReportPage() {
           retry={retry}
         />
 
-        {data.video && <AnswerVideoSection video={data.video} />}
+        {data.video && (
+          <ExportExclude>
+            <AnswerVideoSection video={data.video} />
+          </ExportExclude>
+        )}
 
         {options.showTimeline && <TimelineSection turns={data.summary.turns} />}
 
@@ -172,7 +190,9 @@ export default function ReportPage() {
           <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
         )}
 
-        <ReportActions sessionId={data.sessionId} />
+        <ExportExclude>
+          <ReportActions exporter={exporter} sessionId={data.sessionId} />
+        </ExportExclude>
       </div>
     </div>
   )

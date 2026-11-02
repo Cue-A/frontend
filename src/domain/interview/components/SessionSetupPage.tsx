@@ -50,7 +50,7 @@ const DEFAULT_MINUTES = estimateDurationMinutes(DEFAULT_QUESTION_COUNT, DEFAULT_
  */
 export default function SessionSetupPage() {
   const navigate = useNavigate()
-  const { setup, patch, missing, canStart } = useSessionSetup()
+  const { setup, patch, dropUnknownCompany, missing, canStart } = useSessionSetup()
   const jobRoleId = useId()
   const answerSecondsId = useId()
   const questionCountId = useId()
@@ -64,7 +64,10 @@ export default function SessionSetupPage() {
 
     getCompanies()
       .then((list) => {
-        if (alive) setCompanies(list)
+        if (!alive) return
+        setCompanies(list)
+        // 이 탭에 남겨 둔 기업이 목록에 없으면 비웁니다 (useSessionSetup 의 dropUnknownCompany 주석)
+        dropUnknownCompany(list.map((company) => company.companyId))
       })
       .catch(() => {
         // 기업 목록을 못 받아도 면접은 시작할 수 있습니다. 맞춤 질문만 못 씁니다.
@@ -74,7 +77,7 @@ export default function SessionSetupPage() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [dropUnknownCompany])
 
   const handleStart = () => {
     if (!canStart || isStarting) return

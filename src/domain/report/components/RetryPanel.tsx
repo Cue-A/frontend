@@ -7,6 +7,8 @@ import type { RetryOutcomes } from '../hooks/useAxisRetry'
 import { viewOf, type FailedAxis } from '../lib/retryView'
 import type { RetryAxis } from '../types/report'
 
+import ExportExclude from './ExportExclude'
+
 type Props = {
   /** 지금 실패로 남아 있는 축들. 세부 점수 순서 그대로입니다 */
   failed: FailedAxis[]
@@ -45,6 +47,8 @@ const FOCUS_OPTIONS: FocusOptions = { preventScroll: true }
  * 늘 붙어 있는 보이지 않는 한 줄이 맡습니다 (`lib/retryView.ts` 의 `retryAnnouncementOf`).
  *
  * 바로 아래 보조 지표 카드(회복력 · 머뭇거림)가 회색 판이라, 이 칸은 테두리만 두어 점수 카드로 읽히지 않게 합니다.
+ *
+ * 이미지 · PDF 로 저장할 때는 버튼만 빼고 무엇을 분석하지 못했는지는 남깁니다 (이슈 #143).
  *
  * 실패한 축이 없거나 분석 중이면 그리지 않습니다.
  */
@@ -91,10 +95,12 @@ export default function RetryPanel({ failed, running, outcomes, onRetry, focusFa
       </div>
 
       {view.showButton && (
-        <Button size="sm" onClick={handleRetry} className="shrink-0 whitespace-nowrap">
-          <IconRefresh size={ICON_SIZE} aria-hidden />
-          다시 분석
-        </Button>
+        <ExportExclude>
+          <Button size="sm" onClick={handleRetry} className="shrink-0 whitespace-nowrap">
+            <IconRefresh size={ICON_SIZE} aria-hidden />
+            다시 분석
+          </Button>
+        </ExportExclude>
       )}
     </div>
   )
