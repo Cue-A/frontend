@@ -14,9 +14,12 @@ export const REPLAY_BLOCK_MESSAGES: Record<string, string> = {
   COMPANY_UNVERIFIED: '첫 면접에 고른 기업 정보를 지금은 쓸 수 없어서 재연습을 시작할 수 없어요.',
 }
 
+/** 재연습할 면접을 모를 때(없는 · 남의 면접, 주소에 세션 id 가 없음) 보여주는 문구입니다 */
+export const REPLAY_NOT_FOUND_MESSAGE = '재연습할 면접을 찾을 수 없어요.'
+
 /** 재연습 조건 조회(`GET /api/interviews/{sessionId}/replay-options`)가 실패했을 때 공통 문구 대신 쓰는 문구입니다 */
 export const REPLAY_OPTIONS_MESSAGES: ErrorMessageOverrides = {
-  SESSION_NOT_FOUND: '재연습할 면접을 찾을 수 없어요.',
+  SESSION_NOT_FOUND: REPLAY_NOT_FOUND_MESSAGE,
   SESSION_NOT_COMPLETED: '끝까지 마친 면접만 재연습할 수 있어요.',
 }
 

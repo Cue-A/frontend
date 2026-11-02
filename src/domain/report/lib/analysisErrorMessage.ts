@@ -23,16 +23,26 @@ export const ANALYSIS_MESSAGES: ErrorMessageOverrides = {
 }
 
 /**
+ * 분석 중 화면에서 "같은 질문으로 다시 연습하기" 를 보여줄 실패 코드입니다. (이슈 #152)
+ *
+ * **이번 답변 때문에 리포트를 못 만든 경우만** 넣습니다 — 다시 답하면 풀릴 수 있는 실패입니다. 재연습은 리포트가 아니라
+ * 저장된 질문으로 만들어서, 세션이 끝났으면 리포트가 실패해도 시작할 수 있습니다(Cue-A/backend 확인).
+ * - `STT_FAILED` — 답변 녹음을 글로 옮기지 못함
+ * - `REPORT_TOO_SHORT` — 답한 문항이 너무 적음
+ * - `CONTENT_FAILED` — 답변 내용을 분석하지 못함 (다시 분석하기와 같이 보여줍니다)
+ * - `REPORT_FAILED` — 리포트를 만들지 못함
+ *
+ * 연결 끊김(`UNKNOWN`) · 요청 과다 · AI 서버 문제 · 이미 요청한 면접처럼 **다시 답해도 같은** 실패는 넣지 않습니다.
+ * 그때는 다시 분석하기나 잠시 뒤 다시 시도가 해결책입니다. 면접이 없거나 끝나지 않은 경우(`SESSION_*`)는 재연습도
+ * 같은 이유로 막힙니다. 빠뜨린 코드에 버튼이 안 뜨는 쪽이, 엉뚱한 실패에 버튼이 뜨는 쪽보다 낫다고 보고 허용 목록으로
+ * 둡니다. (PR #153 리뷰)
+ */
+export const REPLAY_SUGGESTED_ERRORS = new Set(['STT_FAILED', 'REPORT_TOO_SHORT', 'CONTENT_FAILED', 'REPORT_FAILED'])
+
+/**
  * 등록이 이 코드로 실패하면 다시 요청해도 결과가 같습니다. 나머지(연결 실패 · 시간 초과 · 요청 과다 · 서버 오류)는
  * 다시 요청할 수 있게 둡니다. 소켓 `error` 는 서버가 `retryable` 을 같이 주므로 이 목록을 쓰지 않습니다.
  */
-/**
- * 이 코드로 실패하면 재연습으로 보내지 않습니다. 면접 자체가 없거나 끝나지 않아서 재연습도 같은 이유로 막힙니다
- * (재연습 조건 조회가 `SESSION_NOT_FOUND` · `SESSION_NOT_COMPLETED`). 나머지 실패는 세션이 끝난 면접이라
- * 리포트가 실패했어도 재연습할 수 있습니다 — 재연습은 리포트가 아니라 저장된 질문으로 만듭니다(Cue-A/backend 확인).
- */
-export const NO_REPLAY_ERRORS = new Set(['SESSION_NOT_FOUND', 'SESSION_NOT_COMPLETED', 'SESSION_ABORTED'])
-
 export const FINAL_REQUEST_ERRORS = new Set([
   'SESSION_NOT_FOUND',
   'SESSION_NOT_COMPLETED',

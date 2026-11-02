@@ -6,7 +6,7 @@ import Button from '@/shared/ui/Button'
 import Logo from '@/shared/ui/Logo'
 
 import { useAnalysisProgress } from '../hooks/useAnalysisProgress'
-import { NO_REPLAY_ERRORS } from '../lib/analysisErrorMessage'
+import { REPLAY_SUGGESTED_ERRORS } from '../lib/analysisErrorMessage'
 import { ANALYSIS_STAGES } from '../types/analysis'
 
 /**
@@ -206,7 +206,7 @@ export default function AnalyzingPage() {
             <AnalysisFailedNotice
               message={failure.message}
               onRetry={failure.retryable ? retry : null}
-              replayTo={sessionId && !NO_REPLAY_ERRORS.has(failure.code) ? toReplay(sessionId) : null}
+              replayTo={sessionId && REPLAY_SUGGESTED_ERRORS.has(failure.code) ? toReplay(sessionId) : null}
             />
           ) : isTimedOut ? (
             <AnalysisTimedOutNotice />

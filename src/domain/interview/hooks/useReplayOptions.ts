@@ -4,7 +4,7 @@ import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
 import { getReplayOptions } from '../api/replayApi'
-import { REPLAY_OPTIONS_MESSAGES } from '../lib/replayMessages'
+import { REPLAY_NOT_FOUND_MESSAGE, REPLAY_OPTIONS_MESSAGES } from '../lib/replayMessages'
 import type { ReplayOptions } from '../types/replay'
 
 export type ReplayOptionsState =
@@ -45,7 +45,7 @@ export function useReplayOptions(sessionId: string | undefined): ReplayOptionsSt
     }
   }, [sessionId])
 
-  if (!sessionId) return { status: 'error', message: REPLAY_OPTIONS_MESSAGES.SESSION_NOT_FOUND ?? '' }
+  if (!sessionId) return { status: 'error', message: REPLAY_NOT_FOUND_MESSAGE }
   if (!settled || settled.sessionId !== sessionId) return { status: 'loading' }
   return settled.status === 'ready'
     ? { status: 'ready', options: settled.options }

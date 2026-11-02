@@ -20,17 +20,25 @@ import Card from '@/shared/ui/Card'
 type Props = {
   /** 이 리포트의 면접. 있으면 "다시 연습하기" 가 재연습으로, 없으면(리포트를 못 불러옴) 새 면접 설정으로 갑니다 */
   sessionId?: string
+  /**
+   * 분석이 실패한 리포트의 면접을 아직 찾는 중인지. 그동안 "다시 연습하기" 를 잠급니다 — 찾기 전후로 목적지가
+   * 바뀌어서, 먼저 누르면 재연습 대신 새 면접 설정으로 가게 됩니다 (PR #153 리뷰)
+   */
+  checking?: boolean
 }
 
-export default function ReportActions({ sessionId }: Props) {
+function guideOf(sessionId: string | undefined, checking: boolean) {
+  if (checking) return '다시 연습할 수 있는지 확인하는 중이에요…'
+  return sessionId
+    ? '다시 연습하기를 누르면 이번 면접과 같은 질문으로 재연습해요. 꼬리질문은 새 답변에 맞춰 새로 나와요.'
+    : '다시 연습하기를 누르면 면접 옵션 설정 화면으로 갑니다.'
+}
+
+export default function ReportActions({ sessionId, checking = false }: Props) {
   return (
     <Card label="다음 단계" padding="lg">
       <div className="flex flex-col gap-4">
-        <p className="text-body-sm text-neutral-500">
-          {sessionId
-            ? '다시 연습하기를 누르면 이번 면접과 같은 질문으로 재연습해요. 꼬리질문은 새 답변에 맞춰 새로 나와요.'
-            : '다시 연습하기를 누르면 면접 옵션 설정 화면으로 갑니다.'}
-        </p>
+        <p className="text-body-sm text-neutral-500">{guideOf(sessionId, checking)}</p>
 
         <nav className="flex flex-wrap gap-3">
           <Button to={ROUTES.HOME} className="flex-1">
@@ -41,7 +49,12 @@ export default function ReportActions({ sessionId }: Props) {
             리포트 저장하기
           </Button>
 
-          <Button variant="primary" to={sessionId ? toReplay(sessionId) : ROUTES.SESSION_SETUP} className="flex-1">
+          <Button
+            variant="primary"
+            to={sessionId ? toReplay(sessionId) : ROUTES.SESSION_SETUP}
+            disabled={checking}
+            className="flex-1"
+          >
             다시 연습하기
           </Button>
         </nav>
