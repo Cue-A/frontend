@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 
+import { GROWTH_CALENDAR_ID, GROWTH_OPEN_GOAL, GROWTH_OPEN_PARAM } from '@/app/routes'
 import { useReportComparison } from '@/domain/report/hooks/useReportComparison'
 import { toUserMessage } from '@/shared/api/errorMessage'
 import Button from '@/shared/ui/Button'
@@ -34,6 +36,11 @@ type OpenDialog = 'goal' | 'event' | null
  *
  * 본문 폭은 시안대로 1040px 입니다 (왼쪽 688 · 오른쪽 336 · 사이 16).
  *
+ * 홈에서 들어올 때 주소로 어디를 보여줄지 받습니다 (이슈 #142, `toGrowth`).
+ * - `?open=goal` — 이번 주 목표 창을 엽니다(홈 "목표 수정 · 목표 정하기"). 요약을 받아 와야 창을 그릴 수 있어서 받은 뒤에
+ *   열립니다. 창을 닫으면 주소에서 지웁니다 — 남겨 두면 새로고침할 때마다 창이 다시 열립니다
+ * - `#calendar` — 면접 캘린더로 내려갑니다(홈 "다가오는 면접일 · 전체보기")
+ *
  * **백엔드에 성장 관리 API 가 없어서 목업으로만 동작합니다** (api/growthApi.ts). 일정 수정 · 삭제와 날짜를 눌러 일정 보기는
  * 이번 범위 밖입니다 (이슈 #136).
  */
@@ -43,7 +50,11 @@ export default function GrowthPage() {
   const [today] = useState(() => toDateKey(new Date()))
   const [month, setMonth] = useState(() => toMonthKey(new Date()))
   const calendar = useCalendarMonth(month)
-  const [openDialog, setOpenDialog] = useState<OpenDialog>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { hash } = useLocation()
+  const [openDialog, setOpenDialog] = useState<OpenDialog>(() =>
+    searchParams.get(GROWTH_OPEN_PARAM) === GROWTH_OPEN_GOAL ? 'goal' : null,
+  )
   // 저장 · 등록 알림은 그 일을 한 카드 안에 띄웁니다. 맨 위에 두면 눈에 띄지 않습니다. (PR #137 리뷰)
   const [goalNotice, setGoalNotice] = useState<string | null>(null)
   const [eventNotice, setEventNotice] = useState<string | null>(null)
@@ -63,6 +74,34 @@ export default function GrowthPage() {
     setEventNotice(null)
     setOpenDialog('event')
   }
+
+  const closeDialog = () => {
+    setOpenDialog(null)
+    if (searchParams.has(GROWTH_OPEN_PARAM)) {
+      setSearchParams(
+        (params) => {
+          params.delete(GROWTH_OPEN_PARAM)
+          return params
+        },
+        { replace: true },
+      )
+    }
+  }
+
+  /*
+    캘린더 자리로 들어왔으면 그리로 내려갑니다. 라우터는 주소의 # 로 스크롤해 주지 않습니다.
+
+    화면을 다 받은 뒤에 **한 번만** 내려갑니다. 위쪽 카드(요약 · 회차 비교)와 캘린더가 불러오는 동안은 자리 표시라 높이가
+    작아서, 그때 내려가면 페이지 끝에 걸려 덜 내려가고 카드가 채워지면서 캘린더가 다시 아래로 밀립니다.
+  */
+  const pageSettled =
+    overview.status !== 'loading' && comparison.status !== 'loading' && calendar.status !== 'loading'
+  const scrolledToCalendar = useRef(false)
+  useEffect(() => {
+    if (hash !== `#${GROWTH_CALENDAR_ID}` || !pageSettled || scrolledToCalendar.current) return
+    scrolledToCalendar.current = true
+    document.getElementById(GROWTH_CALENDAR_ID)?.scrollIntoView({ block: 'start' })
+  }, [hash, pageSettled])
 
   // 사용자가 달을 넘기면 일정 알림을 지웁니다. 다른 달의 일정 알림이 남아 있으면 지금 보는 달 이야기로 읽힙니다.
   const changeMonth = (next: string) => {
@@ -113,14 +152,16 @@ export default function GrowthPage() {
           </>
         )}
 
-        <InterviewCalendarCard
-          month={month}
-          today={today}
-          calendar={calendar}
-          notice={eventNotice}
-          onMonthChange={changeMonth}
-          onAddEvent={openEvent}
-        />
+        <div id={GROWTH_CALENDAR_ID} className="scroll-mt-6">
+          <InterviewCalendarCard
+            month={month}
+            today={today}
+            calendar={calendar}
+            notice={eventNotice}
+            onMonthChange={changeMonth}
+            onAddEvent={openEvent}
+          />
+        </div>
       </div>
 
       {openDialog === 'goal' && ready && (
@@ -130,7 +171,7 @@ export default function GrowthPage() {
             setGoalNotice(`이번 주 목표를 ${goal.target}회로 정했어요.`)
             overview.applyWeeklyGoal(goal)
           }}
-          onClose={() => setOpenDialog(null)}
+          onClose={closeDialog}
         />
       )}
 
@@ -138,7 +179,7 @@ export default function GrowthPage() {
         <EventCreateDialog
           defaultDate={defaultEventDate}
           onCreated={handleEventCreated}
-          onClose={() => setOpenDialog(null)}
+          onClose={closeDialog}
         />
       )}
     </>

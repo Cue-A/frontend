@@ -1,7 +1,7 @@
 import { ROUTES } from '@/app/routes'
 import Card from '@/shared/ui/Card'
 
-import ComingSoonLink from './ComingSoonLink'
+import CardLink from './CardLink'
 import CardHeader from './CardHeader'
 import SkeletonBlock from './SkeletonBlock'
 
@@ -31,12 +31,12 @@ type Props = {
 export default function DiscoverCard({ talentKeywords, popularQuestions }: Props) {
   return (
     <Card label="기업별 인재상 · 질문은행" padding="lg" surface="glass-soft">
-      <CardHeader title="기업별 인재상" aside={<ComingSoonLink label="전체보기" />} />
+      <CardHeader title="기업별 인재상" aside={<CardLink label="전체보기" />} />
       {talentKeywords ? <TagList items={talentKeywords} /> : <SkeletonBlock className="mt-4 h-8 w-full" />}
 
       <hr className="my-5 border-neutral-200" />
 
-      <CardHeader title="질문은행" aside={<ComingSoonLink label="전체보기" to={ROUTES.LIBRARY_QUESTIONS} />} />
+      <CardHeader title="질문은행" aside={<CardLink label="전체보기" to={ROUTES.LIBRARY_QUESTIONS} />} />
       {popularQuestions ? <TagList items={popularQuestions} /> : <SkeletonBlock className="mt-4 h-8 w-full" />}
     </Card>
   )
