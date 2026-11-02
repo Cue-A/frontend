@@ -1,5 +1,5 @@
 import { IconChevronDown, IconDownload, IconFileTypePdf, IconPhoto } from '@tabler/icons-react'
-import { useId, useRef } from 'react'
+import { useId, useRef, type KeyboardEvent } from 'react'
 
 import { ROUTES } from '@/app/routes'
 import { usePopover } from '@/shared/hooks/usePopover'
@@ -24,20 +24,32 @@ const MENU_ITEM_CLASS =
  * 여기에도 둡니다. 화면 맨 아래라 메뉴는 버튼 위로 엽니다.
  *
  * 실패 문구는 위쪽 유틸리티 줄이 `role="alert"` 로 읽어 줍니다. 여기서는 눈으로 보이게만 한 번 더 적습니다.
+ *
+ * 항목을 고르거나 Esc 로 닫으면 포커스를 "리포트 저장하기" 버튼으로 돌려줍니다. 누른 항목이 메뉴와 함께 사라지면
+ * 포커스가 `body` 로 빠져서 키보드 사용자가 위치를 잃습니다. (PR #144 리뷰)
  */
 function SaveMenu({ exporter }: { exporter: ReportExport }) {
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
   const popover = usePopover(rootRef)
   const menuId = useId()
 
+  // 인쇄 창은 열리는 동안 화면을 멈추므로, 포커스를 먼저 돌려놓고 저장을 시작합니다
   const pick = (action: () => void) => () => {
     popover.close()
+    triggerRef.current?.focus()
     action()
   }
 
+  // Esc 로 닫는 건 usePopover 가 합니다. 여기서는 포커스만 버튼으로 돌려놓습니다
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape' && popover.open) triggerRef.current?.focus()
+  }
+
   return (
-    <div ref={rootRef} className="relative flex-1">
+    <div ref={rootRef} onKeyDown={handleKeyDown} className="relative flex-1">
       <button
+        ref={triggerRef}
         type="button"
         onClick={popover.toggle}
         aria-expanded={popover.open}

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { EXPORT_EXCLUDE_ATTR } from '../lib/reportExport'
+import { EXPORT_EXCLUDE_ATTR } from '../lib/exportExclude'
 
 /**
  * 리포트를 이미지 · PDF 로 저장할 때 **빼는** 부분을 감쌉니다. (이슈 #143)
