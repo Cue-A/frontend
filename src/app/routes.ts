@@ -25,8 +25,16 @@ export const ROUTES = {
   LIBRARY_QUESTIONS: '/library/questions',
   /** C-04 성장 관리 — 회차별 점수 추이 · 이번 주 목표 · 배지 · 면접 캘린더 (이슈 #136) */
   GROWTH: '/growth',
-  /** 마이페이지 메뉴 목록. 지금은 계정 설정만 열려 있습니다 */
+  /** 마이페이지 메뉴 목록 */
   MYPAGE: '/mypage',
+  /** 마이페이지 > 프로필 — 이름 · 직무 수정, 이메일은 보기만 */
+  MYPAGE_PROFILE: '/mypage/profile',
+  /** 마이페이지 > 관심 기업 */
+  MYPAGE_INTERESTS: '/mypage/interests',
+  /** 마이페이지 > 알림 설정 */
+  MYPAGE_NOTIFICATIONS: '/mypage/notifications',
+  /** 마이페이지 > 나만의 명함 생성 */
+  MYPAGE_BUSINESS_CARD: '/mypage/business-card',
   /** 마이페이지 > 계정 설정 — 로그아웃 · 회원 탈퇴 */
   MYPAGE_ACCOUNT: '/mypage/account',
   /** 계정 설정 > 계정 탈퇴하기 — 이유 고르기 · 최종 확인 */

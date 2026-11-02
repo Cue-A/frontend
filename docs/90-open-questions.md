@@ -192,6 +192,29 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
 - 걸리는 작업: `domain/document/components/DocumentRenameDialog.tsx`.
 
+### Q16. 🟡 마이페이지 확장 화면의 API 가 없습니다
+
+기능명세서 "사용자" 도메인(MY-1~3)은 있지만 프로필 수정 · 명함 API 가 백엔드 시작 전이고, "알림 설정"은
+기능명세서 자체에 없는 항목입니다. 관심 기업은 백엔드 #101 로 생겼지만 아직 배포 서버에는 없습니다.
+성우님이 PR #112 로 만들던 화면을 이슈 #162 에서 다시 작업했습니다. (커뮤니티는 이번 범위에서 뺐습니다)
+
+- **임시 결정: 아래 경로로 가정해 목업(`missingInBackend`)이 답하게 두고 화면을 완성했습니다.**
+  - 프로필: `PATCH /api/users/me/profile` (본문 `{ nickname, jobTitle }`). 직무는 옵션 설정처럼 직접 적습니다(100자).
+    이메일은 명세서상 별도 `PATCH /api/users/me/email` 소관이라 프로필 화면에서는 보기만 합니다
+  - 직무: `GET /api/users/me` 응답(`UserResponse`)에 아직 없어서, 실제 서버면 빈 칸으로 보입니다
+  - 관심 기업: 백엔드 #101 계약 그대로 `GET /api/companies/interests`, `POST · DELETE /api/companies/{companyId}/interest`.
+    재배포를 확인하면 `domain/company/api/companyMock.ts` 의 `missingInBackend` 를 지웁니다
+  - 알림 설정: `GET · PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로입니다.
+    PATCH 는 바꾼 항목만 보냅니다
+  - 명함: API 명세서 그대로 `POST · GET · PATCH /api/users/me/business-card`. "이미지 다운로드"는 프론트가 미리보기를
+    PNG 로 찍어 내려받습니다(리포트 저장과 같은 캡처). "공유하기"는 공유 링크 발급이 필요해 비활성입니다
+- 남은 결정 (백엔드 · 기획)
+  - 프로필 수정 · 알림 설정 · 명함의 실제 계약 (알림 설정은 API 명세서에 신규 등록부터 필요)
+  - `UserResponse` 에 직무를 넣을지
+  - 명함 공유 방식 (공유 링크를 서버가 만드는지)
+- 걸리는 작업: `domain/user/components/ProfilePage.tsx` · `NotificationSettingsPage.tsx` · `BusinessCardPage.tsx`,
+  `domain/user/api/userApi.ts` · `userMock.ts`, `domain/company/api/companyMock.ts`.
+
 ---
 
 ## 그 외

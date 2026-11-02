@@ -31,7 +31,7 @@ const READONLY_FIELD_CLASS = 'rounded-sm border border-neutral-200 bg-neutral-50
  * 누르면 탈퇴 화면(`WithdrawPage` — 이유 고르기 · 최종 확인)으로 갑니다.
  * 시안이 나오면 맞춰 고칩니다.
  *
- * 닉네임 · 이메일은 여기서 고치지 않습니다. 수정 API 가 없고, 고치는 자리는 프로필 화면(준비 중)입니다.
+ * 닉네임 · 이메일은 여기서 고치지 않습니다. 닉네임은 프로필 화면에서 고치고, 이메일은 변경 API 가 따로 없어 보기만 합니다.
  */
 export default function AccountSettingsPage() {
   const me = useMe()

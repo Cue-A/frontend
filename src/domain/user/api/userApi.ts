@@ -1,6 +1,14 @@
 import { api } from '@/shared/api/apiClient'
 
-import type { LoginProvider, Me, WithdrawRequest } from '../types/user'
+import type {
+  BusinessCard,
+  BusinessCardInput,
+  LoginProvider,
+  Me,
+  NotificationSettings,
+  ProfileUpdateInput,
+  WithdrawRequest,
+} from '../types/user'
 
 import './userMock'
 
@@ -10,6 +18,8 @@ type UserResponse = {
   nickname: string
   email: string | null
   providers: LoginProvider[]
+  /** 실제 서버는 아직 이 필드를 안 줍니다 — 없으면 null 로 둡니다 */
+  jobTitle?: string | null
 }
 
 /**
@@ -19,13 +29,57 @@ type UserResponse = {
  * `VITE_REAL_APIS` 이름은 `users` 입니다.
  */
 export async function getMe(): Promise<Me> {
-  const response = await api.get<UserResponse>('/api/users/me')
+  return toMe(await api.get<UserResponse>('/api/users/me'))
+}
+
+/** 서버 응답을 화면 모양으로 바꿉니다. 직무는 실제 서버가 아직 안 줘서 없으면 null 입니다 */
+function toMe(response: UserResponse): Me {
   return {
     userId: response.userId,
     nickname: response.nickname,
     email: response.email,
     providers: response.providers,
+    jobTitle: response.jobTitle ?? null,
   }
+}
+
+/**
+ * 프로필 수정. `PATCH /api/users/me/profile` — **백엔드에 아직 없습니다.** 경로와 본문은 임시로 정한 것이라
+ * 목업(`missingInBackend`)이 답합니다. 백엔드에 생기면 계약을 대조하고 목업 표시를 지웁니다. (docs/90-open-questions.md Q16)
+ *
+ * 이름 · 직무만 보냅니다. 이메일은 명세서에 변경 API 가 따로 있어서 프로필 화면에서는 보기만 합니다.
+ * 수정된 사용자를 돌려받아 화면 머리의 이름도 그 값으로 바꿉니다.
+ */
+export async function updateProfile(input: ProfileUpdateInput): Promise<Me> {
+  return toMe(await api.patch<UserResponse>('/api/users/me/profile', input))
+}
+
+/**
+ * 알림 설정. API 명세서에 알림 도메인 자체가 없어서 경로는 임시로 정했습니다 — 목업 전용입니다.
+ * 백엔드 계약이 생기면 맞춰 고칩니다. (Q16)
+ */
+export function getNotificationSettings() {
+  return api.get<NotificationSettings>('/api/users/me/notification-settings')
+}
+
+/** 바꾼 항목만 보냅니다. 돌려받는 값은 바뀐 뒤의 전체 설정입니다 */
+export function updateNotificationSettings(input: Partial<NotificationSettings>) {
+  return api.patch<NotificationSettings>('/api/users/me/notification-settings', input)
+}
+
+/** 명함 조회. `GET /api/users/me/business-card` — 백엔드 시작 전, 목업만 있습니다. 아직 만들지 않았으면 null 입니다 */
+export function getBusinessCard() {
+  return api.get<BusinessCard | null>('/api/users/me/business-card')
+}
+
+/** 명함 생성. `POST /api/users/me/business-card` — 백엔드 시작 전. */
+export function createBusinessCard(input: BusinessCardInput) {
+  return api.post<BusinessCard>('/api/users/me/business-card', input)
+}
+
+/** 명함 수정. `PATCH /api/users/me/business-card` — 백엔드 시작 전. */
+export function updateBusinessCard(input: BusinessCardInput) {
+  return api.patch<BusinessCard>('/api/users/me/business-card', input)
 }
 
 /**

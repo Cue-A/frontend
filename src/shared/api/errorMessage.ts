@@ -65,6 +65,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   DOCUMENT_NOT_FOUND: '문서를 찾을 수 없어요.',
   STORAGE_ERROR: '파일을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
 
+  // ── 기업 — 관심 기업 등록 · 기업 상세 (Cue-A/backend#101). 없는 기업과 검증되지 않은 기업이 같은 코드입니다
+  COMPANY_NOT_FOUND: '기업 정보를 찾을 수 없어요.',
+
   // ── 면접 세션 ──────────────────────────────────────────
   SESSION_NOT_FOUND: '면접 세션을 찾을 수 없어요.',
   // 둘은 다시 시도해도 풀리지 않습니다 (#54 2-2). 새 면접으로 안내합니다.

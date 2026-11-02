@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState, type RefObject } from 'react'
 
-import { downloadBlob, printReport } from '../lib/reportExport'
+import { downloadBlob } from '@/shared/lib/downloadFile'
+
+import { printReport } from '../lib/reportExport'
 
 export type ReportExport = {
   /** 리포트 본문을 PNG 로 내려받습니다 */

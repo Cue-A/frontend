@@ -16,7 +16,11 @@ import QuestionBankPage from '@/domain/question/components/QuestionBankPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
 import ReportPage from '@/domain/report/components/ReportPage'
 import AccountSettingsPage from '@/domain/user/components/AccountSettingsPage'
+import BusinessCardPage from '@/domain/user/components/BusinessCardPage'
+import InterestsPage from '@/domain/user/components/InterestsPage'
 import MyPage from '@/domain/user/components/MyPage'
+import NotificationSettingsPage from '@/domain/user/components/NotificationSettingsPage'
+import ProfilePage from '@/domain/user/components/ProfilePage'
 import WithdrawPage from '@/domain/user/components/WithdrawPage'
 
 import AppLayout, { type AppLayoutHandle } from './layout/AppLayout'
@@ -77,6 +81,10 @@ export const router = createBrowserRouter([
           { path: ROUTES.LIBRARY_QUESTIONS, element: <QuestionBankPage /> },
           { path: ROUTES.GROWTH, element: <GrowthPage /> },
           { path: ROUTES.MYPAGE, element: <MyPage /> },
+          { path: ROUTES.MYPAGE_PROFILE, element: <ProfilePage /> },
+          { path: ROUTES.MYPAGE_INTERESTS, element: <InterestsPage /> },
+          { path: ROUTES.MYPAGE_NOTIFICATIONS, element: <NotificationSettingsPage /> },
+          { path: ROUTES.MYPAGE_BUSINESS_CARD, element: <BusinessCardPage /> },
           { path: ROUTES.MYPAGE_ACCOUNT, element: <AccountSettingsPage /> },
           { path: ROUTES.MYPAGE_WITHDRAW, element: <WithdrawPage /> },
         ],
