@@ -422,7 +422,8 @@ const RECOVERED_AXIS: Record<RetryAxis, AxisResponse> = {
     metrics: { hesitationScore: 35, speechRateCv: 0.31, repetitionCount: 4 },
     evidence: [],
   },
-  gaze: GAZE_OK,
+  // 세 축 회차(`ALL_AXES`)와 같은 객체를 쓰면 한쪽을 고칠 때 다른 쪽도 같이 바뀝니다. 값만 복사해 따로 둡니다 (PR #148 리뷰)
+  gaze: { ...GAZE_OK, evidence: [...GAZE_EVIDENCE] },
 }
 
 const AXIS_KEYS: AxisKey[] = ['content', 'speech', 'gaze']
