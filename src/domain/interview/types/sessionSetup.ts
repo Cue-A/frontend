@@ -84,7 +84,23 @@ export const DEFAULT_QUESTION_COUNT = 6
 /** 목록에 없는 기업을 고를 때 쓰는 값입니다. 이때 인재상을 직접 받습니다. */
 export const CUSTOM_COMPANY = 'CUSTOM'
 
+/**
+ * 기업 목록 응답 한 건입니다. (Cue-A/backend#86 `CompanyResponse`)
+ *
+ * `companyId` 는 기업의 숫자 PK 입니다. 세션 시작 요청(`InterviewStartRequest.companyId`)에도 숫자로 보냅니다.
+ * 기업 목록 API(`sessionApi.ts`)와 목업(`sessionMock.ts`)이 같이 써서 여기 둡니다 — 둘 중 한쪽에 두면 서로를
+ * 불러오게 됩니다. (PR #150 리뷰)
+ */
+export type CompanyResponse = {
+  companyId: number
+  name: string
+}
+
 export type Company = {
+  /**
+   * 기업 id. 서버는 숫자로 주는데 화면에서는 **문자열**로 씁니다 — 드롭다운 값과 바로 비교하려고 받을 때 바꿉니다
+   * (`sessionApi.ts` 의 `toCompany`). 서버로 보낼 때 다시 숫자가 됩니다
+   */
   companyId: string
   name: string
 }
