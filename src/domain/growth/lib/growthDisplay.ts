@@ -1,13 +1,8 @@
-import type { ComparisonAxis } from '@/domain/report/types/comparison'
-
 import type { WeeklyGoal } from '../types/growth'
 
 /**
  * 성장 관리 화면에 보여줄 글자와 숫자를 만듭니다. 화면은 이 함수들의 결과만 그립니다.
  */
-
-/** 점수 추이에 그릴 최대 회차 수. 넘으면 최근 회차부터 이만큼만 그립니다 — 막대가 너무 가늘어집니다 */
-export const MAX_ROUNDS_SHOWN = 8
 
 /** 이번 주 목표로 고를 수 있는 횟수. 하루 한 번씩 일주일이 끝입니다 */
 export const WEEKLY_GOAL_OPTIONS = [1, 2, 3, 4, 5, 6, 7] as const
@@ -18,18 +13,19 @@ export const MAX_EVENT_TITLE_LENGTH = 50
 /** 메모 상한(글자 수) */
 export const MAX_EVENT_MEMO_LENGTH = 300
 
-/** 축 이름. 리포트 세부 점수와 같은 말입니다 */
-export const AXIS_LABEL: Record<ComparisonAxis, string> = {
-  content: '내용',
-  speech: '말하기',
-  gaze: '시선',
-}
-
 /*
-  변화량 · 막대 차트 계산은 리포트의 회차 비교 섹션(이슈 #157)도 같이 써서 `shared/lib/scoreDisplay.ts` 로 옮겼습니다.
-  성장 관리 화면은 지금처럼 여기서 가져다 씁니다.
+  변화량 · 막대 차트 계산과 축 이름 · 최대 회차 수는 리포트의 회차 비교 섹션(이슈 #157)도 같이 써서
+  `shared/lib/scoreDisplay.ts` 로 옮겼습니다. 성장 관리 화면은 지금처럼 여기서 가져다 씁니다.
 */
-export { barHeightPercent, deltaView, scoreAxis, spokenDelta, type DeltaView } from '@/shared/lib/scoreDisplay'
+export {
+  barHeightPercent,
+  deltaView,
+  MAX_ROUNDS_SHOWN,
+  SCORE_AXIS_LABEL as AXIS_LABEL,
+  scoreAxis,
+  spokenDelta,
+  type DeltaView,
+} from '@/shared/lib/scoreDisplay'
 
 export function goalMessage({ done, target }: WeeklyGoal) {
   const remaining = target - done

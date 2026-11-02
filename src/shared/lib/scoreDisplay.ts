@@ -5,6 +5,16 @@
  * 해서 여기 둡니다. 도메인끼리는 서로의 lib 를 가져다 쓰지 않는 규칙이라 한쪽에 두면 다른 쪽이 쓸 수 없습니다.
  */
 
+/** 회차별 막대로 그릴 최대 회차 수. 넘으면 최근 회차부터 이만큼만 그립니다 — 막대가 너무 가늘어집니다 */
+export const MAX_ROUNDS_SHOWN = 8
+
+/** 회차 비교의 축 이름. 리포트 세부 점수와 같은 말입니다 */
+export const SCORE_AXIS_LABEL = {
+  content: '내용',
+  speech: '말하기',
+  gaze: '시선',
+} as const satisfies Record<string, string>
+
 /**
  * 막대 차트의 세로축입니다. 맨 위는 늘 100점이고, 맨 아래는 가장 낮은 점수보다 한 칸 아래의 20점 단위입니다.
  *

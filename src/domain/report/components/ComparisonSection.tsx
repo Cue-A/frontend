@@ -1,7 +1,7 @@
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
-import { DELTA_TONE_CLASS, deltaView, spokenDelta } from '@/shared/lib/scoreDisplay'
+import { DELTA_TONE_CLASS, deltaView, SCORE_AXIS_LABEL, spokenDelta } from '@/shared/lib/scoreDisplay'
 
 import type { UseReportComparisonResult } from '../hooks/useReportComparison'
 import type { ComparisonAxis, PreviousComparison, QuestionChange, RoundComparison } from '../types/comparison'
@@ -14,13 +14,6 @@ type Props = {
 }
 
 const AXES: ComparisonAxis[] = ['content', 'speech', 'gaze']
-
-/** 축 이름. 세부 점수와 같은 말입니다 */
-const AXIS_LABEL: Record<ComparisonAxis, string> = {
-  content: '내용',
-  speech: '말하기',
-  gaze: '시선',
-}
 
 /** 작은 제목. 섹션 안의 묶음 이름입니다 */
 const SUB_TITLE_CLASS = 'text-body-lg font-semibold text-neutral-900'
@@ -62,7 +55,7 @@ function PreviousChange({ previous, trendComment }: { previous: PreviousComparis
         </li>
         {AXES.map((axis) => (
           <li key={axis}>
-            <Delta label={AXIS_LABEL[axis]} delta={previous.axisDelta[axis]} />
+            <Delta label={SCORE_AXIS_LABEL[axis]} delta={previous.axisDelta[axis]} />
           </li>
         ))}
       </ul>

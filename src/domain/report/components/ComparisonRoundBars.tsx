@@ -1,12 +1,9 @@
 import { Link } from 'react-router-dom'
 
 import { toReport } from '@/app/routes'
-import { barHeightPercent, scoreAxis } from '@/shared/lib/scoreDisplay'
+import { barHeightPercent, MAX_ROUNDS_SHOWN, scoreAxis } from '@/shared/lib/scoreDisplay'
 
 import type { ComparisonRound } from '../types/comparison'
-
-/** 막대로 그릴 최대 회차 수. 넘으면 이 리포트 쪽(최근)부터 이만큼만 그립니다 — 막대가 너무 가늘어집니다 */
-const MAX_ROUNDS_SHOWN = 8
 
 /** 회차 아래 글자. 이 리포트 · 부분 리포트 회차에 덧붙입니다 */
 function roundLabel(item: ComparisonRound, current: boolean) {

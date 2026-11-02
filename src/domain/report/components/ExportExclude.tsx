@@ -10,10 +10,13 @@ import { EXPORT_EXCLUDE_ATTR } from '../lib/exportExclude'
  * 이미지와 PDF 에 들어가는 내용이 어긋나지 않게 합니다.
  *
  * 감싸는 틀은 `display: contents` 라 화면 배치(flex 의 간격 등)에는 끼어들지 않습니다.
+ *
+ * `when` 이 false 면 저장에 넣습니다. 상태에 따라 넣고 빼는 곳(회차 비교 — 다 불러왔을 때만 넣음)에서 씁니다.
+ * 틀은 그대로 두고 표시만 떼어서, 상태가 바뀌어도 안쪽이 새로 그려지지 않습니다.
  */
-export default function ExportExclude({ children }: { children: ReactNode }) {
+export default function ExportExclude({ children, when = true }: { children: ReactNode; when?: boolean }) {
   return (
-    <div {...{ [EXPORT_EXCLUDE_ATTR]: '' }} className="contents print:hidden">
+    <div {...(when ? { [EXPORT_EXCLUDE_ATTR]: '' } : {})} className={when ? 'contents print:hidden' : 'contents'}>
       {children}
     </div>
   )
