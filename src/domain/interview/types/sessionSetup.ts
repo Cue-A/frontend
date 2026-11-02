@@ -47,9 +47,9 @@ export const NO_TIME_LIMIT = 'NONE'
 /**
  * 답변 시간(초). 시안의 "질문당 90초" 가 기본값입니다.
  *
- * 기능명세서 INT-2 에 "질문당 응답 제한 시간 또는 제한 없음"으로 되어 있어
- * 제한 없음을 넣었습니다. 나머지 값은 아직 확정이 아닙니다.
- * (docs/90-open-questions.md Q10)
+ * 기능명세서 INT-2 에 "질문당 응답 제한 시간 또는 제한 없음"으로 되어 있어 제한 없음을 넣었습니다.
+ * 서버도 60 · 90 · 120 · null(제한 없음)만 받습니다 — 다른 값을 넣으면 세션 시작이 `INVALID_REQUEST` 로
+ * 거절됩니다. (Cue-A/backend#100)
  */
 export const ANSWER_SECONDS_CHOICES: Choice<string>[] = [
   { value: '60', label: '질문당 60초' },
