@@ -15,6 +15,8 @@ import type { ReportComparisonResponse } from './reportComparisonApi'
  * | `…a001` | 1회차뿐 — `vsPrevious: null` (오류 아님) |
  * | `…a104` | 1 · 2 · 4회차 — 3회차는 리포트가 없어 빠지고, 2회차는 부분 리포트(종합 점수 null) |
  * | `…a503` | `AI_UNAVAILABLE` (503) |
+ * | `…a777` | 값이 빠지거나 null 인 응답 — 시선 축 배열 자체가 null, 시선 변화량 · 문항 배열 없음, 3회차 리포트 정보 없음 (이슈 #140) |
+ * | `…a000` | 비교한 회차가 0개 (`comparedRounds: []`) (이슈 #140) |
  *
  * AI 가 계산하느라 몇 초 걸리는 API 라 0.8초 늦게 답합니다. 화면이 이 카드만 따로 로딩을 보여주는지 확인하려는 것입니다.
  */
@@ -24,6 +26,8 @@ export const MOCK_COMPARISON_REPORT_IDS = {
   firstRound: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa001',
   withGap: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa104',
   aiUnavailable: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa503',
+  loose: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa777',
+  noRounds: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa000',
 } as const
 
 const DELAY_MS = 800
@@ -125,6 +129,47 @@ function withGap(reportId: string): ReportComparisonResponse {
   }
 }
 
+/**
+ * 명세 예시보다 느슨한 응답입니다. 실서버(AI) 응답이 이렇게 와도 화면이 멈추지 않는지 확인하려는 것입니다 (이슈 #140).
+ * - 시선을 한 번도 못 잰 면접 — `trend.axes.gaze` 배열 자체가 null
+ * - `vsPrevious.axisDelta.gaze` · `overallDelta` 가 아예 없음, `improved` 등 문항 배열도 없음
+ * - `rounds[]` 에 3회차 정보가 없음 — 3회차 막대는 링크 없이 그려집니다
+ */
+function loose(reportId: string): ReportComparisonResponse {
+  return {
+    reportId,
+    latestRound: 3,
+    comparedRounds: [1, 2, 3],
+    partialRounds: null,
+    rounds: [
+      { round: 1, reportId: roundReportId(1), status: 'COMPLETED', createdAt: startedAt(14) },
+      { round: 2, reportId: roundReportId(2), status: 'COMPLETED', createdAt: startedAt(7) },
+    ],
+    vsPrevious: {
+      axisDelta: { content: 3, speech: -1 },
+      comment: '말하기 속도가 조금 빨라졌지만 내용 구성은 더 단단해졌어요.',
+    },
+    trend: {
+      overall: [65, 69, 72],
+      axes: { content: [64, 70, 73], speech: [66, 68, 67], gaze: null },
+      comment: null,
+    },
+  }
+}
+
+function noRounds(reportId: string): ReportComparisonResponse {
+  return {
+    reportId,
+    latestRound: 1,
+    comparedRounds: [],
+    partialRounds: [],
+    rounds: [],
+    vsPrevious: null,
+    trend: { overall: [], axes: { content: [], speech: [], gaze: [] }, comment: '', stalledAxes: [], bestRound: null },
+    byQuestion: [],
+  }
+}
+
 registerMock(
   'GET',
   '/api/reports/:reportId/comparison',
@@ -138,6 +183,10 @@ registerMock(
         return withGap(reportId)
       case MOCK_COMPARISON_REPORT_IDS.aiUnavailable:
         throw new ApiError('AI_UNAVAILABLE', 'AI 서버에 연결할 수 없습니다')
+      case MOCK_COMPARISON_REPORT_IDS.loose:
+        return loose(reportId)
+      case MOCK_COMPARISON_REPORT_IDS.noRounds:
+        return noRounds(reportId)
       default:
         return fiveRounds(reportId)
     }

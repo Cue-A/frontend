@@ -24,10 +24,58 @@ function roundLabel(item: ComparisonRound, latest: boolean, single: boolean) {
   return `${item.round}회차${tags.length > 0 ? ` (${tags.join(' · ')})` : ''}`
 }
 
-/** 막대 링크의 이름. 화면 읽기 프로그램이 "3회차 71점, 리포트 보기" 처럼 읽습니다 */
-function linkLabel(item: ComparisonRound, latest: boolean) {
+/** 막대의 이름. 화면 읽기 프로그램이 "3회차 71점, 리포트 보기" 처럼 읽습니다. 링크가 없는 막대는 점수까지만 읽습니다 */
+function barLabel(item: ComparisonRound, latest: boolean) {
   const score = item.overall === null ? '부분 리포트라 종합 점수 없음' : `${item.overall}점`
-  return `${item.round}회차${latest ? '(최신)' : ''} ${score}, 리포트 보기`
+  return `${item.round}회차${latest ? '(최신)' : ''} ${score}${item.reportId ? ', 리포트 보기' : ''}`
+}
+
+/** 점수가 나온 회차가 없을 때. 리포트가 하나도 없거나, 비교 응답에 회차가 비어 왔을 때 같은 안내를 씁니다 */
+function EmptyRounds() {
+  return (
+    <div className="mt-6 flex min-h-60 flex-col items-center justify-center gap-1 rounded-md bg-surface-muted p-6 text-center">
+      <p className="text-body-md font-semibold text-neutral-700">아직 점수가 나온 회차가 없어요</p>
+      <p className="break-keep text-body-sm text-neutral-500">
+        면접을 보고 분석을 받으면 회차마다 종합 점수가 여기에 쌓여요.
+      </p>
+      <Button variant="primary" size="sm" to={ROUTES.SESSION_SETUP} className="mt-3">
+        새 연습 시작
+      </Button>
+    </div>
+  )
+}
+
+/** 막대 한 칸의 모양. 링크든 아니든 같은 모양입니다 */
+function BarFace({ item, latest, height }: { item: ComparisonRound; latest: boolean; height: number | null }) {
+  if (height === null) {
+    return (
+      <span
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 flex h-1/4 items-start justify-center rounded-sm border border-dashed border-neutral-300 pt-1 text-body-sm text-neutral-400 group-hover:border-primary-200"
+      >
+        —
+      </span>
+    )
+  }
+
+  return (
+    <>
+      <span
+        aria-hidden
+        className={`absolute inset-x-0 text-center text-body-md ${latest ? 'text-primary-500' : 'text-neutral-500'}`}
+        style={{ bottom: `calc(${height}% + 4px)` }}
+      >
+        {item.overall}
+      </span>
+      <span
+        aria-hidden
+        className={`absolute inset-x-0 bottom-0 rounded-sm transition-colors ${
+          latest ? 'bg-primary-500 group-hover:bg-primary-600' : 'bg-primary-200 group-hover:bg-primary-400'
+        }`}
+        style={{ height: `${height}%` }}
+      />
+    </>
+  )
 }
 
 /**
@@ -35,6 +83,9 @@ function linkLabel(item: ComparisonRound, latest: boolean) {
  *
  * 부분 리포트 회차는 종합 점수가 null 이라 막대를 그리지 않고 점선 칸만 둡니다 — 0점으로 그리면 "못했다" 로 읽힙니다.
  * 회차 번호는 응답의 `comparedRounds` 에서 옵니다. 3회차 리포트가 없으면 1 · 2 · 4회차처럼 비어 보이는 게 맞습니다.
+ * 응답에서 그 회차의 리포트 id 를 못 찾으면 링크 없이 막대만 그립니다 — 없는 화면(`/reports/`)으로 보내지 않습니다.
+ *
+ * `rounds` 는 한 개 이상이어야 합니다. 비어 있으면 부르는 쪽이 `EmptyRounds` 를 그립니다.
  */
 function RoundBars({ rounds }: { rounds: ComparisonRound[] }) {
   const shown = rounds.slice(-MAX_ROUNDS_SHOWN)
@@ -60,37 +111,20 @@ function RoundBars({ rounds }: { rounds: ComparisonRound[] }) {
             const height = item.overall === null ? null : barHeightPercent(item.overall, axis)
             return (
               <li key={item.round} className="relative h-full w-14">
-                <Link
-                  to={toReport(item.reportId)}
-                  aria-label={linkLabel(item, latest)}
-                  className="group absolute inset-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
-                >
-                  {height === null ? (
-                    <span
-                      aria-hidden
-                      className="absolute inset-x-0 bottom-0 flex h-1/4 items-start justify-center rounded-sm border border-dashed border-neutral-300 pt-1 text-body-sm text-neutral-400 group-hover:border-primary-200"
-                    >
-                      —
-                    </span>
-                  ) : (
-                    <>
-                      <span
-                        aria-hidden
-                        className={`absolute inset-x-0 text-center text-body-md ${latest ? 'text-primary-500' : 'text-neutral-500'}`}
-                        style={{ bottom: `calc(${height}% + 4px)` }}
-                      >
-                        {item.overall}
-                      </span>
-                      <span
-                        aria-hidden
-                        className={`absolute inset-x-0 bottom-0 rounded-sm transition-colors ${
-                          latest ? 'bg-primary-500 group-hover:bg-primary-600' : 'bg-primary-200 group-hover:bg-primary-400'
-                        }`}
-                        style={{ height: `${height}%` }}
-                      />
-                    </>
-                  )}
-                </Link>
+                {item.reportId ? (
+                  <Link
+                    to={toReport(item.reportId)}
+                    aria-label={barLabel(item, latest)}
+                    className="group absolute inset-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
+                  >
+                    <BarFace item={item} latest={latest} height={height} />
+                  </Link>
+                ) : (
+                  <div className="absolute inset-0">
+                    <span className="sr-only">{barLabel(item, latest)}</span>
+                    <BarFace item={item} latest={latest} height={height} />
+                  </div>
+                )}
               </li>
             )
           })}
@@ -129,24 +163,23 @@ export default function ScoreRoundsCard({ interview, comparison }: Props) {
           점수 추이를 불러오는 중이에요…
         </p>
       ) : interview === null ? (
-        <div className="mt-6 flex min-h-60 flex-col items-center justify-center gap-1 rounded-md bg-surface-muted p-6 text-center">
-          <p className="text-body-md font-semibold text-neutral-700">아직 점수가 나온 회차가 없어요</p>
-          <p className="break-keep text-body-sm text-neutral-500">
-            면접을 보고 분석을 받으면 회차마다 종합 점수가 여기에 쌓여요.
-          </p>
-          <Button variant="primary" size="sm" to={ROUTES.SESSION_SETUP} className="mt-3">
-            새 연습 시작
-          </Button>
-        </div>
+        <EmptyRounds />
       ) : (
         <>
           <p className="mt-1 text-body-sm text-neutral-400">
             {interview.title}
-            {comparison.status === 'ready' && ` · 총 ${comparison.comparison.rounds.length}회차`}
+            {/* 비교한 회차 수가 아니라 마지막 회차 번호입니다. 1 · 2 · 4회차를 비교했으면 4회차까지 본 면접입니다 */}
+            {comparison.status === 'ready' &&
+              comparison.comparison.rounds.length > 0 &&
+              ` · 총 ${comparison.comparison.latestRound}회차`}
           </p>
 
           {comparison.status === 'ready' ? (
-            <RoundBars rounds={comparison.comparison.rounds} />
+            comparison.comparison.rounds.length > 0 ? (
+              <RoundBars rounds={comparison.comparison.rounds} />
+            ) : (
+              <EmptyRounds />
+            )
           ) : comparison.status === 'error' ? (
             <div
               role="alert"
