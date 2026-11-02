@@ -1,20 +1,16 @@
 import { api } from '@/shared/api/apiClient'
 
 import type { AnswerSubmission, InterviewOptions } from '../types/interview'
-import { CUSTOM_COMPANY, type Company, type InterviewerStyle, type SessionSetup } from '../types/sessionSetup'
+import {
+  CUSTOM_COMPANY,
+  type Company,
+  type CompanyResponse,
+  type InterviewerStyle,
+  type SessionSetup,
+} from '../types/sessionSetup'
 
 import { recallSessionOptions, rememberSessionOptions, toSessionOptions } from './sessionOptionsDraft'
 import './sessionMock'
-
-/**
- * 기업 목록 응답 한 건입니다. (Cue-A/backend#86 `CompanyResponse`)
- *
- * `companyId` 는 기업의 숫자 PK 입니다. 세션 시작 요청(`InterviewStartRequest.companyId`)에도 숫자로 보냅니다.
- */
-export type CompanyResponse = {
-  companyId: number
-  name: string
-}
 
 /**
  * 화면에서는 id 를 **문자열로 바꿔** 씁니다. (이슈 #149)

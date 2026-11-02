@@ -1,7 +1,7 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
-import type { CompanyResponse } from './sessionApi'
+import type { CompanyResponse } from '../types/sessionSetup'
 
 import { advanceMockSession } from './sessionSocketMock'
 
