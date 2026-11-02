@@ -15,12 +15,29 @@ export const ANALYSIS_MESSAGES: ErrorMessageOverrides = {
   AI_TIMEOUT: '분석이 제시간에 끝나지 않았어요. 다시 분석해 주세요.',
   CONTENT_FAILED: '답변 내용을 분석하지 못했어요. 다시 분석해 주세요.',
   MEDIA_FETCH_FAILED: '답변 녹화를 불러오지 못했어요. 다시 분석해 주세요.',
-  STT_FAILED: '답변 녹음을 글로 옮기지 못해 리포트를 만들지 못했어요. 새 면접으로 다시 연습해 주세요.',
+  STT_FAILED: '답변 녹음을 글로 옮기지 못해 리포트를 만들지 못했어요. 같은 질문으로 다시 연습해 주세요.',
   // 이 탭에 기억해 둔 reportId 가 없을 때만 납니다(다른 탭 · 기기). 409 에는 reportId 가 없고, 상태 조회
   // (Cue-A/backend#56)도 reportId 로만 물을 수 있어서 이어 볼 방법이 없습니다. 리포트 목록이 생기면 그리로 보냅니다.
   REPORT_ALREADY_EXISTS:
     '이미 분석을 요청한 면접이에요. 지난 리포트를 모아 보는 화면이 아직 없어서 여기서는 결과를 이어 볼 수 없어요.',
 }
+
+/**
+ * 분석 중 화면에서 "같은 질문으로 다시 연습하기" 를 보여줄 실패 코드입니다. (이슈 #152)
+ *
+ * **이번 답변 때문에 리포트를 못 만든 경우만** 넣습니다 — 다시 답하면 풀릴 수 있는 실패입니다. 재연습은 리포트가 아니라
+ * 저장된 질문으로 만들어서, 세션이 끝났으면 리포트가 실패해도 시작할 수 있습니다(Cue-A/backend 확인).
+ * - `STT_FAILED` — 답변 녹음을 글로 옮기지 못함
+ * - `REPORT_TOO_SHORT` — 답한 문항이 너무 적음
+ * - `CONTENT_FAILED` — 답변 내용을 분석하지 못함 (다시 분석하기와 같이 보여줍니다)
+ * - `REPORT_FAILED` — 리포트를 만들지 못함
+ *
+ * 연결 끊김(`UNKNOWN`) · 요청 과다 · AI 서버 문제 · 이미 요청한 면접처럼 **다시 답해도 같은** 실패는 넣지 않습니다.
+ * 그때는 다시 분석하기나 잠시 뒤 다시 시도가 해결책입니다. 면접이 없거나 끝나지 않은 경우(`SESSION_*`)는 재연습도
+ * 같은 이유로 막힙니다. 빠뜨린 코드에 버튼이 안 뜨는 쪽이, 엉뚱한 실패에 버튼이 뜨는 쪽보다 낫다고 보고 허용 목록으로
+ * 둡니다. (PR #153 리뷰)
+ */
+export const REPLAY_SUGGESTED_ERRORS = new Set(['STT_FAILED', 'REPORT_TOO_SHORT', 'CONTENT_FAILED', 'REPORT_FAILED'])
 
 /**
  * 등록이 이 코드로 실패하면 다시 요청해도 결과가 같습니다. 나머지(연결 실패 · 시간 초과 · 요청 과다 · 서버 오류)는
@@ -38,8 +55,8 @@ export const FINAL_REQUEST_ERRORS = new Set([
  * 리포트 화면의 "다시 분석"(부분 재시도)이 쓰는 문구입니다. `toUserMessage(code, RETRY_MESSAGES)` 로 넘깁니다.
  *
  * 분석 중 화면 문구를 그대로 쓰되, 리포트가 이미 있는 상황과 맞지 않는 말만 바꿉니다.
- * - `STT_FAILED` — 분석 중 화면은 "리포트를 만들지 못했어요 · 새 면접으로" 인데, 재시도는 지금 리포트가 있고
- *   새 면접을 할 이유도 없습니다
+ * - `STT_FAILED` — 분석 중 화면은 "리포트를 만들지 못했어요 · 같은 질문으로 다시 연습" 인데, 재시도는 지금 리포트가
+ *   있고 다시 연습할 이유도 없습니다
  */
 export const RETRY_MESSAGES: ErrorMessageOverrides = {
   ...ANALYSIS_MESSAGES,

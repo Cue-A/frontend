@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { useAxisRetry } from '../hooks/useAxisRetry'
+import { useFailedReportSession } from '../hooks/useFailedReportSession'
 import { useReport } from '../hooks/useReport'
 import { useReportExport } from '../hooks/useReportExport'
 import { reportFileBaseName } from '../lib/reportExport'
@@ -41,7 +42,9 @@ import TimelineSection from './TimelineSection'
  */
 export default function ReportPage() {
   const { reportId } = useParams()
-  const { data, isLoading, error, reload } = useReport(reportId)
+  const { data, isLoading, error, errorCode, reload } = useReport(reportId)
+  // 분석이 실패한 리포트도 재연습할 수 있어서, 어느 면접인지 상태 조회로 찾아 "다시 연습하기" 를 재연습으로 잇습니다
+  const failedReport = useFailedReportSession(reportId, errorCode === 'REPORT_FAILED')
   const retry = useAxisRetry(reportId, data, reload)
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
   // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
@@ -60,7 +63,7 @@ export default function ReportPage() {
     return (
       <div className="flex min-h-screen flex-col items-start gap-4 bg-neutral-50 p-6">
         <p className="text-body-md text-neutral-700">{error ?? '리포트를 찾을 수 없어요.'}</p>
-        <ReportActions />
+        <ReportActions sessionId={failedReport.sessionId ?? undefined} checking={failedReport.checking} />
       </div>
     )
   }
@@ -188,7 +191,7 @@ export default function ReportPage() {
         )}
 
         <ExportExclude>
-          <ReportActions exporter={exporter} />
+          <ReportActions exporter={exporter} sessionId={data.sessionId} />
         </ExportExclude>
       </div>
     </div>

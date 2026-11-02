@@ -1,7 +1,7 @@
 import { IconChevronDown, IconDownload, IconFileTypePdf, IconPhoto } from '@tabler/icons-react'
 import { useId, useRef, type KeyboardEvent } from 'react'
 
-import { ROUTES } from '@/app/routes'
+import { ROUTES, toReplay } from '@/app/routes'
 import { usePopover } from '@/shared/hooks/usePopover'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
@@ -96,6 +96,20 @@ type Props = {
    * 리포트를 못 불러온 화면(에러)에는 저장할 내용이 없어서 비우고, 그러면 저장 버튼을 그리지 않습니다
    */
   exporter?: ReportExport
+  /** 이 리포트의 면접. 있으면 "다시 연습하기" 가 재연습으로, 없으면(리포트를 못 불러옴) 새 면접 설정으로 갑니다 */
+  sessionId?: string
+  /**
+   * 분석이 실패한 리포트의 면접을 아직 찾는 중인지. 그동안 "다시 연습하기" 를 잠급니다 — 찾기 전후로 목적지가
+   * 바뀌어서, 먼저 누르면 재연습 대신 새 면접 설정으로 가게 됩니다 (PR #153 리뷰)
+   */
+  checking?: boolean
+}
+
+function guideOf(sessionId: string | undefined, checking: boolean) {
+  if (checking) return '다시 연습할 수 있는지 확인하는 중이에요…'
+  return sessionId
+    ? '다시 연습하기를 누르면 이번 면접과 같은 질문으로 재연습해요. 꼬리질문은 새 답변에 맞춰 새로 나와요.'
+    : '다시 연습하기를 누르면 면접 옵션 설정 화면으로 갑니다.'
 }
 
 /**
@@ -107,18 +121,15 @@ type Props = {
  *   이름으로 랜딩에 보냈습니다. 시안 문구로 되돌렸습니다.
  * - "리포트 저장하기" — 이미지(PNG) · PDF 중에 골라 저장합니다(이슈 #143). 서버 저장이 아니라 지금 보이는
  *   리포트를 파일로 내려받습니다. 전에는 저장 API 가 없어 비활성이었습니다.
- * - "다시 연습하기" — 이번 회차 설정을 그대로 불러오려면
- *   `POST /sessions/{id}/retry` 가 필요한데 P1 이라 아직 없습니다. 지금은
- *   빈 옵션 설정 화면으로만 갑니다. 설정을 채워준다고 적으면 거짓말이 됩니다.
+ * - "다시 연습하기" — 이 면접의 재연습 설정 화면으로 갑니다(이슈 #152). 첫 면접과 같은 질문 · 조건으로 다시
+ *   봅니다. 전에는 재연습 API 가 없어 빈 옵션 설정 화면으로만 갔습니다. 리포트 분석이 실패한 화면은 상태 조회로
+ *   면접을 찾아 잇고, 찾지 못하면 지금처럼 새 면접 설정으로 보냅니다.
  */
-export default function ReportActions({ exporter }: Props) {
+export default function ReportActions({ exporter, sessionId, checking = false }: Props) {
   return (
     <Card label="다음 단계" padding="lg">
       <div className="flex flex-col gap-4">
-        <p className="text-body-sm text-neutral-500">
-          다시 연습하기를 누르면 면접 옵션 설정 화면으로 갑니다. 이번 회차의 설정을 그대로
-          불러오는 기능은 아직 없어서 옵션은 다시 골라주세요.
-        </p>
+        <p className="text-body-sm text-neutral-500">{guideOf(sessionId, checking)}</p>
 
         <nav className="flex flex-wrap gap-3">
           <Button to={ROUTES.HOME} className="flex-1">
@@ -127,7 +138,12 @@ export default function ReportActions({ exporter }: Props) {
 
           {exporter && <SaveMenu exporter={exporter} />}
 
-          <Button variant="primary" to={ROUTES.SESSION_SETUP} className="flex-1">
+          <Button
+            variant="primary"
+            to={sessionId ? toReplay(sessionId) : ROUTES.SESSION_SETUP}
+            disabled={checking}
+            className="flex-1"
+          >
             다시 연습하기
           </Button>
         </nav>
