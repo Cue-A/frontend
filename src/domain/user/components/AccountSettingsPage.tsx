@@ -7,6 +7,7 @@ import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
+import { useAccount } from '../hooks/useAccount'
 import { useMe } from '../hooks/useMe'
 import type { LoginProvider } from '../types/user'
 
@@ -16,6 +17,11 @@ import MyPageHeader from './MyPageHeader'
 const PROVIDER_LABEL: Record<LoginProvider, string> = {
   LOCAL: '이메일',
   KAKAO: '카카오',
+}
+
+/** '2026-09-01T10:00:00' → '2026.09.01' */
+function toDateLabel(iso: string) {
+  return iso.slice(0, 10).replace(/-/g, '.')
 }
 
 /** 고칠 수 없는 값이라 입력창 모양을 빌리되 바탕을 깔아 "읽기 전용" 으로 보이게 합니다 */
@@ -31,11 +37,17 @@ const READONLY_FIELD_CLASS = 'rounded-sm border border-neutral-200 bg-neutral-50
  * 누르면 탈퇴 화면(`WithdrawPage` — 이유 고르기 · 최종 확인)으로 갑니다.
  * 시안이 나오면 맞춰 고칩니다.
  *
- * 닉네임 · 이메일은 여기서 고치지 않습니다. 수정 API 가 없고, 고치는 자리는 프로필 화면(준비 중)입니다.
+ * 닉네임 · 이메일은 여기서 고치지 않습니다. 닉네임은 프로필 화면에서 고칩니다. 이메일 · 비밀번호 변경은 명세(`PATCH
+ * /api/users/me/email` · `/password`)를 받았고 다음 작업에서 붙입니다.
+ *
+ * 이메일 · 로그인 방식 · 가입일은 계정 정보(`GET /api/users/me/account`)에서 읽습니다. 백엔드에 아직 없어 목업이 답하고(Q16),
+ * 못 불러오면 화면 머리와 같은 사용자 정보(`GET /api/users/me`)의 이메일 · 로그인 방식만 보여줍니다.
  */
 export default function AccountSettingsPage() {
   const me = useMe()
+  const account = useAccount()
   const [logoutOpen, setLogoutOpen] = useState(false)
+  const info = account.status === 'ready' ? account.account : null
 
   const title = (
     <>
@@ -82,19 +94,37 @@ export default function AccountSettingsPage() {
               <dl className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <dt className="text-body-sm text-neutral-500">이메일</dt>
-                  <dd className={`${READONLY_FIELD_CLASS} ${me.me.email ? 'text-neutral-900' : 'text-neutral-500'}`}>
-                    {/* 카카오에서 이메일 제공에 동의하지 않으면 null 입니다 */}
-                    {me.me.email ?? '카카오에서 이메일을 받지 않았어요'}
-                  </dd>
+                  {(() => {
+                    const email = info ? info.email : me.me.email
+                    return (
+                      <dd className={`${READONLY_FIELD_CLASS} ${email ? 'text-neutral-900' : 'text-neutral-500'}`}>
+                        {/* 카카오에서 이메일 제공에 동의하지 않으면 null 입니다 */}
+                        {email ?? '카카오에서 이메일을 받지 않았어요'}
+                      </dd>
+                    )
+                  })()}
                 </div>
                 <div className="flex flex-col gap-2">
                   <dt className="text-body-sm text-neutral-500">로그인 방식</dt>
-                  <dd className="flex gap-2">
-                    {me.me.providers.map((provider) => (
-                      <Badge key={provider}>{PROVIDER_LABEL[provider] ?? provider}</Badge>
-                    ))}
+                  <dd className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    {info
+                      ? info.auths.map((auth) => (
+                          <span key={auth.provider} className="flex items-center gap-2">
+                            <Badge>{PROVIDER_LABEL[auth.provider] ?? auth.provider}</Badge>
+                            <span className="text-body-sm text-neutral-500">{toDateLabel(auth.linkedAt)} 연결</span>
+                          </span>
+                        ))
+                      : me.me.providers.map((provider) => (
+                          <Badge key={provider}>{PROVIDER_LABEL[provider] ?? provider}</Badge>
+                        ))}
                   </dd>
                 </div>
+                {info && (
+                  <div className="flex flex-col gap-2">
+                    <dt className="text-body-sm text-neutral-500">가입일</dt>
+                    <dd className="text-body-md text-neutral-900">{toDateLabel(info.createdAt)}</dd>
+                  </div>
+                )}
               </dl>
 
               <hr className="my-5 border-neutral-200" />

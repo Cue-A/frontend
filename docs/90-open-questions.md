@@ -192,6 +192,36 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
 - 걸리는 작업: `domain/document/components/DocumentRenameDialog.tsx`.
 
+### Q16. 🟡 마이페이지 확장 화면의 API 가 아직 서버에 없습니다
+
+기능명세서 "사용자" 도메인(MY-1~3)의 프로필 · 계정 정보는 API 명세서를 받았지만(진행 상태 "시작 전"), 명함 API 는
+백엔드 시작 전이고 "알림 설정"은 기능명세서 자체에 없는 항목입니다. 관심 기업은 백엔드 #101 로 생겼습니다.
+성우님이 PR #112 로 만들던 화면을 이슈 #162 에서 다시 작업했습니다. (커뮤니티는 이번 범위에서 뺐습니다)
+
+- **임시 결정: 아래 경로로 목업(`missingInBackend`)이 답하게 두고 화면을 완성했습니다.**
+  - 프로필 조회 · 수정: API 명세서 그대로 `GET · PATCH /api/users/me/profile`.
+    - 응답 `userId · userName · email · profileImageUrl · introduction · targetJobRole · careerLevel · schoolName · major · graduationYear`
+    - 수정은 바꾼 칸만 보냅니다. 빈 본문은 `EMPTY_UPDATE_REQUEST` 라 바뀐 게 없으면 저장 버튼을 잠급니다
+    - 화면은 이름 · 직무(50자)만 고칩니다. 자기소개 · 경력 단계 · 학교 · 전공 · 졸업연도는 시안이 없어 아직 그리지 않았습니다
+    - 프로필 사진은 주소(`profileImageUrl`)만 받고 올릴 API 가 없어 "사진 변경" 을 넣지 않았습니다
+    - "계정 탈퇴하기" 는 명세 피드백에 따라 프로필에서 빼고 계정 설정에만 둡니다
+  - 계정 정보: API 명세서 그대로 `GET /api/users/me/account` (이메일 · 가입일 · 로그인 수단별 연결일 · 비밀번호 유무)
+  - 이메일 변경 `PATCH /api/users/me/email` · 비밀번호 변경 `PATCH /api/users/me/password` 은 명세만 받았고 화면은 다음 작업입니다
+  - 관심 기업: 백엔드 #101 계약 그대로 `GET /api/companies/interests`, `POST · DELETE /api/companies/{companyId}/interest`.
+    배포 서버에도 있어서(2026-11 재배포) 목업 표시(`missingInBackend`)를 지웠습니다. `companies` 를 켜면 실제 서버로 갑니다
+  - 알림 설정: `GET · PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로입니다.
+    PATCH 는 바꾼 항목만 보냅니다
+  - 명함: API 명세서 그대로 `POST · GET · PATCH /api/users/me/business-card`. "이미지 다운로드"는 프론트가 미리보기를
+    PNG 로 찍어 내려받습니다(리포트 저장과 같은 캡처). "공유하기"는 공유 링크 발급이 필요해 비활성입니다
+- 남은 결정 (백엔드에 확인 중)
+  - 프로필 · 계정 API 명세의 응답 모양(`code` · `ACCESS_TOKEN_EXPIRED` 등)이 지금 서버 공통 응답(`errorCode` · `TOKEN_EXPIRED`)과
+    다릅니다. 프론트 토큰 재발급이 `TOKEN_EXPIRED` 에 걸려 있어 기존 공통 응답을 따르는지 확인이 필요합니다
+  - 프로필의 `userName` 과 `GET /api/users/me` 의 `nickname` 이 같은 값인지 (프론트는 같은 값으로 보고 화면 머리를 바꿉니다)
+  - 프로필 직무(50자)와 면접 직무 `jobRole`(100자) 길이를 맞출지
+  - 프로필 사진 업로드 방식, 회원 탈퇴 API, 알림 설정 · 명함의 실제 계약, 명함 공유 방식
+- 걸리는 작업: `domain/user/components/ProfilePage.tsx` · `AccountSettingsPage.tsx` · `NotificationSettingsPage.tsx` ·
+  `BusinessCardPage.tsx`, `domain/user/api/userApi.ts` · `userMock.ts`.
+
 ---
 
 ## 그 외
