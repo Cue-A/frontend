@@ -41,10 +41,12 @@ function Notice({ children }: { children: ReactNode }) {
 /**
  * 행 끝의 버튼. 세션 상태마다 할 수 있는 일이 다릅니다.
  *
- * - **다시보기** (완료 · 리포트 있음) — 리포트로 갑니다. 답변 영상 · 점수 · 개선 답변이 거기 있습니다
- * - **분석하기** (완료 · 리포트 없음) — 면접은 끝냈지만 분석 화면에서 나가 리포트를 맡기지 않은 세션입니다. 분석 중
- *   화면으로 가면 분석을 등록하고 끝나면 리포트로 넘어갑니다. 시안에 없는 경우라 시안의 버튼 모양을 따랐습니다
- * - 중단한 세션은 버튼이 없습니다. 리포트를 만들지 않는 세션입니다(`SessionStatus.ABORTED`)
+ * - **다시보기** (완료 · 볼 수 있는 리포트 `COMPLETED` · `PARTIAL`) — 리포트로 갑니다. 답변 영상 · 점수 · 개선 답변이 거기 있습니다
+ * - **분석하기** (완료 · 리포트 없음 또는 분석 실패) — 분석 중 화면으로 가면 분석을 등록하고 끝나면 리포트로 넘어갑니다.
+ *   실패한 리포트는 서버가 같은 reportId 로 다시 받아 줍니다. 시안에 없는 경우라 시안의 버튼 모양을 따랐습니다
+ * - **분석 중**인 리포트는 버튼이 없고 한 줄 설명에 "분석 중" 만 붙입니다. 분석 중 화면은 이 탭에서 등록한 리포트만
+ *   이어 볼 수 있어서(다른 탭에서 열면 등록이 409 `REPORT_ALREADY_EXISTS` 로 막힘), 보내면 실패 화면이 뜹니다
+ * - 중단한 세션은 서버가 목록에서 빼고 보냅니다(`SessionStatus.ABORTED`)
  *
  * 시안의 **이어하기**(진행 중)는 아직 두지 않습니다. 진행 중인 세션을 장치 테스트로 다시 보내면 실서버에서 어떻게
  * 되는지 확인되지 않았습니다 — 백엔드에 "이어서 보기" API 가 없고, AI 서버가 그 세션을 아직 들고 있는지에 달려
@@ -57,7 +59,7 @@ function Notice({ children }: { children: ReactNode }) {
 function RowAction({ session }: { session: PracticeSession }) {
   const title = titleOf(session)
 
-  if (session.status === 'COMPLETED') {
+  if (session.status === 'COMPLETED' && session.reportStatus !== 'PROCESSING') {
     const to = session.reportId ? toReport(session.reportId) : toAnalyzing(session.sessionId)
     return (
       <Link to={to} className={`${ACTION_BASE} text-neutral-700`}>

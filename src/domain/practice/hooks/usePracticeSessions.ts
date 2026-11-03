@@ -32,7 +32,7 @@ function keyOf(query: PracticeListQuery) {
 }
 
 /**
- * 연습 기록 목록입니다. 조건이 바뀌면 다시 받습니다. (`GET /api/interviews` — 백엔드에 없어 목업이 답합니다)
+ * 연습 기록 목록입니다. 조건이 바뀌면 다시 받습니다. (`GET /api/practice-records`)
  *
  * 늦게 온 응답이 새 조건의 목록을 덮지 않게, 조건이 바뀌면 앞선 요청의 결과는 버립니다.
  *

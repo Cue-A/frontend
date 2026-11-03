@@ -31,7 +31,7 @@ export function titleOf(session: PracticeSession): string {
 
 /**
  * 제목 아래 한 줄. 상태에 따라 붙는 말이 다릅니다.
- * - 완료 `2026.08.02 · 질문 9문항 · 종합 84점` (점수가 아직 없으면 점수는 빼고)
+ * - 완료 `2026.08.02 · 질문 9문항 · 종합 84점` (점수가 아직 없으면 점수 대신 `분석 중` · `분석 실패`, 맡기지 않았으면 빼고)
  * - 진행 중 `2026.07.20 · 진행 중`
  * - 중단 `2026.07.18 · 중간에 그만둔 연습`
  */
@@ -46,6 +46,8 @@ export function metaOf(session: PracticeSession): string {
     case 'COMPLETED': {
       const parts = [date, `질문 ${session.questionCount}문항`]
       if (session.totalScore !== null) parts.push(`종합 ${session.totalScore}점`)
+      else if (session.reportStatus === 'PROCESSING') parts.push('분석 중')
+      else if (session.reportStatus === 'FAILED') parts.push('분석 실패')
       return parts.join(' · ')
     }
   }

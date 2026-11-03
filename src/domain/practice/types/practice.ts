@@ -9,9 +9,17 @@
  * 세션 상태. 백엔드 `SessionStatus` 와 같은 세 값입니다.
  * - `IN_PROGRESS` 시작했지만 끝내지 않은 면접
  * - `COMPLETED` 끝까지 본 면접. 리포트를 만들 수 있습니다
- * - `ABORTED` 중간에 그만둔 면접. 리포트를 만들지 않습니다
+ * - `ABORTED` 중간에 그만둔 면접. 리포트를 만들지 않습니다. 연습 기록 목록은 서버가 이 세션을 빼고 보내서 화면에 나오지 않습니다
  */
 export type PracticeStatus = 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED'
+
+/**
+ * 리포트 상태. 백엔드 `ReportStatus` 와 같은 네 값입니다.
+ * - `PROCESSING` 분석 중
+ * - `COMPLETED` · `PARTIAL` 리포트를 볼 수 있습니다. `PARTIAL` 은 일부 축이 실패한 리포트입니다
+ * - `FAILED` 분석이 실패했습니다
+ */
+export type PracticeReportStatus = 'PROCESSING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'
 
 /** 면접관 스타일. 기능명세서 INT-2 의 두 종입니다 (시안의 "중립적 면접관" 은 명세서에 없어 뺐습니다) */
 export type PracticePersona = 'FRIENDLY' | 'PRESSURE'
@@ -30,9 +38,11 @@ export type PracticeSession = {
   questionCount: number
   /** ISO 8601. 면접을 시작한 시각입니다 */
   startedAt: string
-  /** 리포트를 등록했으면 그 id. 끝냈지만 분석을 아직 안 맡겼으면 null 입니다 */
+  /** 리포트 상태. 끝냈지만 분석을 아직 안 맡겼으면 null 입니다 */
+  reportStatus: PracticeReportStatus | null
+  /** 볼 수 있는 리포트(`COMPLETED` · `PARTIAL`)의 id. 분석 중 · 실패 · 미요청이면 null 입니다 */
   reportId: string | null
-  /** 리포트의 종합 점수. 분석이 안 끝났거나 실패했으면 null 입니다 */
+  /** 리포트의 종합 점수. 볼 수 있는 리포트가 아니면 null 입니다 */
   totalScore: number | null
 }
 
@@ -54,23 +64,19 @@ export type PracticeFolder = {
 }
 
 export type PracticeFolders = {
-  /** 내 세션 전부. "전체" 카드의 숫자입니다 */
+  /** 내 세션 전부(중단한 세션 제외). "전체" 카드의 숫자입니다 */
   totalCount: number
-  /** 폴더에 넣지 않은 세션. "기타" 카드의 숫자입니다 */
-  unfiledCount: number
   /** 만든 순서입니다 */
   folders: PracticeFolder[]
 }
 
-/** 폴더 카드에서 고른 것. 폴더 id 는 UUID 라 두 상수와 겹치지 않습니다 */
-export type FolderSelection = typeof ALL_FOLDERS | typeof UNFILED | string
+/** 폴더 카드에서 고른 것. 폴더 id 는 UUID 라 상수와 겹치지 않습니다 */
+export type FolderSelection = typeof ALL_FOLDERS | string
 
 /** "전체" 카드 */
 export const ALL_FOLDERS = 'ALL'
-/** "기타" 카드 — 폴더에 넣지 않은 세션 */
-export const UNFILED = 'UNFILED'
 
-/** 상태 탭. 중단한 세션은 "전체" 에서만 보입니다 */
+/** 상태 탭. 중단한 세션은 서버가 빼고 보내서 어느 탭에도 없습니다 */
 export type PracticeStatusTab = 'ALL' | 'COMPLETED' | 'IN_PROGRESS'
 
 export type PracticeListQuery = {

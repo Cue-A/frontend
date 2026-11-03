@@ -16,7 +16,7 @@ export type UseCreateFolderResult = {
   clearError: () => void
 }
 
-/** 연습 기록 폴더를 만듭니다. (`POST /api/folders` — 백엔드에 없어 목업이 답합니다) */
+/** 연습 기록 폴더를 만듭니다. (`POST /api/folders`) */
 export function useCreateFolder(): UseCreateFolderResult {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -6,8 +6,6 @@ import './reportComparisonMock'
 
 /**
  * 회차 비교 · 성장 추이 응답입니다. (Cue-A/backend#104 `ReportComparisonResponse`)
- *
- * ⚠️ 백엔드 PR(#104)이 아직 머지 · 배포 전이라 목업(`missingInBackend`)이 답합니다. 배포되면 목업 옵션을 지웁니다.
  */
 type AxisScores = Partial<Record<ComparisonAxis, number | null>>
 

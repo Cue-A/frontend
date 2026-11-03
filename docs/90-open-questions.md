@@ -222,6 +222,17 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 걸리는 작업: `domain/user/components/ProfilePage.tsx` · `AccountSettingsPage.tsx` · `NotificationSettingsPage.tsx` ·
   `BusinessCardPage.tsx`, `domain/user/api/userApi.ts` · `userMock.ts`.
 
+### Q17. 🟡 연습 기록 "기타" 카드 — 폴더에 넣지 않은 기록만 거르는 조건이 없습니다
+
+시안의 폴더 카드 줄은 전체 · 내 폴더들 · 기타(폴더에 넣지 않은 세션) 순서입니다. 연습 기록 목록
+`GET /api/practice-records` 는 `folderId` 로 한 폴더만 거를 수 있고 "폴더 없음" 조건이 없으며, 폴더 목록
+`GET /api/folders` 에도 그 개수가 없습니다(Cue-A/backend#92 · #97). 폴더로 옮기는 화면도 아직 없어서 지금은 기타가
+전체와 같습니다.
+
+- **임시 결정: "기타" 카드를 두지 않습니다** (이슈 #167). 전체 · 내 폴더들만 보입니다.
+- 남은 결정: 폴더 이동 화면(`PATCH /api/practice-records/folder`)을 만들 때 백엔드에 "폴더 없음" 필터와 개수를 요청하고 다시 넣습니다.
+- 걸리는 작업: `domain/practice/components/FolderCards.tsx` · `api/practiceApi.ts`.
+
 ---
 
 ## 그 외

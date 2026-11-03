@@ -25,9 +25,7 @@ const COMPANIES: CompanyResponse[] = [
   { companyId: 7, name: '토스' },
 ]
 
-registerMock('GET', '/api/companies', () => COMPANIES, {
-  missingInBackend: '기업 API 없음 (명세서 v0.2 `/v1/companies` 시작 전)',
-})
+registerMock('GET', '/api/companies', () => COMPANIES)
 
 /**
  * 면접 세션 생성 목업입니다. 검사 순서와 에러 코드는 백엔드 `InterviewStartService` 를 따랐습니다.
@@ -171,12 +169,9 @@ registerMock('POST', '/api/interviews', (_params, body) => {
  * 때문입니다 (sessionApi.getInterviewOptions · sessionOptionsDraft.ts). 남긴 값이 없을 때만(다른 탭에서 연 면접) 이
  * 목업이 답하고, 위 세션 생성 목업이 저장한 값을 돌려줍니다.
  *
- * 백엔드 dev 에는 있지만(Cue-A/backend#100) 배포 서버에는 아직 없어서 `missingInBackend` 를 둡니다. 재배포를
- * 확인하면 지웁니다.
+ * 배포 서버에도 있어서(Cue-A/backend#100, 2026-11 재배포) `interviews` 를 켜면 실제 서버로 갑니다.
  */
-registerMock('GET', '/api/interviews/:sessionId', ({ sessionId }) => ({ sessionId, ...recallMockOptions() }), {
-  missingInBackend: '면접 옵션 조회 API 가 배포 서버에 없음 (backend#100 dev 머지, 재배포 전)',
-})
+registerMock('GET', '/api/interviews/:sessionId', ({ sessionId }) => ({ sessionId, ...recallMockOptions() }))
 
 /**
  * 답변 제출 목업입니다. 실제 WS 시나리오(sessionSocketMock)의 다음 턴(progress →
