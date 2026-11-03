@@ -400,6 +400,10 @@ export default function DeviceCheckPage() {
                   ariaLabel="마이크 선택"
                 />
 
+                <p className="text-body-sm text-neutral-400">
+                  실시간 자막은 크롬 음성 인식을 사용해요. 평가에는 쓰이지 않아요.
+                </p>
+
                 {micDeviceMissing && (
                   <p className="text-body-sm text-neutral-500">
                     선택한 마이크의 연결이 끊겼어요. 장치를 다시 연결하거나 다른 장치를 선택해주세요.

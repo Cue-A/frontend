@@ -25,6 +25,7 @@ type Props = {
   hasCameraStream: boolean
   cameraFailureMessage?: string | null
   caption: string | null
+  captionSupported?: boolean
 
   /** 질문 음성 <audio> 에 물릴 콜백 ref. useQuestionAudio 가 준다. */
   onAudioElement?: (element: HTMLAudioElement | null) => void
@@ -59,6 +60,7 @@ export default function InterviewSessionPage({
   hasCameraStream,
   cameraFailureMessage = null,
   caption,
+  captionSupported,
   onAudioElement,
   question,
   hideQuestionText,
@@ -101,6 +103,7 @@ export default function InterviewSessionPage({
             hasStream={hasCameraStream}
             cameraFailureMessage={cameraFailureMessage}
             caption={caption}
+            captionSupported={captionSupported}
           />
         </div>
 

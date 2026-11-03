@@ -8,6 +8,7 @@ import Button from '@/shared/ui/Button'
 import { useAnswerRecording } from '../hooks/useAnswerRecording'
 import { useInterviewSession } from '../hooks/useInterviewSession'
 import { useInterviewSessionOptions } from '../hooks/useInterviewSessionOptions'
+import { useLiveCaption } from '../hooks/useLiveCaption'
 import { useMediaStream } from '../hooks/useMediaStream'
 import { useQuestionAudio } from '../hooks/useQuestionAudio'
 import type { InterviewSessionOptions } from '../api/sessionApi'
@@ -103,6 +104,8 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const session = useInterviewSession(sessionId, options.answerTimeLimitSec, handleAnswerTimeout)
   const { beginSubmit, submitAnswer, cancelSubmit } = session
   const { setAudioElement, amplitude } = useQuestionAudio(session.question, session.notifyPresentationDone)
+  // 답변 중에만 브라우저 음성 인식(Web Speech API)으로 자막을 만든다 — 화면 표시 전용, 서버 전송 없음.
+  const { caption, isSupported: captionSupported } = useLiveCaption(session.phase === 'answering', session.question?.questionId)
 
   // 뒤로가기 등 인앱 이동으로 세션을 잃지 않도록 막는다(#26 — X 버튼·beforeunload 만으로는
   // 브라우저 뒤로가기가 안 잡혔다). "확인" 누른 직후의 navigate(ROUTES.HOME) 호출도
@@ -294,9 +297,8 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         hasCameraStream={camera.status === 'available'}
         cameraFailureMessage={camera.status === 'failed' && camera.failureReason ? CAMERA_FAILURE_MESSAGE[camera.failureReason] : null}
         onAudioElement={setAudioElement}
-        // 실시간 자막은 범위 제외가 확정 사항이다(백엔드 WS 메시지에 발화 전사 채널이 없음) —
-        // LiveCaptionPanel 은 B-01-1 의 빈 상태 UI를 그대로 쓴다.
-        caption={null}
+        caption={caption}
+        captionSupported={captionSupported}
         question={session.question}
         hideQuestionText={options.hideQuestionText}
         phase={session.phase}
