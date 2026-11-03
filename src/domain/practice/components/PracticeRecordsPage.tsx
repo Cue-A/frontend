@@ -126,7 +126,8 @@ export default function PracticeRecordsPage() {
 
       {creatingFolder && folders.status === 'ready' && (
         <FolderCreateDialog
-          // "전체" · "기타" 는 늘 있는 카드라 같은 이름의 폴더를 만들면 카드 줄에서 구분할 수 없습니다.
+          // "전체" 는 늘 있는 카드라 같은 이름의 폴더를 만들면 카드 줄에서 구분할 수 없습니다. "기타" 카드는 지금 숨겼지만
+          // 폴더 이동을 만들 때 다시 넣을 자리라(docs/90 Q17) 이름을 미리 막아 둡니다.
           existingNames={['전체', '기타', ...folders.folders.folders.map((item) => item.name)]}
           onCreated={handleFolderCreated}
           onClose={() => setCreatingFolder(false)}
