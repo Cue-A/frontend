@@ -1,9 +1,9 @@
 import type { InterviewerStyle } from '../types/interview'
 
-import ElapsedRecordingIndicator from './ElapsedRecordingIndicator'
 import ElapsedSessionProgressMeta from './ElapsedSessionProgressMeta'
 import ExitButton from './ExitButton'
 import InterviewerStyleBadge from './InterviewerStyleBadge'
+import RecordingIndicator from './RecordingIndicator'
 
 type Props = {
   onExit?: () => void
@@ -32,7 +32,7 @@ export default function InterviewTopBar({
     <header className="grid h-18 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-neutral-200 bg-neutral-0 px-10">
       <div className="flex items-center gap-4">
         <ExitButton onClick={onExit} />
-        <ElapsedRecordingIndicator recordingStartedAt={recordingStartedAt} />
+        {recordingStartedAt !== null && <RecordingIndicator />}
       </div>
 
       <InterviewerStyleBadge interviewerStyle={interviewerStyle} />
