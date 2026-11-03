@@ -123,11 +123,17 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   // 안 바뀌니 다시 시도할 계기가 없어서 화면이 계속 비게 된다. session.question 이 처음
   // 생기는 시점(= <video> 가 처음 마운트되는 시점)도 의존성에 넣어서, 그때 videoStream 이
   // 이미 준비돼 있으면 그 시점에 다시 대입한다.
+  //
+  // 의존성은 questionId 가 아니라 "질문이 있는가(boolean)" 여야 한다 — questionId 로 두면 질문이
+  // 바뀔 때마다 같은 스트림을 srcObject 에 다시 넣는데, 같은 값이어도 대입하면 미디어 로드가
+  // 다시 돌아 두 번째 질문부터 미리보기가 멈춘다(#154). 같은 스트림이면 대입도 건너뛴다.
+  const hasQuestion = session.question !== null
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = videoStream
+    const video = videoRef.current
+    if (video && video.srcObject !== videoStream) {
+      video.srcObject = videoStream
     }
-  }, [videoStream, session.question?.questionId])
+  }, [videoStream, hasQuestion])
 
   // 새 질문에서 'answering' 이 되면(재녹음으로 되돌아온 경우 포함) 녹화를 새로 시작한다.
   // startRecording 자체가 "스트림 없음/이미 녹화 중"을 걸러줘서 여기선 조건 없이 부른다.
