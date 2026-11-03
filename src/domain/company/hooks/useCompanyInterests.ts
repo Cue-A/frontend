@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
@@ -31,17 +31,24 @@ function codeOf(cause: unknown) {
  *
  * 해제는 기다리지 않고 목록에서 먼저 뺍니다(낙관적 업데이트). 실패하면 **그 기업만** 원래 자리에 되돌립니다 — 누른 순간의
  * 목록 통째로 되돌리면, 연달아 둘을 뺐을 때 하나만 실패해도 다른 하나까지 살아납니다. (PR #112 리뷰)
+ *
+ * 되돌릴 자리는 **처음 불러온 순서**로 찾습니다. 전에는 setState 업데이트 함수 안에서 뺀 자리(index)를 적어 두고 실패
+ * 콜백에서 읽었는데, 업데이트 함수가 실패 콜백보다 먼저 돈다는 순서에 기대는 구조였습니다. (PR #166 리뷰)
  */
 export function useCompanyInterests(): UseCompanyInterestsResult {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [actionError, setActionError] = useState<string | null>(null)
+  /** 기업 id → 처음 불러온 목록에서의 자리. 해제에 실패한 기업을 되돌릴 자리를 여기서 찾습니다 */
+  const order = useRef(new Map<string, number>())
 
   useEffect(() => {
     let cancelled = false
 
     getCompanyInterests()
       .then((interests) => {
-        if (!cancelled) setState({ status: 'ready', interests })
+        if (cancelled) return
+        order.current = new Map(interests.map((item, index) => [item.companyId, index]))
+        setState({ status: 'ready', interests })
       })
       .catch((cause: unknown) => {
         if (cancelled) return
@@ -55,13 +62,12 @@ export function useCompanyInterests(): UseCompanyInterestsResult {
   }, [])
 
   const remove = useCallback((company: CompanyInterest) => {
-    let index = -1
     setActionError(null)
-    setState((previous) => {
-      if (previous.status !== 'ready') return previous
-      index = previous.interests.findIndex((item) => item.companyId === company.companyId)
-      return { status: 'ready', interests: previous.interests.filter((item) => item.companyId !== company.companyId) }
-    })
+    setState((previous) =>
+      previous.status === 'ready'
+        ? { status: 'ready', interests: previous.interests.filter((item) => item.companyId !== company.companyId) }
+        : previous,
+    )
 
     removeCompanyInterest(company.companyId).catch((cause: unknown) => {
       console.error('관심 기업 해제 실패 code=%s', codeOf(cause))
@@ -70,8 +76,11 @@ export function useCompanyInterests(): UseCompanyInterestsResult {
         if (previous.status !== 'ready' || previous.interests.some((item) => item.companyId === company.companyId)) {
           return previous
         }
+        // 처음 목록에 없던 기업(나중에 추가된 것)은 맨 뒤로 봅니다
+        const rankOf = (companyId: string) => order.current.get(companyId) ?? Number.POSITIVE_INFINITY
+        const at = previous.interests.findIndex((item) => rankOf(item.companyId) > rankOf(company.companyId))
         const next = [...previous.interests]
-        next.splice(index < 0 ? next.length : Math.min(index, next.length), 0, company)
+        next.splice(at < 0 ? next.length : at, 0, company)
         return { status: 'ready', interests: next }
       })
     })

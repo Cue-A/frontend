@@ -77,6 +77,12 @@ function BusinessCardForm({ initial, saving, saveError, save }: FormProps) {
   const image = useBusinessCardImage(previewRef, input.name.trim())
   const fieldId = useId()
 
+  /** 저장한 뒤에 칸을 고치면 "저장했어요." 를 지웁니다 — 지금 보이는 값은 아직 저장 전이라서요. 프로필 화면과 같습니다 */
+  function edit(patch: Partial<BusinessCardInput>) {
+    setInput((prev) => ({ ...prev, ...patch }))
+    setSaved(false)
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setSaved(false)
@@ -128,7 +134,7 @@ function BusinessCardForm({ initial, saving, saveError, save }: FormProps) {
                 required={field.required}
                 placeholder={field.placeholder}
                 value={input[field.key]}
-                onChange={(event) => setInput((prev) => ({ ...prev, [field.key]: event.target.value }))}
+                onChange={(event) => edit({ [field.key]: event.target.value })}
                 className={FIELD_CLASS}
               />
             </div>
@@ -143,7 +149,7 @@ function BusinessCardForm({ initial, saving, saveError, save }: FormProps) {
                   type="button"
                   aria-label={option.label}
                   aria-pressed={input.color === option.value}
-                  onClick={() => setInput((prev) => ({ ...prev, color: option.value }))}
+                  onClick={() => edit({ color: option.value })}
                   className={`h-8 w-8 rounded-full ${option.bgClass} ${
                     input.color === option.value ? 'ring-2 ring-neutral-900 ring-offset-2' : ''
                   }`}
