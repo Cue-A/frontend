@@ -7,6 +7,7 @@ import Card from '@/shared/ui/Card'
 import { useBusinessCard } from '../hooks/useBusinessCard'
 import { useBusinessCardImage } from '../hooks/useBusinessCardImage'
 import { useMe } from '../hooks/useMe'
+import { useProfile } from '../hooks/useProfile'
 import { BUSINESS_CARD_COLORS, colorOf } from '../lib/businessCardColors'
 import type { BusinessCardInput } from '../types/user'
 
@@ -175,7 +176,7 @@ function BusinessCardForm({ initial, saving, saveError, save }: FormProps) {
 /**
  * 마이페이지 > 나만의 명함 생성 — 미리보기 · 입력 · 색상 선택 · 이미지 다운로드. (B-03 마이페이지/디지털 명함 시안)
  *
- * - 처음 만들 때는 이름 · 직무 · 이메일을 내 정보로 채워 둡니다.
+ * - 처음 만들 때는 이름 · 직무 · 이메일을 내 프로필(`GET /api/users/me/profile`)로 채워 둡니다. 프로필을 못 불러오면 빈 칸입니다.
  * - "이미지 다운로드" 는 지금 보이는 미리보기(앞 · 뒷면)를 PNG 한 장으로 내려받습니다. 저장하지 않은 수정도 그대로 들어갑니다.
  * - "공유하기" 는 공유 링크를 만들어 줄 API 가 없어 비활성입니다. 못 누르는 이유는 툴팁이 아니라 글로 적습니다 (이슈 #32).
  * - 시안에는 저장 버튼이 없지만, 명함을 서버에 남기려면 필요해서 입력 칸 아래에 둡니다.
@@ -184,10 +185,12 @@ function BusinessCardForm({ initial, saving, saveError, save }: FormProps) {
  */
 export default function BusinessCardPage() {
   const me = useMe()
+  const profileState = useProfile()
   const state = useBusinessCard()
 
   const body = (() => {
-    if (state.status === 'loading' || me.status === 'loading') {
+    // 처음 만들 때만 프로필을 쓰지만, 폼은 첫 값으로 한 번만 초기화해서 프로필도 기다립니다
+    if (state.status === 'loading' || (state.status === 'ready' && !state.card && profileState.status === 'loading')) {
       return <p className="text-body-md text-neutral-500">불러오는 중…</p>
     }
     if (state.status === 'error') {
@@ -198,11 +201,11 @@ export default function BusinessCardPage() {
       )
     }
 
-    const mine = me.status === 'ready' ? me.me : null
+    const mine = profileState.status === 'ready' ? profileState.profile : null
     const initial: BusinessCardInput = state.card ?? {
       companyName: '',
-      name: mine?.nickname ?? '',
-      jobTitle: mine?.jobTitle ?? '',
+      name: mine?.userName ?? '',
+      jobTitle: mine?.targetJobRole ?? '',
       email: mine?.email ?? '',
       phone: '',
       color: 'purple',

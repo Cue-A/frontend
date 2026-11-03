@@ -1,11 +1,13 @@
 import { api } from '@/shared/api/apiClient'
 
 import type {
+  AccountInfo,
   BusinessCard,
   BusinessCardInput,
   LoginProvider,
   Me,
   NotificationSettings,
+  Profile,
   ProfileUpdateInput,
   WithdrawRequest,
 } from '../types/user'
@@ -18,8 +20,6 @@ type UserResponse = {
   nickname: string
   email: string | null
   providers: LoginProvider[]
-  /** 실제 서버는 아직 이 필드를 안 줍니다 — 없으면 null 로 둡니다 */
-  jobTitle?: string | null
 }
 
 /**
@@ -29,29 +29,43 @@ type UserResponse = {
  * `VITE_REAL_APIS` 이름은 `users` 입니다.
  */
 export async function getMe(): Promise<Me> {
-  return toMe(await api.get<UserResponse>('/api/users/me'))
-}
-
-/** 서버 응답을 화면 모양으로 바꿉니다. 직무는 실제 서버가 아직 안 줘서 없으면 null 입니다 */
-function toMe(response: UserResponse): Me {
+  const response = await api.get<UserResponse>('/api/users/me')
   return {
     userId: response.userId,
     nickname: response.nickname,
     email: response.email,
     providers: response.providers,
-    jobTitle: response.jobTitle ?? null,
   }
 }
 
 /**
- * 프로필 수정. `PATCH /api/users/me/profile` — **백엔드에 아직 없습니다.** 경로와 본문은 임시로 정한 것이라
- * 목업(`missingInBackend`)이 답합니다. 백엔드에 생기면 계약을 대조하고 목업 표시를 지웁니다. (docs/90-open-questions.md Q16)
+ * 내 프로필. `GET /api/users/me/profile` (API 명세서 "내정보 조회")
  *
- * 이름 · 직무만 보냅니다. 이메일은 명세서에 변경 API 가 따로 있어서 프로필 화면에서는 보기만 합니다.
- * 수정된 사용자를 돌려받아 화면 머리의 이름도 그 값으로 바꿉니다.
+ * **백엔드에 아직 없습니다**(명세서 "시작 전"). 목업(`missingInBackend`)이 답합니다. (docs/90-open-questions.md Q16)
+ * 응답 모양이 화면 타입(`Profile`)과 같아서 그대로 씁니다.
  */
-export async function updateProfile(input: ProfileUpdateInput): Promise<Me> {
-  return toMe(await api.patch<UserResponse>('/api/users/me/profile', input))
+export function getProfile() {
+  return api.get<Profile>('/api/users/me/profile')
+}
+
+/**
+ * 프로필 수정. `PATCH /api/users/me/profile` (API 명세서 "프로필 수정")
+ *
+ * **바꾼 칸만 보냅니다.** 빈 본문은 `EMPTY_UPDATE_REQUEST`(400) 라, 화면이 바뀐 게 없으면 부르지 않습니다.
+ * 고친 뒤의 프로필 전체를 돌려받습니다. 백엔드에 아직 없어 목업이 답합니다. (Q16)
+ */
+export function updateProfile(input: ProfileUpdateInput) {
+  return api.patch<Profile>('/api/users/me/profile', input)
+}
+
+/**
+ * 계정 정보. `GET /api/users/me/account` (API 명세서 "계정 정보 조회")
+ *
+ * 이메일 · 가입일 · 로그인 수단별 연결일과 비밀번호 유무입니다. 비밀번호 원문 · 카카오 회원번호는 오지 않습니다.
+ * 백엔드에 아직 없어 목업이 답합니다. (Q16)
+ */
+export function getAccount() {
+  return api.get<AccountInfo>('/api/users/me/account')
 }
 
 /**
