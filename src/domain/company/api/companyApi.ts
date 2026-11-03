@@ -10,7 +10,7 @@ import './companyMock'
  * 관심 기업은 **기업 id 로만** 등록 · 해제합니다. 둘 다 멱등이라 이미 등록된 기업을 다시 등록하거나, 등록하지 않은
  * 기업을 해제해도 200 입니다. 검증되지 않은(verified=false) 기업과 없는 기업은 등록하면 `COMPANY_NOT_FOUND`(404) 입니다.
  *
- * 백엔드 dev 에는 머지됐지만 배포 서버에는 아직 없어서, 재배포 전까지는 목업(`missingInBackend`)이 답합니다.
+ * 배포 서버에도 있습니다(2026-11 재배포, Swagger 확인). `VITE_REAL_APIS` 에 `companies` 를 넣으면 실제 서버로 갑니다.
  */
 
 function toInterest(response: CompanyInterestResponse): CompanyInterest {

@@ -208,7 +208,7 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   - 계정 정보: API 명세서 그대로 `GET /api/users/me/account` (이메일 · 가입일 · 로그인 수단별 연결일 · 비밀번호 유무)
   - 이메일 변경 `PATCH /api/users/me/email` · 비밀번호 변경 `PATCH /api/users/me/password` 은 명세만 받았고 화면은 다음 작업입니다
   - 관심 기업: 백엔드 #101 계약 그대로 `GET /api/companies/interests`, `POST · DELETE /api/companies/{companyId}/interest`.
-    재배포를 확인하면 `domain/company/api/companyMock.ts` 의 `missingInBackend` 를 지웁니다
+    배포 서버에도 있어서(2026-11 재배포) 목업 표시(`missingInBackend`)를 지웠습니다. `companies` 를 켜면 실제 서버로 갑니다
   - 알림 설정: `GET · PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로입니다.
     PATCH 는 바꾼 항목만 보냅니다
   - 명함: API 명세서 그대로 `POST · GET · PATCH /api/users/me/business-card`. "이미지 다운로드"는 프론트가 미리보기를
@@ -220,7 +220,7 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   - 프로필 직무(50자)와 면접 직무 `jobRole`(100자) 길이를 맞출지
   - 프로필 사진 업로드 방식, 회원 탈퇴 API, 알림 설정 · 명함의 실제 계약, 명함 공유 방식
 - 걸리는 작업: `domain/user/components/ProfilePage.tsx` · `AccountSettingsPage.tsx` · `NotificationSettingsPage.tsx` ·
-  `BusinessCardPage.tsx`, `domain/user/api/userApi.ts` · `userMock.ts`, `domain/company/api/companyMock.ts`.
+  `BusinessCardPage.tsx`, `domain/user/api/userApi.ts` · `userMock.ts`.
 
 ---
 

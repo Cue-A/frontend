@@ -23,8 +23,6 @@ const MOCK_COMPANY_NAMES: Record<number, string> = {
 /** 등록한 순서대로 쌓고, 응답은 최근에 등록한 순서입니다. 처음에는 시안처럼 두 곳을 넣어 둡니다 */
 let interests: number[] = [1, 5]
 
-const MISSING = '관심 기업 API 가 배포 서버에 없음 (backend#101 dev 머지, 재배포 전)'
-
 function toCompanyId(raw: string): number {
   const id = Number(raw)
   // 서버는 등록된(verified) 기업만 받습니다. 없는 기업이면 404 입니다
@@ -39,7 +37,6 @@ registerMock(
   '/api/companies/interests',
   (): CompanyInterestResponse[] =>
     [...interests].reverse().map((companyId) => ({ companyId, name: MOCK_COMPANY_NAMES[companyId] })),
-  { missingInBackend: MISSING },
 )
 
 registerMock(
@@ -50,7 +47,6 @@ registerMock(
     if (!interests.includes(id)) interests = [...interests, id]
     return undefined
   },
-  { missingInBackend: MISSING },
 )
 
 registerMock(
@@ -61,5 +57,4 @@ registerMock(
     interests = interests.filter((id) => String(id) !== companyId)
     return undefined
   },
-  { missingInBackend: MISSING },
 )
