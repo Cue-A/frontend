@@ -2,6 +2,7 @@ import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
 import type { ReportComparisonResponse } from './reportComparisonApi'
+import { MOCK_REPORT_IDS } from './reportMock'
 
 /**
  * 회차 비교 목업입니다. **백엔드에 아직 없어서** `reports` 를 `VITE_REAL_APIS` 에 넣어도 목업이 답합니다.
@@ -17,6 +18,9 @@ import type { ReportComparisonResponse } from './reportComparisonApi'
  * | `…a503` | `AI_UNAVAILABLE` (503) |
  * | `…a777` | 값이 빠지거나 null 인 응답 — 시선 축 배열 자체가 null, 시선 변화량 · 문항 배열 없음, 3회차 리포트 정보 없음 (이슈 #140) |
  * | `…a000` | 비교한 회차가 0개 (`comparedRounds: []`) (이슈 #140) |
+ *
+ * 리포트 화면의 목업 리포트(`reportMock.ts`)는 기본 응답(5회차)을 받고, "요약 없음" 회차(`…3c01`)만 재연습 이력이 없는
+ * 리포트로 1회차뿐인 응답을 받습니다 — 리포트 화면의 "아직 비교할 회차가 없어요" 를 보려는 것입니다 (이슈 #157).
  *
  * AI 가 계산하느라 몇 초 걸리는 API 라 0.8초 늦게 답합니다. 화면이 이 카드만 따로 로딩을 보여주는지 확인하려는 것입니다.
  */
@@ -55,6 +59,8 @@ function fiveRounds(reportId: string): ReportComparisonResponse {
       createdAt: startedAt((5 - round) * 6 + 1),
     })),
     vsPrevious: {
+      fromRound: 4,
+      toRound: 5,
       overallDelta: 4,
       axisDelta: { content: 8, speech: -2, gaze: null },
       improved: ['q_1', 'q_3'],
@@ -75,7 +81,36 @@ function fiveRounds(reportId: string): ReportComparisonResponse {
       stalledAxes: ['speech'],
       bestRound: 5,
     },
-    byQuestion: [],
+    byQuestion: [
+      {
+        questionId: 'q_1',
+        questionText: '이 직무에 지원한 동기는 무엇인가요?',
+        category: '지원동기',
+        scores: [62, 66, 70, 74, 80],
+        deltaFromPrevious: 6,
+        deltaFromFirst: 18,
+        comment: '회사 소개 문구 대신 본인 경험으로 동기를 설명하기 시작했어요.',
+      },
+      {
+        questionId: 'q_2',
+        questionText: '팀원과 의견이 갈렸던 경험을 말씀해 주세요.',
+        category: '협업·갈등',
+        scores: [70, 72, 68, 79, 76],
+        deltaFromPrevious: -3,
+        deltaFromFirst: 6,
+        comment: '결론을 먼저 말했지만 갈등을 푼 과정 설명이 4회차보다 짧아졌어요.',
+      },
+      {
+        questionId: 'q_3',
+        // 백엔드가 원문을 못 찾으면 null 입니다 — 화면은 "질문 N" 으로 둡니다
+        questionText: null,
+        category: '직무역량',
+        scores: [72, 75, 75, 80, 88],
+        deltaFromPrevious: 8,
+        deltaFromFirst: 16,
+        comment: null,
+      },
+    ],
   }
 }
 
@@ -110,6 +145,9 @@ function withGap(reportId: string): ReportComparisonResponse {
       { round: 4, reportId, status: 'COMPLETED', createdAt: startedAt(1) },
     ],
     vsPrevious: {
+      // 3회차 리포트가 없어서 4회차는 2회차와 비교합니다 (latestRound - 1 이 아님)
+      fromRound: 2,
+      toRound: 4,
       // 2회차가 부분 리포트라 종합 점수는 비교할 수 없습니다
       overallDelta: null,
       axisDelta: { content: 5, speech: 0, gaze: null },
@@ -125,7 +163,17 @@ function withGap(reportId: string): ReportComparisonResponse {
       stalledAxes: [],
       bestRound: 4,
     },
-    byQuestion: [],
+    byQuestion: [
+      {
+        questionId: 'q_1',
+        questionText: '가장 자신 있는 기술 스택은 무엇인가요?',
+        category: '직무역량',
+        scores: [68, null, 74],
+        deltaFromPrevious: null,
+        deltaFromFirst: 6,
+        comment: '2회차는 이 문항을 분석하지 못해 1회차와 비교했어요.',
+      },
+    ],
   }
 }
 
@@ -178,6 +226,7 @@ registerMock(
 
     switch (reportId) {
       case MOCK_COMPARISON_REPORT_IDS.firstRound:
+      case MOCK_REPORT_IDS.noExtras:
         return firstRound(reportId)
       case MOCK_COMPARISON_REPORT_IDS.withGap:
         return withGap(reportId)
@@ -191,5 +240,5 @@ registerMock(
         return fiveRounds(reportId)
     }
   },
-  { missingInBackend: '회차 비교 API 없음 — 명세(API 명세서 v0.2) 상태 "시작 전"' },
+  { missingInBackend: '회차 비교 API 배포 전 — Cue-A/backend#104 머지 · 배포되면 이 옵션을 지웁니다' },
 )

@@ -4,12 +4,14 @@ import { useParams } from 'react-router-dom'
 import { useAxisRetry } from '../hooks/useAxisRetry'
 import { useFailedReportSession } from '../hooks/useFailedReportSession'
 import { useReport } from '../hooks/useReport'
+import { useReportComparison } from '../hooks/useReportComparison'
 import { useReportExport } from '../hooks/useReportExport'
 import { reportFileBaseName } from '../lib/reportExport'
 import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
 
 import AnswerVideoSection from './AnswerVideoSection'
 import CompanyCommentSection from './CompanyCommentSection'
+import ComparisonSection from './ComparisonSection'
 import ExportExclude from './ExportExclude'
 import ImprovedAnswerSection from './ImprovedAnswerSection'
 import ReportActions from './ReportActions'
@@ -46,6 +48,12 @@ export default function ReportPage() {
   // 분석이 실패한 리포트도 재연습할 수 있어서, 어느 면접인지 상태 조회로 찾아 "다시 연습하기" 를 재연습으로 잇습니다
   const failedReport = useFailedReportSession(reportId, errorCode === 'REPORT_FAILED')
   const retry = useAxisRetry(reportId, data, reload)
+  // 회차 비교는 리포트를 먼저 그린 뒤 따로 부릅니다(AI 가 계산해서 몇 초 걸림). 다시 분석으로 점수가 바뀌면 새로 부릅니다.
+  // 총점이 같아도 축 점수만 바뀌는 재분석이 있어서, 축 점수까지 버전에 넣습니다 — 회차 비교가 축별 변화도 보여줍니다 (PR #158 리뷰)
+  const comparison = useReportComparison(data ? data.reportId : null, {
+    subject: '이 리포트',
+    version: data ? [data.status, data.totalScore, ...data.metrics.map((metric) => metric.score)].join(':') : undefined,
+  })
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
   // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
   const sheetRef = useRef<HTMLDivElement | null>(null)
@@ -177,6 +185,11 @@ export default function ReportPage() {
           comment={data.metricsComment}
           retry={retry}
         />
+
+        {/* 다 불러온 비교 내용만 저장에 넣습니다. 로딩 자리 표시 · 오류 안내(다시 시도 버튼)는 파일에 남지 않게 뺍니다 (PR #158 리뷰) */}
+        <ExportExclude when={comparison.status !== 'ready'}>
+          <ComparisonSection comparison={comparison} />
+        </ExportExclude>
 
         {data.video && (
           <ExportExclude>

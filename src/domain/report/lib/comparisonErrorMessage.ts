@@ -10,15 +10,18 @@ export type ComparisonErrorView = {
   retryable: boolean
 }
 
-export function comparisonErrorOf(code: string): ComparisonErrorView {
+/**
+ * @param subject 비교 기준 리포트를 부르는 말. 성장 관리는 "가장 최근 리포트", 리포트 화면은 "이 리포트" 입니다 (이슈 #157)
+ */
+export function comparisonErrorOf(code: string, subject = '가장 최근 리포트'): ComparisonErrorView {
   switch (code) {
     case 'RATE_LIMIT_EXCEEDED':
       return { message: '잠시 후 다시 시도해 주세요.', retryable: true }
     // 202 · 409 는 비교가 아니라 기준 리포트의 상태입니다
     case 'REPORT_NOT_READY':
-      return { message: '가장 최근 리포트를 아직 분석하고 있어요. 분석이 끝나면 비교해 드려요.', retryable: true }
+      return { message: `${subject}를 아직 분석하고 있어요. 분석이 끝나면 비교해 드려요.`, retryable: true }
     case 'REPORT_FAILED':
-      return { message: '가장 최근 리포트를 만들지 못해 비교할 수 없어요.', retryable: false }
+      return { message: `${subject}를 만들지 못해 비교할 수 없어요.`, retryable: false }
     case 'REPORT_NOT_FOUND':
       return { message: '비교할 리포트를 찾을 수 없어요.', retryable: false }
     default:
