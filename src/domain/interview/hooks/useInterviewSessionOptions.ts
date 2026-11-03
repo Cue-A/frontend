@@ -11,8 +11,9 @@ export type UseInterviewSessionOptionsResult =
 
 /**
  * 면접 진행 화면(B-01-2)이 필요로 하는 세션 옵션(interviewerStyle · hideQuestionText ·
- * answerTimeLimitSec)을 가져온다. 조회 API 가 백엔드에 없어서, 세션을 만들 때 이 탭에 남겨 둔 값을 먼저 쓰고
- * 없을 때만 GET /api/interviews/{sessionId}(지금은 목업)로 간다 (sessionApi.getInterviewOptions 참고).
+ * answerTimeLimitSec)을 가져온다. 세션을 만들 때 이 탭에 남겨 둔 값(시작 응답에 담긴 저장값)을 먼저 쓰고,
+ * 없을 때만(새 탭 · 다른 기기) GET /api/interviews/{sessionId} 로 간다. 조회 API 는 백엔드 dev 에 머지됐고
+ * (backend#100) 배포 서버에 반영되기 전까지는 목업이 답한다 (sessionApi.getInterviewOptions 참고).
  */
 type State = UseInterviewSessionOptionsResult & { sessionId: string }
 
