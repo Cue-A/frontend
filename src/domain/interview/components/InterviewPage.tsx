@@ -86,7 +86,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const [isExitRequested, setIsExitRequested] = useState(false)
 
   const { camera, mic, videoStream, audioRecordingStream, videoRecordingStream } = useMediaStream(initialDeviceStatus, initialDeviceIds)
-  const { uploadStatus, startRecording, stopAndUpload } = useAnswerRecording(sessionId, audioRecordingStream, videoRecordingStream)
+  const { uploadStatus, recordingStartedAt, startRecording, stopAndUpload } = useAnswerRecording(sessionId, audioRecordingStream, videoRecordingStream)
 
   // 녹화 업로드가 끝나야 실제 제출을 부를 수 있어서(아래 pendingSubmit effect 주석
   // 참고), 수동 제출·타임아웃 제출 둘 다 "제출 의도"만 여기 적어두고 stopAndUpload 를
@@ -285,11 +285,11 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
       <InterviewSessionPage
         videoRef={videoRef}
         onExit={() => setIsExitRequested(true)}
-        // TODO(B-01-4): REC 표시(경과 시간)는 녹화 시작 시점을 노출하는 후속 작업 몫이다.
-        recordingElapsedSec={0}
+        recordingStartedAt={recordingStartedAt}
         interviewerStyle={options.interviewerStyle}
-        // TODO(B-01-4): 세션 전체 경과·제한 시간은 아직 이 이슈 범위가 아니다.
-        sessionElapsedSec={0}
+        sessionStartedAt={session.sessionStartedAt}
+        isSessionFinished={session.isFinished}
+        // 면접 전체 제한 시간은 없다 — 경과 시간만 표시한다.
         sessionLimitSec={null}
         deviceStatus={deviceStatus.status}
         deviceStatusMessage={deviceStatus.message}

@@ -11,9 +11,12 @@ import SessionSidePanel from './SessionSidePanel'
 
 type Props = {
   onExit?: () => void
-  recordingElapsedSec: number
+  /** 답변 녹화 시작 시각(epoch ms). 녹화 중이 아니면 null — REC 표시를 숨긴다. */
+  recordingStartedAt: number | null
   interviewerStyle: InterviewerStyle
-  sessionElapsedSec: number
+  /** 첫 질문 도착 시각(epoch ms). 면접 누적 시간의 기준이다. */
+  sessionStartedAt: number | null
+  isSessionFinished: boolean
   sessionLimitSec: number | null
 
   deviceStatus: DeviceStatus
@@ -49,9 +52,10 @@ type Props = {
  */
 export default function InterviewSessionPage({
   onExit,
-  recordingElapsedSec,
+  recordingStartedAt,
   interviewerStyle,
-  sessionElapsedSec,
+  sessionStartedAt,
+  isSessionFinished,
   sessionLimitSec,
   deviceStatus,
   deviceStatusMessage,
@@ -79,11 +83,12 @@ export default function InterviewSessionPage({
     <div className="flex min-h-screen min-w-5xl flex-col bg-neutral-50">
       <InterviewTopBar
         onExit={onExit}
-        recordingElapsedSec={recordingElapsedSec}
+        recordingStartedAt={recordingStartedAt}
         interviewerStyle={interviewerStyle}
         questionNumber={question.questionNumber}
         questionTotal={question.questionTotal}
-        sessionElapsedSec={sessionElapsedSec}
+        sessionStartedAt={sessionStartedAt}
+        isSessionFinished={isSessionFinished}
         sessionLimitSec={sessionLimitSec}
       />
 

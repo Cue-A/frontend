@@ -126,6 +126,7 @@ const MIN_WIDTH_PX = 1024
  */
 function LiveFullWidthPreview() {
   const [state, setState] = useState<PreviewState>(INITIAL_STATE)
+  const [previewStartedAt] = useState(() => Date.now())
   const videoRef = useRef<HTMLVideoElement | null>(null)
   // 아바타 입 모션 확인용: 켜면 말하는 것처럼 speakingIntensity 가 0~1 사이를 오간다 (이슈 #124).
   const [simulateSpeaking, setSimulateSpeaking] = useState(false)
@@ -251,9 +252,10 @@ function LiveFullWidthPreview() {
         <InterviewSessionPage
           videoRef={videoRef}
           onExit={() => {}}
-          recordingElapsedSec={13}
+          recordingStartedAt={previewStartedAt - 13_000}
           interviewerStyle={state.interviewerStyle}
-          sessionElapsedSec={324}
+          sessionStartedAt={previewStartedAt - 324_000}
+          isSessionFinished={false}
           sessionLimitSec={900}
           deviceStatus={state.deviceStatus}
           deviceStatusMessage={DEVICE_STATUS_MESSAGE[state.deviceStatus]}
