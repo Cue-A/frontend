@@ -12,7 +12,7 @@ type ToggleKey = Exclude<keyof DisplayOptions, 'printMono'>
 
 const TOGGLES: { key: ToggleKey; label: string }[] = [
   { key: 'showTimeline', label: '타임라인 마커 표시' },
-  { key: 'showImprovedAnswer', label: '개선 답변 예시 포함' },
+  { key: 'showImprovedAnswer', label: '답변 개선 방향 포함' },
   { key: 'showGaze', label: '시선 지표 포함' },
 ]
 
