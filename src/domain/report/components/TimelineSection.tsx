@@ -61,6 +61,23 @@ const AXIS_TOPIC: Record<TimelineAxis, string> = {
   gaze: '시선은',
 }
 
+/**
+ * 근거가 가리키는 재생 시각입니다. **그 답변 녹음 · 영상 기준 초 그대로**이고 문항 길이로 자르지 않습니다 — 되묻기 근거는
+ * 되묻기 답변 기준이라 원 질문 길이보다 클 수 있습니다. 영상 길이를 넘으면 답변 영상이 끝에 맞춥니다. (PR #173 리뷰)
+ * 마커 이름 · 근거 목록의 시각도 이 값을 씁니다.
+ */
+function seekSecondsOf(item: TimelineEvidence) {
+  return item.tStart ?? 0
+}
+
+/**
+ * 트랙에 찍는 자리(그 문항 구간 안의 초)입니다. 한 줄 트랙은 문항 길이를 이어 붙인 근사치라, 구간을 넘는 근거는 구간 끝에
+ * 찍습니다. 길이를 모르는 문항(`durationSec` null)은 구간이 0 이라 문항 시작에 찍힙니다.
+ */
+function trackSecondsOf(item: TimelineEvidence, segment: Segment) {
+  return Math.min(seekSecondsOf(item), segment.duration)
+}
+
 /** 근거가 비어 있는 이유. 분석 실패와 미사용은 다른 말입니다 (세부 점수와 같은 구분) */
 function missingAxisNotes(timeline: ReportTimeline): string[] {
   return (Object.keys(SCORE_AXIS_LABEL) as TimelineAxis[]).flatMap((axis) => {
@@ -95,8 +112,8 @@ function MarkerTrack({
 
         {segments.flatMap((segment) =>
           segment.evidence.map((item, index) => {
-            const at = Math.min(item.tStart ?? 0, segment.duration)
-            const left = ((segment.offset + at) / total) * 100
+            const at = seekSecondsOf(item)
+            const left = ((segment.offset + trackSecondsOf(item, segment)) / total) * 100
             const name = `Q${segment.questionNumber}${item.isReask ? ' 되묻기' : ''} ${formatDuration(at)} · ${
               SCORE_AXIS_LABEL[item.axis]
             } ${KIND_LABEL[item.kind]} — ${item.label}`
@@ -164,7 +181,7 @@ function EvidenceList({
   return (
     <ul className="flex flex-col gap-1.5 pl-1">
       {segment.evidence.map((item, index) => {
-        const at = Math.min(item.tStart ?? 0, segment.duration || (item.tStart ?? 0))
+        const at = seekSecondsOf(item)
         const time = formatDuration(at)
         // 문항 줄의 시각(트랙 기준)과 헷갈리지 않게 "그 답변 안의 시각" 이라고 붙입니다. 답변 영상의 재생 시각과 같습니다
         const where = item.isReask ? `되묻기 ${time}` : `답변 ${time}`

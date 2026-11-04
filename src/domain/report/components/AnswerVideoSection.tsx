@@ -1,5 +1,5 @@
 import { IconMicrophone } from '@tabler/icons-react'
-import { forwardRef, useEffect, useRef, useState, type ReactNode, type Ref, type SyntheticEvent } from 'react'
+import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode, type Ref, type SyntheticEvent } from 'react'
 
 import { toUserMessage } from '@/shared/api/errorMessage'
 import Button from '@/shared/ui/Button'
@@ -139,21 +139,21 @@ export default function AnswerVideoSection({ recordings, seek }: Props) {
   const current = items.find((item) => item.questionId === selectedId) ?? items[0] ?? null
   const failed = ready !== null && failedGeneration === ready.generation
 
-  const applyPending = (media: HTMLMediaElement | null) => {
-    if (!media || !pending || appliedKey.current === pending.key || media.readyState < 1) return
-    appliedKey.current = pending.key
-    media.currentTime = Math.min(pending.seconds, Number.isFinite(media.duration) ? media.duration : pending.seconds)
-    if (pending.play) media.play().catch(() => {})
-  }
+  /** 아직 옮기지 않은 자리로 옮깁니다. 영상 길이를 넘는 시각은 끝에 맞춥니다 */
+  const applyPending = useCallback(
+    (media: HTMLMediaElement | null) => {
+      if (!media || !pending || appliedKey.current === pending.key || media.readyState < 1) return
+      appliedKey.current = pending.key
+      media.currentTime = Math.min(pending.seconds, Number.isFinite(media.duration) ? media.duration : pending.seconds)
+      if (pending.play) media.play().catch(() => {})
+    },
+    [pending],
+  )
 
   // 같은 문항이면 요소가 그대로라 loadedmetadata 가 다시 오지 않습니다. 이미 준비된 요소면 여기서 옮깁니다
   useEffect(() => {
-    const media = mediaRef.current
-    if (!media || !pending || appliedKey.current === pending.key || media.readyState < 1) return
-    appliedKey.current = pending.key
-    media.currentTime = Math.min(pending.seconds, Number.isFinite(media.duration) ? media.duration : pending.seconds)
-    if (pending.play) media.play().catch(() => {})
-  }, [pending])
+    applyPending(mediaRef.current)
+  }, [applyPending])
 
   const handleReady = () => {
     refreshedFrom.current = null
@@ -171,8 +171,13 @@ export default function AnswerVideoSection({ recordings, seek }: Props) {
     if (refreshedFrom.current === ready.generation) return
     console.error('답변 영상 재생 실패 — 목록을 다시 받습니다 generation=%d', ready.generation)
     refreshedFrom.current = ready.generation
-    resumeKey.current -= 1
-    setPending({ seconds: resumeAt, play: false, key: resumeKey.current })
+    // 아직 옮기지 못한 자리(타임라인에서 누른 시각)가 있으면 그대로 둡니다. 새 요소가 준비되면 그 자리로 갑니다 —
+    // 덮어쓰면 처음 불러오다 실패한 경우 resumeAt 이 0 이라 누른 시각이 사라집니다 (PR #173 리뷰)
+    const waiting = pending !== null && appliedKey.current !== pending.key
+    if (!waiting) {
+      resumeKey.current -= 1
+      setPending({ seconds: resumeAt, play: false, key: resumeKey.current })
+    }
     recordings.refresh()
   }
 
@@ -204,6 +209,19 @@ export default function AnswerVideoSection({ recordings, seek }: Props) {
       <Notice
         title="영상 링크가 만료되었어요"
         detail="보안을 위해 재생 링크는 일정 시간이 지나면 만료돼요. 점수와 분석 내용은 그대로 확인할 수 있어요"
+        action={
+          <Button size="sm" onClick={retryLoad} className="mt-2">
+            다시 불러오기
+          </Button>
+        }
+      />
+    )
+  } else if (!current.videoUrl && !current.audioUrl) {
+    // 서명에 실패하면 둘 다 null 일 수 있습니다. src 없는 재생 컨트롤만 두면 오류도 안 나서 고장인지 알 수 없습니다
+    body = (
+      <Notice
+        title="이 문항은 재생할 녹화가 없어요"
+        detail="점수와 분석 내용은 그대로 확인할 수 있어요. 다시 불러오면 새 주소를 받아 와요"
         action={
           <Button size="sm" onClick={retryLoad} className="mt-2">
             다시 불러오기

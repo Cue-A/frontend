@@ -39,7 +39,9 @@ registerMock('GET', '/api/interviews/:sessionId/recordings', ({ sessionId }): In
     : [1, 2, 3, 4].map((questionNumber) => ({ questionId: `q${questionNumber}`, questionNumber, questionText: null }))
   // 시선을 안 쓴 회차는 카메라를 끈 면접입니다
   const withVideo = report?.axes.gaze?.status !== 'skipped'
-  const url = sessionId === EXPIRES_ONCE_SESSION && count === 1 ? EXPIRED_URL : SAMPLE_URL
+  const base = sessionId === EXPIRES_ONCE_SESSION && count === 1 ? EXPIRED_URL : SAMPLE_URL
+  // 실제 서버처럼 문항마다 주소가 다르게 합니다(같은 파일이어도). 문항을 바꾸면 새 요소로 불러옵니다
+  const urlOf = (questionId: string) => `${base}?q=${encodeURIComponent(questionId)}`
 
   const items = questions.map((question) => ({
     questionId: question.questionId,
@@ -47,8 +49,8 @@ registerMock('GET', '/api/interviews/:sessionId/recordings', ({ sessionId }): In
     type: 'QUESTION',
     questionText: question.questionText,
     questionAudioUrl: null,
-    answerAudioUrl: url,
-    answerVideoUrl: withVideo ? url : null,
+    answerAudioUrl: urlOf(question.questionId),
+    answerVideoUrl: withVideo ? urlOf(question.questionId) : null,
   }))
 
   return { sessionId, hasVideo: items.some((item) => item.answerVideoUrl !== null), items }
