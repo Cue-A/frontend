@@ -71,6 +71,11 @@ const ERROR_MESSAGE: Record<string, string> = {
   // ── 기업 — 관심 기업 등록 · 기업 상세 (Cue-A/backend#101). 없는 기업과 검증되지 않은 기업이 같은 코드입니다
   COMPANY_NOT_FOUND: '기업 정보를 찾을 수 없어요.',
 
+  // ── 연습 기록 폴더 (Cue-A/backend#97 · #98). 같은 이름은 화면이 먼저 막고, 다른 탭에서 만든 이름만 서버에서 걸립니다
+  FOLDER_NOT_FOUND: '폴더를 찾을 수 없어요. 새로고침한 뒤 다시 시도해 주세요.',
+  FOLDER_NAME_DUPLICATED: '같은 이름의 폴더가 이미 있어요.',
+  FOLDER_LIMIT_EXCEEDED: '폴더는 20개까지 만들 수 있어요.',
+
   // ── 면접 세션 ──────────────────────────────────────────
   SESSION_NOT_FOUND: '면접 세션을 찾을 수 없어요.',
   // 둘은 다시 시도해도 풀리지 않습니다 (#54 2-2). 새 면접으로 안내합니다.

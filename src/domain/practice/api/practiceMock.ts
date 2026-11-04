@@ -1,29 +1,38 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
+import type { PracticeReportStatus } from '../types/practice'
+
 import type {
   FolderListResponse,
   FolderResponse,
-  InterviewSessionListResponse,
-  InterviewSessionSummaryResponse,
+  PracticeRecordListResponse,
+  PracticeRecordResponse,
 } from './practiceResponse'
 
 /**
- * 연습 기록 목업입니다. **백엔드에 세션 목록 · 폴더 API 가 없어서** `interviews` · `folders` 를 `VITE_REAL_APIS` 에
- * 넣어도 이 API 들은 목업이 답합니다.
+ * 연습 기록 목업입니다. **백엔드 응답 모양 그대로** 돌려줍니다. `VITE_REAL_APIS` 에 `practice-records` · `folders` 를
+ * 넣으면 실제 서버로 갑니다.
  *
- * 숫자는 시안(전체 12 · 삼성전자 5 · 카카오 4 · 네이버 3 · 기타 0)에 맞췄습니다. 날짜는 홈 목업처럼 **오늘 기준**으로
- * 만듭니다 — 날짜를 박아 두면 "진행 중" 세션이 몇 달 전 것으로 보입니다.
+ * 숫자는 시안(삼성전자 5 · 카카오 4 · 네이버 3)에 맞췄습니다. 중단한 세션 하나를 넣어 두었지만 서버처럼 목록 · 개수에서
+ * 뺍니다. 날짜는 홈 목업처럼 **오늘 기준**으로 만듭니다 — 날짜를 박아 두면 "진행 중" 세션이 몇 달 전 것으로 보입니다.
  *
  * 저장은 메모리에만 합니다. 새로 만든 폴더는 새로고침하면 사라집니다.
  */
 
 const MAX_FOLDER_NAME_LENGTH = 50
+const MAX_FOLDER_COUNT = 20
 const DEFAULT_PAGE_SIZE = 10
 const MAX_PAGE_SIZE = 100
 
 type StoredFolder = { folderId: string; folderName: string; createdAt: string }
-type StoredSession = Omit<InterviewSessionSummaryResponse, 'createdAt'> & { daysAgo: number }
+type StoredSession = Omit<PracticeRecordResponse, 'createdAt' | 'folder' | 'report'> & {
+  daysAgo: number
+  folderId: string | null
+  /** 리포트를 맡겼으면 그 상태. 맡기지 않았으면 null */
+  reportStatus: PracticeReportStatus | null
+  totalScore: number | null
+}
 
 const FOLDER_SAMSUNG = '6f1c2a40-1b7e-4b8e-9a31-5d0c2e7a9b01'
 const FOLDER_KAKAO = '6f1c2a40-1b7e-4b8e-9a31-5d0c2e7a9b02'
@@ -37,11 +46,10 @@ const folders: StoredFolder[] = [
 
 function session(
   index: number,
-  fields: Omit<StoredSession, 'sessionId' | 'reportId'> & { hasReport?: boolean },
+  fields: Omit<StoredSession, 'sessionId' | 'reportStatus'> & { reportStatus?: PracticeReportStatus | null },
 ): StoredSession {
-  const { hasReport = fields.status === 'COMPLETED', ...rest } = fields
-  const id = String(index).padStart(2, '0')
-  return { ...rest, sessionId: `mock-practice-${id}`, reportId: hasReport ? `mock-practice-report-${id}` : null }
+  const { reportStatus = fields.status === 'COMPLETED' ? 'COMPLETED' : null, ...rest } = fields
+  return { ...rest, reportStatus, sessionId: `mock-practice-${String(index).padStart(2, '0')}` }
 }
 
 /** 최신순으로 적었습니다. `daysAgo` 는 오늘로부터 며칠 전에 시작했는지입니다 */
@@ -51,13 +59,16 @@ const sessions: StoredSession[] = [
   session(3, { companyName: '삼성전자', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 2, status: 'IN_PROGRESS', questionCount: 6, totalScore: null, folderId: FOLDER_SAMSUNG, daysAgo: 4 }),
   session(4, { companyName: '네이버', jobRole: '데이터 분석가', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 88, folderId: FOLDER_NAVER, daysAgo: 6 }),
   // 끝냈지만 분석 화면에서 나가 리포트를 맡기지 않은 세션입니다. "분석하기" 를 확인할 때 씁니다
-  session(5, { companyName: '카카오', jobRole: '백엔드 개발자', persona: 'PRESSURE', round: 2, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 8, hasReport: false }),
+  session(5, { companyName: '카카오', jobRole: '백엔드 개발자', persona: 'PRESSURE', round: 2, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 8, reportStatus: null }),
   session(6, { companyName: '삼성전자', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 71, folderId: FOLDER_SAMSUNG, daysAgo: 11 }),
-  // 중간에 그만둔 세션은 "전체" 탭에서만 보입니다
+  // 중간에 그만둔 세션입니다. 서버처럼 목록 · 개수에서 뺍니다
   session(7, { companyName: '네이버', jobRole: '서비스 기획자', persona: 'PRESSURE', round: 1, status: 'ABORTED', questionCount: 6, totalScore: null, folderId: FOLDER_NAVER, daysAgo: 13 }),
-  session(8, { companyName: '카카오', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 3, totalScore: 69, folderId: FOLDER_KAKAO, daysAgo: 16 }),
-  session(9, { companyName: '삼성전자', jobRole: '마케팅 직무', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 79, folderId: FOLDER_SAMSUNG, daysAgo: 20 }),
-  session(10, { companyName: '네이버', jobRole: '데이터 분석가', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 74, folderId: FOLDER_NAVER, daysAgo: 24 }),
+  // 분석 중인 리포트는 버튼 없이 "분석 중" 만 보입니다
+  session(8, { companyName: '카카오', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 3, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 16, reportStatus: 'PROCESSING' }),
+  // 일부 축만 분석된 리포트도 리포트로 갑니다
+  session(9, { companyName: '삼성전자', jobRole: '마케팅 직무', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 79, folderId: FOLDER_SAMSUNG, daysAgo: 20, reportStatus: 'PARTIAL' }),
+  // 분석이 실패한 리포트는 점수 없이 분석 중 화면으로 갑니다
+  session(10, { companyName: '네이버', jobRole: '데이터 분석가', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_NAVER, daysAgo: 24, reportStatus: 'FAILED' }),
   session(11, { companyName: '카카오', jobRole: '백엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 81, folderId: FOLDER_KAKAO, daysAgo: 29 }),
   session(12, { companyName: '삼성전자', jobRole: '프론트엔드 개발자', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 66, folderId: FOLDER_SAMSUNG, daysAgo: 35 }),
 ]
@@ -70,9 +81,21 @@ function startedAt(daysAgo: number): string {
   return date.toISOString()
 }
 
-function toResponse({ daysAgo, ...stored }: StoredSession): InterviewSessionSummaryResponse {
-  return { ...stored, createdAt: startedAt(daysAgo) }
+function toResponse({ daysAgo, folderId, reportStatus, totalScore, ...stored }: StoredSession): PracticeRecordResponse {
+  const folder = folders.find((item) => item.folderId === folderId)
+  const scored = reportStatus === 'COMPLETED' || reportStatus === 'PARTIAL'
+  return {
+    ...stored,
+    createdAt: startedAt(daysAgo),
+    folder: folder ? { folderId: folder.folderId, folderName: folder.folderName } : null,
+    report: reportStatus
+      ? { reportId: `${stored.sessionId}-report`, status: reportStatus, scoreTotal: scored ? totalScore : null }
+      : null,
+  }
 }
+
+/** 서버처럼 중단한 세션은 목록 · 개수 어디에도 넣지 않습니다 */
+const listed = () => sessions.filter((stored) => stored.status !== 'ABORTED')
 
 function parsePositiveInt(value: string | null): number | null {
   if (value === null || value === '') return null
@@ -85,18 +108,16 @@ function matchesKeyword(stored: StoredSession, keyword: string) {
   return [stored.companyName ?? '', stored.jobRole].some((text) => text.toLowerCase().includes(keyword))
 }
 
-const MISSING = '연습 기록 API 없음 — 세션 목록 · 폴더 컨트롤러가 백엔드에 없음 (경로 · 응답 모양 프론트 임시안)'
-
 registerMock(
   'GET',
-  '/api/interviews',
-  (_params, _body, query): InterviewSessionListResponse => {
+  '/api/practice-records',
+  (_params, _body, query): PracticeRecordListResponse => {
     const folderId = query.get('folderId')
-    const unfiled = query.get('unfiled') === 'true'
     const status = query.get('status')
     const keyword = (query.get('keyword') ?? '').trim().toLowerCase()
 
-    if (status !== null && status !== 'COMPLETED' && status !== 'IN_PROGRESS' && status !== 'ABORTED') {
+    // 서버 enum(PracticeRecordStatus)에 ABORTED 가 없어서 400 입니다
+    if (status !== null && status !== 'COMPLETED' && status !== 'IN_PROGRESS') {
       throw new ApiError('INVALID_REQUEST', `알 수 없는 상태입니다 (${status})`)
     }
 
@@ -106,9 +127,8 @@ registerMock(
     const page = pageParam === null || pageParam < 0 ? 0 : pageParam
     const size = sizeParam === null || sizeParam < 1 ? DEFAULT_PAGE_SIZE : Math.min(sizeParam, MAX_PAGE_SIZE)
 
-    const filtered = sessions
+    const filtered = listed()
       .filter((stored) => {
-        if (unfiled && stored.folderId !== null) return false
         if (folderId && stored.folderId !== folderId) return false
         if (status && stored.status !== status) return false
         return !keyword || matchesKeyword(stored, keyword)
@@ -116,18 +136,17 @@ registerMock(
       .sort((a, b) => a.daysAgo - b.daysAgo)
 
     return {
-      sessions: filtered.slice(page * size, page * size + size).map(toResponse),
+      records: filtered.slice(page * size, page * size + size).map(toResponse),
       page,
       size,
       totalElements: filtered.length,
       totalPages: Math.ceil(filtered.length / size),
     }
   },
-  { missingInBackend: MISSING },
 )
 
-function countIn(folderId: string | null) {
-  return sessions.filter((stored) => stored.folderId === folderId).length
+function countIn(folderId: string) {
+  return listed().filter((stored) => stored.folderId === folderId).length
 }
 
 function toFolderResponse(folder: StoredFolder): FolderResponse {
@@ -138,11 +157,9 @@ registerMock(
   'GET',
   '/api/folders',
   (): FolderListResponse => ({
-    totalSessionCount: sessions.length,
-    unfiledSessionCount: countIn(null),
+    totalCount: listed().length,
     folders: folders.map(toFolderResponse),
   }),
-  { missingInBackend: MISSING },
 )
 
 registerMock(
@@ -154,10 +171,16 @@ registerMock(
     if (!folderName || folderName.length > MAX_FOLDER_NAME_LENGTH) {
       throw new ApiError('INVALID_REQUEST', `폴더 이름은 1~${MAX_FOLDER_NAME_LENGTH}자입니다`)
     }
+    // 서버는 자른 이름 그대로 견줍니다 (FolderName.normalize)
+    if (folders.some((item) => item.folderName === folderName)) {
+      throw new ApiError('FOLDER_NAME_DUPLICATED', '같은 이름의 폴더가 이미 있습니다')
+    }
+    if (folders.length >= MAX_FOLDER_COUNT) {
+      throw new ApiError('FOLDER_LIMIT_EXCEEDED', `폴더는 ${MAX_FOLDER_COUNT}개까지 만들 수 있습니다`)
+    }
 
     const folder: StoredFolder = { folderId: crypto.randomUUID(), folderName, createdAt: new Date().toISOString() }
     folders.push(folder)
     return toFolderResponse(folder)
   },
-  { missingInBackend: MISSING },
 )

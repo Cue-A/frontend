@@ -61,7 +61,7 @@ type InterviewStartRequest = {
    *
    * **늘 싣습니다.** 서버는 이 필드가 없으면 기본값 90초로 저장하고, null 이 와야 "제한 없음"으로 저장합니다.
    * 빼먹으면 "제한 없음"을 골라도 90초가 되어서 생략할 수 있는 칸으로 두지 않습니다. 그 밖의 값은 `INVALID_REQUEST` 입니다.
-   * 이 필드를 모르는 서버(배포 서버가 backend#100 전)는 그냥 버립니다
+   * 이 필드를 모르는 서버(backend#100 전)는 그냥 버립니다
    */
   answerTimeLimitSec: number | null
   /**
@@ -121,7 +121,7 @@ export type CreatedSession = {
    * 서버에 실제로 저장된 세션 옵션입니다. 요청값이 아니라 저장값이라 서버와 어긋나지 않습니다. (Cue-A/backend#100)
    * 면접관 스타일은 요청(`FRIENDLY`)과 달리 소문자(`friendly`)로 옵니다. 답변 시간은 "제한 없음"이면 null 입니다.
    *
-   * 배포 서버가 backend#100 전이면 이 셋이 없습니다. 그때는 요청값을 대신 씁니다 (`savedOptionsOf`)
+   * backend#100 전 서버면 이 셋이 없습니다. 그때는 요청값을 대신 씁니다 (`savedOptionsOf`)
    */
   hideQuestionText?: boolean
   interviewerStyle?: InterviewOptions['interviewerStyle']
@@ -175,7 +175,6 @@ export async function createSession(setup: SessionSetup, { sourceSessionId }: { 
  * 저장값이라 서버와 같아서, 같은 탭에서는 조회 API 를 부르지 않는다. 남긴 값이 없을 때만(새로 연 탭 · 다른 기기)
  * `GET /api/interviews/{sessionId}` 로 서버에 저장된 값을 읽고, 이 탭에 남겨 둔다. (Cue-A/backend#100 · 이슈 #161)
  *
- * 조회 API 는 백엔드 dev 에 머지됐지만 배포 서버에는 아직 없다. 그동안은 목업(`missingInBackend`)이 답한다.
  * 응답의 면접관 스타일은 소문자(friendly · pressure), 답변 시간은 "제한 없음"이면 null 이다. 답변 시간을 저장하기
  * 전에 만든 과거 세션도 null 로 온다 — 실제 설정값을 알 수 없어서 서버가 "제한 없음"으로 본다.
  */
