@@ -8,14 +8,13 @@ import { useMe } from '../hooks/useMe'
 import MyPageHeader from './MyPageHeader'
 
 /**
- * 시안의 여섯 메뉴입니다. "관심 질문" 은 기록(REC) 도메인 몫이라 그 화면이 생기기 전까지
- * `to` 를 비워 "준비 중" 으로 그립니다 — 아이콘 레일과 같은 규칙입니다.
+ * 마이페이지 메뉴입니다. 시안의 여섯 메뉴 중 "관심 질문" 은 뺐습니다 — 질문 은행의 북마크(내 보관함 > 질문 은행)와 같은
+ * 기능이라, 따로 만들면 같은 목록이 두 곳에 생깁니다. `to` 가 없는 메뉴는 "준비 중" 으로 그립니다(아이콘 레일과 같은 규칙).
  */
 const MENU: { label: string; to?: string }[] = [
   { label: '프로필', to: ROUTES.MYPAGE_PROFILE },
   { label: '나만의 명함 생성', to: ROUTES.MYPAGE_BUSINESS_CARD },
   { label: '관심 기업', to: ROUTES.MYPAGE_INTERESTS },
-  { label: '관심 질문' },
   { label: '계정 설정', to: ROUTES.MYPAGE_ACCOUNT },
   { label: '알림 설정', to: ROUTES.MYPAGE_NOTIFICATIONS },
 ]
@@ -26,8 +25,8 @@ const ROW_CLASS = 'flex items-center justify-between rounded-sm bg-neutral-0 px-
 /**
  * 마이페이지 메뉴 목록입니다. (마이페이지 시안)
  *
- * "관심 질문" 만 기록(REC) 도메인 화면이 아직 없어 준비 중입니다. 나머지는 지금 목업으로 동작합니다 — 관심 기업은
- * 백엔드 dev 에만 있고(배포 전), 프로필 수정 · 알림 설정 · 명함은 백엔드 시작 전입니다. (docs/90-open-questions.md Q16)
+ * 관심 기업은 실제 서버로 동작합니다. 프로필 수정 · 알림 설정 · 명함은 백엔드 시작 전이라 목업이 답합니다.
+ * (docs/90-open-questions.md Q16)
  */
 export default function MyPage() {
   const me = useMe()
