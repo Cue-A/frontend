@@ -346,6 +346,11 @@
   }
 }
 
+/* 면접 진행 화면 배경: 아바타 뒤 중심에서 가장자리로 번지는 방사형. 색은 stage 토큰을 따라가서 다크 전환에도 같이 바뀐다. */
+@utility bg-stage-gradient {
+  background-image: radial-gradient(ellipse at 50% 42%, var(--color-stage-glow), var(--color-stage-bg) 70%);
+}
+
 /**
  * 면접 진행 화면 다크 버전 (비교용). `InterviewSessionPage` 루트에 `data-stage-theme="dark"` 가 붙으면 위 `stage-*`
  * 값만 덮어쓴다 — 컴포넌트는 같은 클래스를 쓰고 색만 바뀐다. 기본(라이트)과 어느 쪽으로 갈지 정해지면 안 쓰는 쪽을

@@ -99,7 +99,7 @@ export default function InterviewSessionPage({
     // 좁은 뷰포트는 시안 검증 대상이 아니다 — 요소가 겹치는 대신 가로 스크롤이 생기게 한다.
     <div
       data-stage-theme={stageTheme}
-      className="flex min-h-screen min-w-5xl flex-col bg-stage-bg bg-[radial-gradient(ellipse_at_50%_42%,var(--color-stage-glow),var(--color-stage-bg)_70%)]"
+      className="flex min-h-screen min-w-5xl flex-col bg-stage-bg bg-stage-gradient"
     >
       <InterviewTopBar
         onExit={onExit}

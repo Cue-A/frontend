@@ -26,6 +26,7 @@ const ROUND_BUTTON = 'flex h-13 w-13 items-center justify-center rounded-full bo
 
 /**
  * 마이크 · 카메라 토글 자리입니다. **지금은 UI 만 있고 눌러도 동작하지 않습니다(비활성).**
+ * 이유는 title 이 아니라 독 아래 글로 적는다 — 비활성 버튼에는 툴팁이 뜨지 않는다 (docs/01-conventions.md).
  * 면접 중 마이크를 끄면 답변 녹음이 무음이 되어 STT 가 실패하고, 카메라를 끄면 영상 분석 근거가 빠집니다.
  * 동작시키려면 경고 · 제출 차단 · 서버 처리 규칙이 먼저 필요하다.
  */
@@ -35,7 +36,6 @@ function PlaceholderToggle({ label, children }: { label: string; children: React
       type="button"
       disabled
       aria-label={`${label} (준비 중)`}
-      title={`${label} — 준비 중`}
       className={`${ROUND_BUTTON} cursor-not-allowed bg-stage-surface-hover/80 text-stage-text opacity-50`}
     >
       {children}
@@ -122,6 +122,8 @@ export default function AnswerControlBar({
           </svg>
         </button>
       </div>
+
+      <p className="text-body-sm text-stage-muted">마이크 · 카메라 켜고 끄기는 아직 준비 중이에요</p>
     </div>
   )
 }
