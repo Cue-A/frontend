@@ -220,3 +220,21 @@ export function submitAnswer(sessionId: string, submission: AnswerSubmission) {
 export function abortSession(sessionId: string) {
   return api.post<void>(`/api/interviews/${sessionId}/abort`)
 }
+
+/**
+ * 면접 중 질문 북마크. `PUT /api/interviews/{sessionId}/questions/{questionId}/bookmark`
+ *
+ * 버튼은 누를 때마다 바뀌는 토글이지만 서버에는 **바뀔 상태**를 보냅니다. 이미 그 상태면 아무것도 바꾸지 않고 성공입니다.
+ * `false` 로 빼면 그 질문에 쓴 메모도 함께 지워집니다. 되묻기(`REASK`) 질문도 담을 수 있습니다.
+ * 끝난 세션은 `SESSION_ENDED` · 중단된 세션은 `SESSION_ABORTED`(409) 입니다.
+ *
+ * **백엔드에 아직 배포되지 않았습니다.** 구현은 Cue-A/backend#118(`feat/117-question-bookmark`, dev 로 리뷰 중)이고 경로 · 본문 ·
+ * 응답 · 에러 코드가 이 함수와 같습니다. 머지 · 배포되면 `sessionMock.ts` 의 `missingInBackend` 를 지웁니다. 그 전까지는 목업이 답합니다.
+ * 질문 push 에 북마크 여부가 없어서 면접 중 새로고침하면 아이콘이 비어 보이는 건 서버도 같은 한계로 알고 있습니다(backend#118).
+ */
+export function setQuestionBookmark(sessionId: string, questionId: string, bookmarked: boolean) {
+  return api.put<{ bookmarked: boolean }>(
+    `/api/interviews/${encodeURIComponent(sessionId)}/questions/${encodeURIComponent(questionId)}/bookmark`,
+    { bookmarked },
+  )
+}
