@@ -1,12 +1,17 @@
-import { IconFileTypePdf, IconPhoto } from '@tabler/icons-react'
+import { IconFileTypePdf, IconPhoto, IconShare } from '@tabler/icons-react'
 
 import Button from '@/shared/ui/Button'
 
 import type { ReportExport } from '../hooks/useReportExport'
+import type { ReportShare } from '../hooks/useReportShare'
+
+import ReportShareDialog from './ReportShareDialog'
 
 type Props = {
   /** 이미지 · PDF 저장. `ReportPage` 가 `useReportExport` 로 만들어 넘깁니다 */
   exporter: ReportExport
+  /** 공유하기 창. `ReportPage` 가 `useReportShare` 로 만들어 넘깁니다 */
+  share: ReportShare
 }
 
 /**
@@ -20,15 +25,13 @@ type Props = {
  *
  * 이 줄은 저장 대상이 아니라 판 바깥에 있고, 인쇄에서도 뺍니다.
  *
- * `공유하기` 는 공유 링크를 만들어주는 API 가 있어야 해서 아직 비활성입니다.
- * 못 누르는 이유는 툴팁이 아니라 글로 적습니다 (이슈 #32).
+ * - `공유하기` — 창을 열어 이미지로 공유하거나 링크를 복사합니다(`ReportShareDialog`). 공유 링크 API 가 없어 링크는 목업이고,
+ *   창 안에 "준비 중" 으로 적습니다 (이슈 #32)
  */
-export default function ReportDocActions({ exporter }: Props) {
+export default function ReportDocActions({ exporter, share }: Props) {
   return (
     <div className="flex flex-col items-end gap-2 print:hidden">
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <p className="text-body-sm text-neutral-400">공유 링크는 아직 준비 중이에요</p>
-
         <Button size="sm" onClick={exporter.saveImage} disabled={exporter.savingImage}>
           <IconPhoto size={16} stroke={2} aria-hidden />
           {exporter.savingImage ? '이미지 만드는 중…' : '이미지로 저장'}
@@ -39,7 +42,8 @@ export default function ReportDocActions({ exporter }: Props) {
           PDF 내보내기
         </Button>
 
-        <Button size="sm" disabled>
+        <Button size="sm" onClick={share.open}>
+          <IconShare size={16} stroke={2} aria-hidden />
           공유하기
         </Button>
       </div>
@@ -49,6 +53,8 @@ export default function ReportDocActions({ exporter }: Props) {
           {exporter.error}
         </p>
       )}
+
+      {share.isOpen && <ReportShareDialog share={share} />}
     </div>
   )
 }
