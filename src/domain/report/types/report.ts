@@ -164,7 +164,7 @@ export type ScoreDelta = {
   diff: number
 }
 
-/** 개선 답변 예시. 한 질문에 대해서만 옵니다. */
+/** 답변 개선 방향. 한 질문에 대해서만 옵니다. */
 export type ImprovedAnswer = {
   turnTitle: string
   myAnswer: string
