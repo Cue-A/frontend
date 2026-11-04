@@ -9,6 +9,8 @@ import type { ReportTimeline, TimelineAxis, TimelineEvidence } from '../types/ti
 type Props = {
   turns: TurnFlow[]
   timeline: UseReportTimelineResult
+  /** 리포트 옵션 "타임라인 마커 표시". 끄면 마커 트랙만 빼고 문항 목록 · 근거는 그대로 둡니다 */
+  showMarkers: boolean
   /**
    * 답변 영상의 그 문항 · 그 시각으로 옮깁니다. 영상 목록을 아직 못 받았거나 못 받으면 비웁니다 — 그때는 마커를 누를 수 없고
    * "구간 보기" 도 그리지 않습니다.
@@ -82,8 +84,8 @@ function trackSecondsOf(item: TimelineEvidence, segment: Segment) {
 function missingAxisNotes(timeline: ReportTimeline): string[] {
   return (Object.keys(SCORE_AXIS_LABEL) as TimelineAxis[]).flatMap((axis) => {
     const status = timeline.axes[axis]
-    if (status === 'failed') return [`${AXIS_TOPIC[axis]} 분석하지 못해서 마커가 없어요`]
-    if (status === 'skipped') return [`${AXIS_TOPIC[axis]} 이번 면접에서 쓰지 않아 마커가 없어요`]
+    if (status === 'failed') return [`${AXIS_TOPIC[axis]} 분석하지 못해서 근거가 없어요`]
+    if (status === 'skipped') return [`${AXIS_TOPIC[axis]} 이번 면접에서 쓰지 않아 근거가 없어요`]
     return []
   })
 }
@@ -224,14 +226,24 @@ function EvidenceList({
  *
  * 트랙의 시각은 문항 답변을 차례로 이은 길이입니다. 면접 전체 영상이 없어서, 실제로는 문항별 영상 안의 시각으로 옮깁니다.
  * 타임라인을 못 받으면 지금처럼 문항 제목 · 점수만 보여주고 마커와 "구간 보기" 를 뺍니다.
+ * 리포트 옵션 "타임라인 마커 표시" 를 끄면 마커 트랙만 빠집니다(`showMarkers`).
  */
-export default function TimelineSection({ turns, timeline, onSeek }: Props) {
+export default function TimelineSection({ turns, timeline, showMarkers, onSeek }: Props) {
   if (turns.length === 0) return null
 
   const ready = timeline.status === 'ready' ? timeline.timeline : null
   const track = ready ? toSegments(ready) : null
-  const hasMarkers = track !== null && track.total > 0 && track.segments.some((segment) => segment.evidence.length > 0)
+  const hasMarkers =
+    showMarkers && track !== null && track.total > 0 && track.segments.some((segment) => segment.evidence.length > 0)
   const notes = ready ? missingAxisNotes(ready) : []
+  const hasEvidence = track !== null && track.segments.some((segment) => segment.evidence.length > 0)
+  const subtitle = !hasEvidence
+    ? '질문별로 어느 구간에서 무슨 일이 있었는지 보여줍니다'
+    : !onSeek
+      ? '근거마다 몇 분 몇 초에 무슨 일이 있었는지 보여줘요'
+      : hasMarkers
+        ? '근거마다 몇 분 몇 초에 무슨 일이 있었는지 보여줘요. 마커나 시각을 누르면 그 구간의 답변 영상으로 이동해요'
+        : '근거마다 몇 분 몇 초에 무슨 일이 있었는지 보여줘요. 시각을 누르면 그 구간의 답변 영상으로 이동해요'
   const segmentOf = (turn: TurnFlow) => track?.segments.find((segment) => segment.questionNumber === turn.turnId)
 
   return (
@@ -240,9 +252,7 @@ export default function TimelineSection({ turns, timeline, onSeek }: Props) {
         <div className="flex flex-col gap-1">
           <h2 className="text-h2 text-neutral-900">XAI 타임라인</h2>
           <p className="text-body-sm text-neutral-500">
-            {hasMarkers && onSeek
-              ? '근거마다 몇 분 몇 초에 무슨 일이 있었는지 보여줘요. 마커나 시각을 누르면 그 구간의 답변 영상으로 이동해요'
-              : '질문별로 어느 구간에서 무슨 일이 있었는지 보여줍니다'}
+            {subtitle}
           </p>
           {notes.map((note) => (
             <p key={note} className="text-body-sm text-neutral-400">

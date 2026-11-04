@@ -67,6 +67,8 @@ export default function ReportPage() {
   // 타임라인의 마커 · "구간 보기": 답변 영상을 그 문항 · 시각으로 옮기고 영상이 보이게 올립니다
   const recordingIds = recordings.status === 'ready' ? recordings.recordings.items.map((item) => item.questionId) : null
   const canSeek = recordingIds !== null && recordingIds.length > 0
+  const hasTimelineMarkers =
+    timeline.status === 'ready' && timeline.timeline.questions.some((question) => question.evidence.length > 0)
   const handleSeek = (questionId: string, seconds: number, fallbackQuestionId: string) => {
     if (!recordingIds || !data) return
     const reportId = data.reportId
@@ -161,7 +163,8 @@ export default function ReportPage() {
             options={options}
             onChange={setOptions}
             available={{
-              showTimeline: data.summary.turns.length > 0,
+              // 마커를 그릴 근거가 있을 때만 토글을 둡니다. 근거가 없으면 눌러도 바뀌는 게 없습니다
+              showTimelineMarkers: hasTimelineMarkers,
               showImprovedAnswer: data.improvedAnswer !== null,
               showGaze: data.metrics.some((metric) => metric.key === 'gaze'),
             }}
@@ -224,9 +227,12 @@ export default function ReportPage() {
           </div>
         </ExportExclude>
 
-        {options.showTimeline && (
-          <TimelineSection turns={data.summary.turns} timeline={timeline} onSeek={canSeek ? handleSeek : undefined} />
-        )}
+        <TimelineSection
+          turns={data.summary.turns}
+          timeline={timeline}
+          showMarkers={options.showTimelineMarkers}
+          onSeek={canSeek ? handleSeek : undefined}
+        />
 
         {options.showImprovedAnswer && data.improvedAnswer && (
           <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
