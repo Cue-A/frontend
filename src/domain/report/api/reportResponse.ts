@@ -542,7 +542,7 @@ function toHighlights(
 }
 
 /**
- * 개선 답변 예시입니다. 화면은 한 문항만 보여주므로 첫 번째 것을 씁니다.
+ * 답변 개선 방향입니다. 화면은 한 문항만 보여주므로 첫 번째 것을 씁니다.
  * 백엔드는 내용 점수가 낮은 문항을 최대 2개 보내고, 없으면 빈 배열입니다 — 그때는 절이 사라집니다.
  */
 function toImprovedAnswer(detail: ReportDetailResponse, questions: QuestionResultResponse[]): ImprovedAnswer | null {

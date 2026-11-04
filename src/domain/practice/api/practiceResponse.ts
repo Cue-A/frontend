@@ -1,41 +1,37 @@
-import type { PracticeFolder, PracticeFolders, PracticePage, PracticeSession } from '../types/practice'
+import type { PracticeFolder, PracticeFolders, PracticePage, PracticeReportStatus, PracticeSession } from '../types/practice'
 
 /**
- * 연습 기록 서버 응답 모양입니다. **백엔드에 아직 없는 API 라 프론트가 정한 임시안입니다.**
+ * 연습 기록 서버 응답 모양입니다. (Cue-A/backend #92 `PracticeRecordListResponse` · #97 `FolderListResponse`)
  *
- * 필드는 백엔드 엔티티(`InterviewSession` · `Folder`)의 이름을 따랐습니다. 백엔드가 만들 때 그대로 쓰거나,
- * 바뀌면 이 파일과 변환 함수만 고치면 됩니다.
- *
- * **세션 테이블에 그대로 있지 않은 값**은 백엔드가 계산해서 내려줘야 합니다. 요청할 때 이 셋을 따로 적습니다.
- * - `round` — `retry_of_session_id` 를 거슬러 올라가 센 회차
- * - `reportId` · `totalScore` — 그 세션의 리포트를 붙여서(join) 꺼낸 값
- *
- * 화면이 쓰지 않는 값(끝난 시각 등)은 넣지 않았습니다. 필요해지면 그때 더합니다.
+ * 화면 타입(`types/practice.ts`)과 따로 둡니다. 서버 필드가 바뀌면 이 파일과 변환 함수만 고칩니다.
  */
 
-/** `GET /api/interviews` 목록 한 줄 */
-export type InterviewSessionSummaryResponse = {
+/** `GET /api/practice-records` 목록 한 줄 */
+export type PracticeRecordResponse = {
   sessionId: string
-  /** 회사 미선택(인재상 직접 입력)이면 null — `session.company_id` 가 nullable */
+  /** 회사를 고르지 않았으면 null */
   companyName: string | null
   jobRole: string
   persona: 'FRIENDLY' | 'PRESSURE'
-  /** 회차. 루트 세션(`retry_of_session_id` 가 null)이 1 입니다. **백엔드 계산 값** */
-  round: number
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED'
+  /** 고른 문항 수. 되묻기는 세지 않습니다 */
   questionCount: number
+  /** 서버 enum 에는 `ABORTED` 도 있지만, 중단된 세션은 목록에서 빼고 보냅니다 */
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED'
+  /** 회차. 1부터이고 중단된 재면접은 세지 않습니다 */
+  round: number
   createdAt: string
-  folderId: string | null
-  /** 리포트를 등록하지 않았으면 null. **리포트 조인 값** */
-  reportId: string | null
-  /** 리포트 종합 점수. 분석이 안 끝났거나 실패했으면 null. **리포트 조인 값** */
-  totalScore: number | null
+  /** 들어 있는 폴더. 폴더에 넣지 않았으면 null */
+  folder: { folderId: string; folderName: string } | null
+  /** 리포트 요약. 리포트를 요청하지 않았으면 null */
+  report: { reportId: string; status: PracticeReportStatus; scoreTotal: number | null } | null
 }
 
-export type InterviewSessionListResponse = {
-  sessions: InterviewSessionSummaryResponse[]
+export type PracticeRecordListResponse = {
+  records: PracticeRecordResponse[]
+  /** 0 부터 */
   page: number
   size: number
+  /** 필터를 적용한 전체 개수 */
   totalElements: number
   totalPages: number
 }
@@ -43,18 +39,27 @@ export type InterviewSessionListResponse = {
 export type FolderResponse = {
   folderId: string
   folderName: string
+  /** 이 폴더의 세션 수. 회차마다 하나로 세고 중단된 세션은 세지 않습니다 */
   sessionCount: number
   createdAt: string
 }
 
 /** `GET /api/folders` */
 export type FolderListResponse = {
-  totalSessionCount: number
-  unfiledSessionCount: number
+  /** 「전체」 카드의 세션 수. 연습 기록 목록을 필터 없이 불렀을 때의 `totalElements` 와 같습니다 */
+  totalCount: number
+  /** 만든 순서(오래된 것부터). 폴더가 없으면 빈 배열 */
   folders: FolderResponse[]
 }
 
-export function toPracticeSession(response: InterviewSessionSummaryResponse): PracticeSession {
+/** 리포트 화면이 그릴 수 있는 상태입니다. 분석 중 · 실패한 리포트는 분석 중 화면이 맡습니다 */
+function isReadyReport(status: PracticeReportStatus) {
+  return status === 'COMPLETED' || status === 'PARTIAL'
+}
+
+export function toPracticeSession(response: PracticeRecordResponse): PracticeSession {
+  const report = response.report
+  const ready = report !== null && isReadyReport(report.status)
   return {
     sessionId: response.sessionId,
     companyName: response.companyName,
@@ -64,14 +69,15 @@ export function toPracticeSession(response: InterviewSessionSummaryResponse): Pr
     status: response.status,
     questionCount: response.questionCount,
     startedAt: response.createdAt,
-    reportId: response.reportId,
-    totalScore: response.totalScore,
+    reportStatus: report?.status ?? null,
+    reportId: ready ? report.reportId : null,
+    totalScore: ready ? (report.scoreTotal ?? null) : null,
   }
 }
 
-export function toPracticePage(response: InterviewSessionListResponse): PracticePage {
+export function toPracticePage(response: PracticeRecordListResponse): PracticePage {
   return {
-    sessions: response.sessions.map(toPracticeSession),
+    sessions: response.records.map(toPracticeSession),
     page: response.page,
     size: response.size,
     totalElements: response.totalElements,
@@ -85,8 +91,7 @@ export function toPracticeFolder(response: FolderResponse): PracticeFolder {
 
 export function toPracticeFolders(response: FolderListResponse): PracticeFolders {
   return {
-    totalCount: response.totalSessionCount,
-    unfiledCount: response.unfiledSessionCount,
+    totalCount: response.totalCount,
     folders: response.folders.map(toPracticeFolder),
   }
 }

@@ -201,7 +201,7 @@ const GAZE_SKIPPED: AxisResponse = {
   evidence: [],
 }
 
-/** 개선 답변 예시. 백엔드는 내용 점수가 낮은 문항을 최대 2개 보냅니다. 화면은 첫 번째만 씁니다 */
+/** 답변 개선 방향. 백엔드는 내용 점수가 낮은 문항을 최대 2개 보냅니다. 화면은 첫 번째만 씁니다 */
 const IMPROVED_ANSWERS: ReportDetailResponse['improvedAnswers'] = [
   {
     questionId: 'q3',
@@ -316,8 +316,8 @@ function withoutSummary(detail: ReportDetailResponse): ReportDetailResponse {
 }
 
 /**
- * **지금 백엔드 응답 그대로**인 회차입니다. 한 줄 총평 · 문항 코멘트 키가 없고, 개선 답변 예시도 빈 배열입니다.
- * 총평 칸 · 흐름의 코멘트 줄 · 개선 답변 절과 토글이 모두 사라지는지 이 회차로 봅니다.
+ * **지금 백엔드 응답 그대로**인 회차입니다. 한 줄 총평 · 문항 코멘트 키가 없고, 답변 개선 방향도 빈 배열입니다.
+ * 총평 칸 · 흐름의 코멘트 줄 · 답변 개선 방향 절과 토글이 모두 사라지는지 이 회차로 봅니다.
  */
 const NO_EXTRAS: ReportDetailResponse = {
   ...withoutSummary(LATEST),

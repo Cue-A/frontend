@@ -26,11 +26,11 @@ import SummarySection from './SummarySection'
 import TimelineSection from './TimelineSection'
 
 /**
- * 면접 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
+ * 결과 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
  *
  * 시안 순서대로 위에서 아래로 한 줄로 쌓습니다.
  * 유틸리티(인쇄 · 공유) → 제목 · 종합 점수 → 리포트 옵션 → 안내 →
- * 이번 면접 요약 → (인재상 코멘트) → 세부 점수 → 답변 영상 → XAI 타임라인 → 개선 답변 예시
+ * 이번 면접 요약 → (인재상 코멘트) → 세부 점수 → 답변 영상 → XAI 타임라인 → 답변 개선 방향
  * → 다음 단계
  *
  * 인재상 코멘트는 기업을 고른 면접에서만 나옵니다. 시안에 없던 자리라 요약 바로 아래에 붙였습니다.
@@ -80,7 +80,7 @@ export default function ReportPage() {
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
   // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
   const sheetRef = useRef<HTMLDivElement | null>(null)
-  const exporter = useReportExport(sheetRef, data ? reportFileBaseName(data) : '큐앤에이_리포트')
+  const exporter = useReportExport(sheetRef, data ? reportFileBaseName(data) : '큐앤에이_결과리포트')
 
   if (isLoading) {
     return (

@@ -21,7 +21,7 @@ type State =
   | { status: 'error'; error: ApiError }
   | { status: 'ready'; folders: PracticeFolders }
 
-/** 연습 기록 위쪽의 폴더 카드(전체 · 폴더들 · 기타)와 그 숫자입니다. (`GET /api/folders` — 백엔드에 없어 목업이 답합니다) */
+/** 연습 기록 위쪽의 폴더 카드(전체 · 폴더들)와 그 숫자입니다. (`GET /api/folders`) */
 export function usePracticeFolders(): UsePracticeFoldersResult {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)

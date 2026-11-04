@@ -5,7 +5,7 @@ import type { ReportComparisonResponse } from './reportComparisonApi'
 import { MOCK_REPORT_IDS } from './reportMock'
 
 /**
- * 회차 비교 목업입니다. **백엔드에 아직 없어서** `reports` 를 `VITE_REAL_APIS` 에 넣어도 목업이 답합니다.
+ * 회차 비교 목업입니다. 백엔드 응답 모양 그대로이고, `reports` 를 `VITE_REAL_APIS` 에 넣으면 실제 서버로 갑니다.
  *
  * 기준 리포트 id 로 경우를 고릅니다. 성장 관리 목업(`growth/api/growthMock.ts`)이 시나리오마다 아래 id 를 "가장 최근
  * 리포트" 로 내려줍니다 — 도메인끼리 api 를 서로 가져다 쓰지 않는 규칙이라 id 는 양쪽에 같은 글자로 적어 둡니다.
@@ -240,5 +240,4 @@ registerMock(
         return fiveRounds(reportId)
     }
   },
-  { missingInBackend: '회차 비교 API 배포 전 — Cue-A/backend#104 머지 · 배포되면 이 옵션을 지웁니다' },
 )

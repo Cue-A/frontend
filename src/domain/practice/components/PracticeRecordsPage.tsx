@@ -31,8 +31,8 @@ const SEARCH_DELAY_MS = 300
  * 시안에는 아이콘 레일 옆에 "내 보관함" 두 번째 패널이 붙어 있지만, 자소서 · 포트폴리오처럼 패널 없이 사이드바의
  * 하위 메뉴(SideNav)로 대신하고 본문을 1248px 로 묶어 가운데에 둡니다. 상단 줄(현재 위치 · 알림 · 프로필)도 같습니다.
  *
- * **백엔드에 세션 목록 · 폴더 API 가 없어서 목업으로만 동작합니다** (practiceApi.ts). 세션을 폴더에 넣고 빼는 기능은
- * 시안에 없어 아직 만들지 않았습니다 — 새 폴더는 만들 수 있지만 지금은 빈 폴더로 남습니다.
+ * 목록은 `GET /api/practice-records`, 폴더는 `GET · POST /api/folders` 입니다 (practiceApi.ts). 세션을 폴더에 넣고 빼는
+ * 기능은 시안에 없어 아직 만들지 않았습니다 — 새 폴더는 만들 수 있지만 지금은 빈 폴더로 남습니다.
  */
 export default function PracticeRecordsPage() {
   const folders = usePracticeFolders()
@@ -126,7 +126,8 @@ export default function PracticeRecordsPage() {
 
       {creatingFolder && folders.status === 'ready' && (
         <FolderCreateDialog
-          // "전체" · "기타" 는 늘 있는 카드라 같은 이름의 폴더를 만들면 카드 줄에서 구분할 수 없습니다.
+          // "전체" 는 늘 있는 카드라 같은 이름의 폴더를 만들면 카드 줄에서 구분할 수 없습니다. "기타" 카드는 지금 숨겼지만
+          // 폴더 이동을 만들 때 다시 넣을 자리라(docs/90 Q17) 이름을 미리 막아 둡니다.
           existingNames={['전체', '기타', ...folders.folders.folders.map((item) => item.name)]}
           onCreated={handleFolderCreated}
           onClose={() => setCreatingFolder(false)}

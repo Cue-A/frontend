@@ -1,10 +1,10 @@
-import { IconArchive, IconFolder, IconLayoutGrid, IconPlus } from '@tabler/icons-react'
+import { IconFolder, IconLayoutGrid, IconPlus } from '@tabler/icons-react'
 import { useId } from 'react'
 
 import Button from '@/shared/ui/Button'
 
 import type { UsePracticeFoldersResult } from '../hooks/usePracticeFolders'
-import { ALL_FOLDERS, UNFILED, type FolderSelection } from '../types/practice'
+import { ALL_FOLDERS, type FolderSelection } from '../types/practice'
 
 type Props = {
   folders: UsePracticeFoldersResult
@@ -27,12 +27,12 @@ const CARD_BASE =
 /**
  * 연습 기록 위쪽의 폴더 카드 줄입니다. (연습 기록 시안 folder-row)
  *
- * **전체 · 내 폴더들 · 기타** 순서입니다. "기타" 는 사용자가 만든 폴더가 아니라 **폴더에 넣지 않은 세션**을 모은
- * 칸입니다 — 백엔드는 폴더를 지워도 세션을 지우지 않고 "폴더 없음" 으로 남기는데(`session.folder_id` null), 그 세션들이
- * 갈 곳입니다. 시안에서도 기타만 아이콘이 달라서 그렇게 읽었습니다.
+ * **전체 · 내 폴더들** 순서입니다. 시안의 "기타"(폴더에 넣지 않은 세션) 카드는 아직 두지 않습니다 — 연습 기록 API 에
+ * "폴더에 넣지 않은 기록만" 거르는 조건과 그 개수가 없고, 폴더로 옮기는 화면도 없어서 지금은 기타가 전체와 같습니다.
+ * 폴더 이동 화면을 만들 때 백엔드에 필터를 요청하고 다시 넣습니다. (이슈 #167)
  *
  * 여럿 중 하나를 고르는 것이라 필터 탭(SegmentedTabs)처럼 숨긴 라디오로 만듭니다. 화살표 키로 옮겨 다니고
- * 스크린리더가 "5개 중 2번째, 선택됨" 으로 읽습니다. "새 폴더" 는 고르는 칸이 아니라 버튼이라 라디오 묶음 밖에 둡니다.
+ * 스크린리더가 "4개 중 2번째, 선택됨" 으로 읽습니다. "새 폴더" 는 고르는 칸이 아니라 버튼이라 라디오 묶음 밖에 둡니다.
  *
  * 폴더를 못 불러와도 "전체" 는 고를 수 있게 둡니다. 목록은 폴더와 따로 받아서 전체 목록은 그대로 보입니다.
  */
@@ -51,7 +51,6 @@ export default function FolderCards({ folders, value, onChange, onCreate }: Prop
     for (const folder of folders.folders.folders) {
       options.push({ value: folder.folderId, name: folder.name, count: folder.sessionCount, Icon: IconFolder })
     }
-    options.push({ value: UNFILED, name: '기타', count: folders.folders.unfiledCount, Icon: IconArchive })
   }
 
   return (

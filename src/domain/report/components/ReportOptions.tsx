@@ -12,7 +12,7 @@ type ToggleKey = Exclude<keyof DisplayOptions, 'printMono'>
 
 const TOGGLES: { key: ToggleKey; label: string }[] = [
   { key: 'showTimelineMarkers', label: '타임라인 마커 표시' },
-  { key: 'showImprovedAnswer', label: '개선 답변 예시 포함' },
+  { key: 'showImprovedAnswer', label: '답변 개선 방향 포함' },
   { key: 'showGaze', label: '시선 지표 포함' },
 ]
 
@@ -24,7 +24,7 @@ type Props = {
   /**
    * 토글이 가리키는 절이 이 리포트에 있는지입니다. 없으면 토글을 그리지 않습니다.
    *
-   * 타임라인 · 개선 답변 예시는 명세서 v0.2 에서 P1 이라 백엔드 MVP 에 안 들어올 수 있습니다.
+   * 타임라인 · 답변 개선 방향은 명세서 v0.2 에서 P1 이라 백엔드 MVP 에 안 들어올 수 있습니다.
    * 절은 이미 값이 없으면 안 그리는데, 토글만 남으면 눌러도 아무 일이 없어 고장으로 읽힙니다.
    * (이슈 #54 3-1)
    */
@@ -99,7 +99,7 @@ export default function ReportOptions({
         </div>
 
         <p className="text-body-sm text-neutral-400">
-          재연습 기록은 이 면접 리포트 안에 회차별로 저장됩니다
+          재연습 기록은 이 결과 리포트 안에 회차별로 저장됩니다
         </p>
       </div>
     </Card>
