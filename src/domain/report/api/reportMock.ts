@@ -482,6 +482,17 @@ function mockDetailOf(reportId: string): ReportDetailResponse {
   return { ...withRecovered(base, recoveredAxes.get(reportId)), retry: retryInfos.get(reportId) ?? null }
 }
 
+/** 타임라인 목업(`timelineMock.ts`)이 쓰는 상세 응답입니다. 다시 분석해서 살아난 축까지 반영돼 있습니다 */
+export function mockReportDetail(reportId: string): ReportDetailResponse {
+  return mockDetailOf(reportId)
+}
+
+/** 재생목록 목업(`recordingsMock.ts`)이 세션 id 로 그 리포트를 찾습니다. 목업 리포트의 세션이 아니면 null 입니다 */
+export function mockReportOfSession(sessionId: string): ReportDetailResponse | null {
+  const reportId = Object.keys(SCENARIOS).find((id) => SCENARIOS[id].sessionId === sessionId)
+  return reportId ? mockDetailOf(reportId) : null
+}
+
 /**
  * 재시도 목업(`reportRetryMock.ts`)이 보는 값만 꺼냅니다 — 리포트 상태 · 총점 · 실패한 축 · 재시도 상태.
  * 실제 서버처럼 리포트가 `PARTIAL` 인지, 이미 도는 중인지, 어느 축을 다시 돌릴지를 이걸로 정합니다.

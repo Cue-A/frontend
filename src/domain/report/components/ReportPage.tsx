@@ -3,11 +3,14 @@ import { useParams } from 'react-router-dom'
 
 import { useAxisRetry } from '../hooks/useAxisRetry'
 import { useFailedReportSession } from '../hooks/useFailedReportSession'
+import { useInterviewRecordings } from '../hooks/useInterviewRecordings'
 import { useReport } from '../hooks/useReport'
 import { useReportComparison } from '../hooks/useReportComparison'
 import { useReportExport } from '../hooks/useReportExport'
+import { useReportTimeline } from '../hooks/useReportTimeline'
 import { reportFileBaseName } from '../lib/reportExport'
 import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
+import type { SeekRequest } from '../types/recording'
 
 import AnswerVideoSection from './AnswerVideoSection'
 import CompanyCommentSection from './CompanyCommentSection'
@@ -50,10 +53,28 @@ export default function ReportPage() {
   const retry = useAxisRetry(reportId, data, reload)
   // 회차 비교는 리포트를 먼저 그린 뒤 따로 부릅니다(AI 가 계산해서 몇 초 걸림). 다시 분석으로 점수가 바뀌면 새로 부릅니다.
   // 총점이 같아도 축 점수만 바뀌는 재분석이 있어서, 축 점수까지 버전에 넣습니다 — 회차 비교가 축별 변화도 보여줍니다 (PR #158 리뷰)
+  const scoreVersion = data ? [data.status, data.totalScore, ...data.metrics.map((metric) => metric.score)].join(':') : ''
   const comparison = useReportComparison(data ? data.reportId : null, {
     subject: '이 리포트',
-    version: data ? [data.status, data.totalScore, ...data.metrics.map((metric) => metric.score)].join(':') : undefined,
+    version: data ? scoreVersion : undefined,
   })
+  // 답변 영상 · XAI 타임라인 근거도 리포트를 그린 뒤 따로 부릅니다(이슈 #168). 근거는 다시 분석하면 바뀌어서 같은 버전을 씁니다
+  const recordings = useInterviewRecordings(data ? data.sessionId : null)
+  const timeline = useReportTimeline(data ? data.reportId : null, scoreVersion)
+  const [seek, setSeek] = useState<SeekRequest | null>(null)
+  const videoSectionRef = useRef<HTMLDivElement | null>(null)
+
+  // 타임라인의 마커 · "구간 보기": 답변 영상을 그 문항 · 시각으로 옮기고 영상이 보이게 올립니다
+  const recordingIds = recordings.status === 'ready' ? recordings.recordings.items.map((item) => item.questionId) : null
+  const canSeek = recordingIds !== null && recordingIds.length > 0
+  const handleSeek = (questionId: string, seconds: number, fallbackQuestionId: string) => {
+    if (!recordingIds || !data) return
+    const reportId = data.reportId
+    const target = recordingIds.includes(questionId) ? questionId : fallbackQuestionId
+    if (!recordingIds.includes(target)) return
+    setSeek((previous) => ({ reportId, questionId: target, seconds, key: (previous?.key ?? 0) + 1 }))
+    videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
   // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
   const sheetRef = useRef<HTMLDivElement | null>(null)
@@ -191,13 +212,21 @@ export default function ReportPage() {
           <ComparisonSection comparison={comparison} />
         </ExportExclude>
 
-        {data.video && (
-          <ExportExclude>
-            <AnswerVideoSection video={data.video} />
-          </ExportExclude>
-        )}
+        {/* 파일에서는 재생할 수 없어 저장에서 뺍니다 */}
+        <ExportExclude>
+          <div ref={videoSectionRef} className="scroll-mt-6">
+            {/* 다른 리포트로 옮기면 고른 문항 · 재생 위치를 처음부터 다시 잡습니다 */}
+            <AnswerVideoSection
+              key={data.reportId}
+              recordings={recordings}
+              seek={seek?.reportId === data.reportId ? seek : null}
+            />
+          </div>
+        </ExportExclude>
 
-        {options.showTimeline && <TimelineSection turns={data.summary.turns} />}
+        {options.showTimeline && (
+          <TimelineSection turns={data.summary.turns} timeline={timeline} onSeek={canSeek ? handleSeek : undefined} />
+        )}
 
         {options.showImprovedAnswer && data.improvedAnswer && (
           <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
