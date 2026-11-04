@@ -57,7 +57,7 @@ export default function ReportPage() {
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
   // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
   const sheetRef = useRef<HTMLDivElement | null>(null)
-  const exporter = useReportExport(sheetRef, data ? reportFileBaseName(data) : '큐앤에이_리포트')
+  const exporter = useReportExport(sheetRef, data ? reportFileBaseName(data) : '큐앤에이_결과리포트')
 
   if (isLoading) {
     return (

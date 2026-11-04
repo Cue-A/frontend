@@ -86,7 +86,7 @@ export default function RetryPanel({ failed, running, outcomes, onRetry, focusFa
       ref={boxRef}
       // 버튼이 없는 실패에서 칸 자체로 포커스를 옮길 때만 씁니다. 탭 순서에는 넣지 않습니다
       tabIndex={-1}
-      className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-neutral-200 p-5 outline-none"
+      className="flex flex-wrap items-center justify-between gap-4 rounded-sm bg-neutral-50 p-5 outline-none"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="text-body-md font-semibold text-neutral-900">{view.title}</p>
