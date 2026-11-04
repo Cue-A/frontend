@@ -156,12 +156,22 @@ function savedOptionsOf(session: CreatedSession): InterviewSessionOptions | null
  *
  * 재연습은 `sourceSessionId` 를 같이 넘깁니다. 고정 옵션은 재연습 조건 조회(`getReplayOptions`) 값 그대로여야 합니다.
  */
-export async function createSession(setup: SessionSetup, { sourceSessionId }: { sourceSessionId?: string } = {}) {
+export async function createSession(
+  setup: SessionSetup,
+  { sourceSessionId, companies = [] }: { sourceSessionId?: string; companies?: Company[] } = {},
+) {
   const body: InterviewStartRequest = sourceSessionId ? { ...toCreateBody(setup), sourceSessionId } : toCreateBody(setup)
   const session = await api.post<CreatedSession>('/api/interviews', body)
   // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 서버가 저장한 값이 응답에 있으면 그 값을, 없으면 요청값을 남깁니다
   // (`getInterviewOptions` · sessionOptionsDraft.ts)
-  rememberSessionOptions(session.sessionId, savedOptionsOf(session) ?? toSessionOptions(setup))
+  // 직무 · 기업명은 서버 응답에 없어서 요청한 설정에서 가져온다 (상단바 표시용).
+  const companyId = toCompanyId(setup)
+  const companyName = companyId === null ? null : (companies.find((company) => company.companyId === String(companyId))?.name ?? null)
+  rememberSessionOptions(session.sessionId, {
+    ...(savedOptionsOf(session) ?? toSessionOptions(setup)),
+    jobRole: setup.jobRole.trim(),
+    companyName,
+  })
   return session
 }
 
@@ -178,7 +188,16 @@ export async function createSession(setup: SessionSetup, { sourceSessionId }: { 
  * 응답의 면접관 스타일은 소문자(friendly · pressure), 답변 시간은 "제한 없음"이면 null 이다. 답변 시간을 저장하기
  * 전에 만든 과거 세션도 null 로 온다 — 실제 설정값을 알 수 없어서 서버가 "제한 없음"으로 본다.
  */
-export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'>
+export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'> & {
+  /**
+   * 상단바 "면접관 모드" 아래에 보여줄 설정 직무 · 기업명. **표시 전용이라 없어도 면접은 진행됩니다.**
+   * 세션을 만들 때 이 탭에 남겨 둔 값이 있을 때만 채워집니다. 새 탭 · 다른 기기에서 연 면접은 서버 조회 응답이
+   * 주는 경우에만 채워지고(미확인 — 지금 응답 명세에는 없습니다), 아니면 그 줄을 숨깁니다. 기업이 없는(연습 모드) 면접은
+   * `companyName` 이 null 입니다.
+   */
+  jobRole?: string
+  companyName?: string | null
+}
 
 /** `GET /api/interviews/{sessionId}` 응답입니다. 화면은 `sessionId` 를 빼고 씁니다 */
 type InterviewSessionOptionsResponse = InterviewSessionOptions & { sessionId: string }
@@ -187,10 +206,17 @@ export async function getInterviewOptions(sessionId: string): Promise<InterviewS
   const remembered = recallSessionOptions(sessionId)
   if (remembered) return remembered
 
-  const { hideQuestionText, interviewerStyle, answerTimeLimitSec } = await api.get<InterviewSessionOptionsResponse>(
+  const { hideQuestionText, interviewerStyle, answerTimeLimitSec, jobRole, companyName } = await api.get<InterviewSessionOptionsResponse>(
     `/api/interviews/${sessionId}`,
   )
-  const options = { hideQuestionText, interviewerStyle, answerTimeLimitSec }
+  // jobRole · companyName 은 서버가 주는지 확인되지 않았다. 문자열로 오면 쓰고 아니면 표시를 생략한다.
+  const options: InterviewSessionOptions = {
+    hideQuestionText,
+    interviewerStyle,
+    answerTimeLimitSec,
+    ...(typeof jobRole === 'string' && jobRole ? { jobRole } : {}),
+    ...(typeof companyName === 'string' && companyName ? { companyName } : {}),
+  }
   rememberSessionOptions(sessionId, options)
   return options
 }

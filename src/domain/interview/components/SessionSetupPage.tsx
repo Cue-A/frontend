@@ -85,7 +85,7 @@ export default function SessionSetupPage() {
     setIsStarting(true)
     setError(null)
 
-    createSession(setup)
+    createSession(setup, { companies })
       .then((session) => {
         navigate(toDeviceCheck(session.sessionId))
       })

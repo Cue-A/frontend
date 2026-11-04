@@ -4,26 +4,28 @@ type Props = {
   onClick?: () => void
 }
 
-/** "답변 완료" — primary/500 CTA. presenting 이면 disabled, submitting 이면 로딩 표시. */
+/** "답변 완료 ✓" — 강조색 알약 CTA(라이트는 어두운 알약, 다크는 흰 알약). 답변 중이 아니면 disabled, submitting 이면 로딩 표시. */
 export default function SubmitAnswerButton({ disabled, loading, onClick }: Props) {
   return (
     <button
       type="button"
       disabled={disabled || loading}
       onClick={onClick}
-      className={`flex h-10 items-center gap-2 rounded-sm px-5 py-2 text-body-lg disabled:cursor-not-allowed ${
-        disabled && !loading
-          ? 'bg-neutral-300 text-neutral-500'
-          : 'bg-primary-500 text-neutral-0'
+      className={`flex h-13 items-center gap-2 rounded-full px-6 text-body-lg disabled:cursor-not-allowed ${
+        disabled && !loading ? 'bg-stage-cta-disabled text-stage-sub' : 'bg-stage-cta text-stage-cta-text hover:bg-stage-cta-hover'
       }`}
     >
-      {loading && (
+      답변 완료
+      {loading ? (
         <span
-          className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-0 border-t-transparent"
+          className="h-4 w-4 animate-spin rounded-full border-2 border-stage-cta-text border-t-transparent"
           aria-hidden="true"
         />
+      ) : (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+          <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       )}
-      답변 완료
     </button>
   )
 }

@@ -14,9 +14,8 @@ type Props = {
 
 export default function SelfCameraPreview({ videoRef, hasStream, failureMessage = null }: Props) {
   return (
-    // TODO(design-token): design-system.md에 없는 값. 임시로 neutral-300 / radius-md(14px) 사용 중.
-    // 필요한 값: 셀프 카메라 프리뷰(PIP) placeholder 배경색 #d8d8e1, 모서리 16px (Figma 847:708, 문서 미정의)
-    <div className="relative aspect-video w-full overflow-hidden rounded-md bg-neutral-300 shadow-card">
+    // 리디자인 시안 기준: 3:2 · 큰 모서리. 모서리는 radius-lg(20px) 임시 사용 (TODO(design-token): 시안 값 확정 필요)
+    <div className="relative aspect-[3/2] w-full overflow-hidden rounded-lg bg-stage-surface/70">
       <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" hidden={!hasStream} />
 
       {!hasStream && (

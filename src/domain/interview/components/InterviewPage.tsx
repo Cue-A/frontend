@@ -17,6 +17,8 @@ import type { MediaTrackFailureReason, MediaTrackState } from '../types/media'
 
 import ExitConfirmModal from './ExitConfirmModal'
 import InterviewSessionPage from './InterviewSessionPage'
+import { readCaptionLayout } from '../lib/captionLayout'
+import { readStageTheme } from '../lib/stageTheme'
 
 function InterviewStatusScreen({ message, children }: { message: string; children?: ReactNode }) {
   return (
@@ -116,6 +118,9 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const blocker = useBlocker(() => !session.isFinished && !hasConfirmedExitRef.current)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  // 자막 배치 비교용 임시 스위치 (lib/captionLayout.ts). 결정되면 지운다.
+  const [captionLayout] = useState(readCaptionLayout)
+  const [stageTheme] = useState(readStageTheme)
 
   // videoStream 이 <video> 태그가 실제로 그려지기 전에(session.question 이 아직 null 일 때)
   // 먼저 도착할 수 있다 — getUserMedia 가 mock 의 첫 질문(약 400ms)보다 빨리 끝나는 경우다.
@@ -293,6 +298,8 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         onExit={() => setIsExitRequested(true)}
         recordingStartedAt={recordingStartedAt}
         interviewerStyle={options.interviewerStyle}
+        jobRole={options.jobRole}
+        companyName={options.companyName}
         sessionStartedAt={session.sessionStartedAt}
         isSessionFinished={session.isFinished}
         // 면접 전체 제한 시간은 없다 — 경과 시간만 표시한다.
@@ -305,6 +312,8 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         onAudioElement={setAudioElement}
         caption={caption}
         captionSupported={captionSupported}
+        captionLayout={captionLayout}
+        stageTheme={stageTheme}
         question={session.question}
         hideQuestionText={options.hideQuestionText}
         phase={session.phase}

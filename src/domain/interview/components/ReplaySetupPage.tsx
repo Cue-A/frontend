@@ -137,7 +137,7 @@ export default function ReplaySetupPage() {
     setIsStarting(true)
     setError(null)
 
-    createSession(setup, { sourceSessionId: sessionId })
+    createSession(setup, { sourceSessionId: sessionId, companies: companiesOf(options) })
       .then((session) => {
         const replayState: ReplayDeviceCheckState = { replaySetup: setup, backTo: toReplay(sessionId) }
         navigate(toDeviceCheck(session.sessionId), { state: replayState })

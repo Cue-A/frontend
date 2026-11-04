@@ -51,7 +51,7 @@ export function recallSessionOptions(sessionId: string): InterviewSessionOptions
   const saved = loadDraft(draftName(sessionId))
   if (typeof saved !== 'object' || saved === null) return null
 
-  const { interviewerStyle, hideQuestionText, answerTimeLimitSec } = saved as Record<string, unknown>
+  const { interviewerStyle, hideQuestionText, answerTimeLimitSec, jobRole, companyName } = saved as Record<string, unknown>
   const validStyle = interviewerStyle === 'friendly' || interviewerStyle === 'pressure'
   const validTime = answerTimeLimitSec === null || (typeof answerTimeLimitSec === 'number' && answerTimeLimitSec > 0)
 
@@ -60,5 +60,12 @@ export function recallSessionOptions(sessionId: string): InterviewSessionOptions
     return null
   }
 
-  return { interviewerStyle, hideQuestionText, answerTimeLimitSec }
+  // 표시 전용 값이라 모양이 맞지 않으면 버리기만 하고 저장분 전체를 지우지는 않는다.
+  return {
+    interviewerStyle,
+    hideQuestionText,
+    answerTimeLimitSec,
+    ...(typeof jobRole === 'string' && jobRole ? { jobRole } : {}),
+    ...(typeof companyName === 'string' && companyName ? { companyName } : {}),
+  }
 }
