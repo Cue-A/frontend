@@ -145,9 +145,63 @@ function MarkerTrack({
 }
 
 /**
+ * 문항 줄 아래의 근거 목록입니다. "몇 분 몇 초에 왜" 를 글로 보여줍니다 — 마커 툴팁에만 두면 마우스를 올려야 보이고, 터치 ·
+ * 키보드로는 보기 어렵습니다. 시각을 누르면 그 구간부터 재생합니다.
+ *
+ *   답변 00:08 · 말하기 · 아쉬운 점 · 침묵 — 예상 밖 질문에서 8초 동안 말이 멈췄습니다
+ */
+function EvidenceList({
+  segment,
+  title,
+  onSeek,
+}: {
+  segment: Segment
+  title: string
+  onSeek?: Props['onSeek']
+}) {
+  if (segment.evidence.length === 0) return null
+
+  return (
+    <ul className="flex flex-col gap-1.5 pl-1">
+      {segment.evidence.map((item, index) => {
+        const at = Math.min(item.tStart ?? 0, segment.duration || (item.tStart ?? 0))
+        const time = formatDuration(at)
+        // 문항 줄의 시각(트랙 기준)과 헷갈리지 않게 "그 답변 안의 시각" 이라고 붙입니다. 답변 영상의 재생 시각과 같습니다
+        const where = item.isReask ? `되묻기 ${time}` : `답변 ${time}`
+        return (
+          <li key={`${item.questionId}-${index}`} className="flex items-start gap-2 text-body-sm">
+            <span aria-hidden className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${MARKER_CLASS[item.kind]}`} />
+            {onSeek ? (
+              <button
+                type="button"
+                onClick={() => onSeek(item.questionId, at, segment.questionId)}
+                className="shrink-0 rounded-xs font-semibold tabular-nums text-primary-600 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary-500"
+              >
+                {where}
+                <span className="sr-only"> 구간 보기 — {title}</span>
+              </button>
+            ) : (
+              <span className="shrink-0 font-semibold tabular-nums text-neutral-500">{where}</span>
+            )}
+            <span className="min-w-0 break-keep text-neutral-700">
+              <span className="text-neutral-500">
+                {SCORE_AXIS_LABEL[item.axis]} · {KIND_LABEL[item.kind]} ·{' '}
+              </span>
+              <span className="font-semibold">{item.label}</span>
+              {item.comment && <span> — {item.comment}</span>}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
  * XAI 타임라인입니다. (C-01 "XAI 타임라인" · 이슈 #168)
  *
- * 위쪽 트랙에 축별 근거를 마커로 찍고, 아래에 문항별 시작 시각 · 점수 · "구간 보기" 를 둡니다. 마커와 "구간 보기" 를 누르면
+ * 위쪽 트랙에 축별 근거를 마커로 찍고, 아래에 문항별 시작 시각 · 점수 · "구간 보기" 와 그 문항의 근거(시각 · 축 · 이유)를
+ * 글로 둡니다. 마커와 "구간 보기" 를 누르면
  * 답변 영상이 그 문항으로 바뀌고 그 시각부터 재생합니다. 되묻기에서 나온 근거는 원 질문 자리에 찍히고, 누르면 되묻기 답변으로
  * 갑니다.
  *
@@ -170,7 +224,7 @@ export default function TimelineSection({ turns, timeline, onSeek }: Props) {
           <h2 className="text-h2 text-neutral-900">XAI 타임라인</h2>
           <p className="text-body-sm text-neutral-500">
             {hasMarkers && onSeek
-              ? '마커를 누르면 그 구간의 답변 영상으로 이동해요'
+              ? '근거마다 몇 분 몇 초에 무슨 일이 있었는지 보여줘요. 마커나 시각을 누르면 그 구간의 답변 영상으로 이동해요'
               : '질문별로 어느 구간에서 무슨 일이 있었는지 보여줍니다'}
           </p>
           {notes.map((note) => (
@@ -186,27 +240,27 @@ export default function TimelineSection({ turns, timeline, onSeek }: Props) {
           {turns.map((turn) => {
             const segment = segmentOf(turn)
             return (
-              <li
-                key={turn.turnId}
-                className="flex flex-wrap items-center gap-4 border-b border-neutral-200 p-4 last:border-b-0"
-              >
-                <span className="min-w-0 flex-1 text-body-md text-neutral-900">{turn.title}</span>
-                {segment && track && track.total > 0 && (
-                  <span className="text-body-sm tabular-nums text-neutral-400">{formatDuration(segment.offset)}</span>
-                )}
-                <span className="w-16 text-right text-stat tabular-nums text-primary-600">
-                  {turn.score === null ? '—' : `${turn.score}점`}
-                </span>
-                {segment && onSeek && (
-                  <button
-                    type="button"
-                    onClick={() => onSeek(segment.questionId, 0, segment.questionId)}
-                    className="shrink-0 rounded-sm bg-neutral-50 px-3 py-1.5 text-body-sm text-neutral-700 transition-colors hover:bg-neutral-200/60 focus-visible:outline-2 focus-visible:outline-primary-500"
-                  >
-                    구간 보기
-                    <span className="sr-only"> — {turn.title}</span>
-                  </button>
-                )}
+              <li key={turn.turnId} className="flex flex-col gap-3 border-b border-neutral-200 p-4 last:border-b-0">
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="min-w-0 flex-1 text-body-md text-neutral-900">{turn.title}</span>
+                  {segment && track && track.total > 0 && (
+                    <span className="text-body-sm tabular-nums text-neutral-400">{formatDuration(segment.offset)}</span>
+                  )}
+                  <span className="w-16 text-right text-stat tabular-nums text-primary-600">
+                    {turn.score === null ? '—' : `${turn.score}점`}
+                  </span>
+                  {segment && onSeek && (
+                    <button
+                      type="button"
+                      onClick={() => onSeek(segment.questionId, 0, segment.questionId)}
+                      className="shrink-0 rounded-sm bg-neutral-50 px-3 py-1.5 text-body-sm text-neutral-700 transition-colors hover:bg-neutral-200/60 focus-visible:outline-2 focus-visible:outline-primary-500"
+                    >
+                      구간 보기
+                      <span className="sr-only"> — {turn.title}</span>
+                    </button>
+                  )}
+                </div>
+                {segment && <EvidenceList segment={segment} title={turn.title} onSeek={onSeek} />}
               </li>
             )
           })}
