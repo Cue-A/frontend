@@ -9,7 +9,12 @@ import {
   type SessionSetup,
 } from '../types/sessionSetup'
 
-import { recallSessionOptions, rememberSessionOptions, toSessionOptions } from './sessionOptionsDraft'
+import {
+  recallSessionOptions,
+  rememberSessionOptions,
+  rememberSessionSummary,
+  toSessionOptions,
+} from './sessionOptionsDraft'
 import './sessionMock'
 
 /**
@@ -162,6 +167,8 @@ export async function createSession(setup: SessionSetup, { sourceSessionId }: { 
   // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 서버가 저장한 값이 응답에 있으면 그 값을, 없으면 요청값을 남깁니다
   // (`getInterviewOptions` · sessionOptionsDraft.ts)
   rememberSessionOptions(session.sessionId, savedOptionsOf(session) ?? toSessionOptions(setup))
+  // 장치 테스트의 면접 요약이 보여줄 직무 · 질문 수 — 조회 API 에 없어서 만들 때의 값을 남깁니다 (이슈 #132)
+  rememberSessionSummary(session.sessionId, { jobRole: body.jobRole, questionCount: session.questionTotal ?? body.questionCount })
   return session
 }
 

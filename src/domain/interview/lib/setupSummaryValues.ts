@@ -9,6 +9,11 @@ export function labelOf(choices: { value: string; label: string }[], value: stri
   return choices.find((choice) => choice.value === value)?.label ?? NOT_SELECTED
 }
 
+/** 답변 시간 한 줄 문구입니다. 서버값(조회 응답)과 옵션 설정 값이 같은 문구를 쓰도록 한 곳에 둡니다 */
+export function answerTimeText(seconds: number | null) {
+  return seconds === null ? '제한 없음' : `질문당 ${seconds}초`
+}
+
 /**
  * 옵션 설정에서 고른 값을 화면에 보여줄 글로 바꿉니다.
  * 옵션 설정의 설정 요약(SetupSummary)과 장치 테스트의 면접 요약이 같은 문구를 쓰도록 한 곳에 둡니다.
@@ -16,8 +21,7 @@ export function labelOf(choices: { value: string; label: string }[], value: stri
 export const setupSummaryValues = {
   jobRole: (setup: SessionSetup) => setup.jobRole.trim() || '미입력',
   questionCount: (setup: SessionSetup) => `${setup.questionCount}문항`,
-  answerTime: (setup: SessionSetup) =>
-    setup.answerSeconds === null ? '제한 없음' : `질문당 ${setup.answerSeconds}초`,
+  answerTime: (setup: SessionSetup) => answerTimeText(setup.answerSeconds),
   interviewer: (setup: SessionSetup) => labelOf(INTERVIEWER_STYLES, setup.interviewerStyle),
   deliveryMode: (setup: SessionSetup) => labelOf(DELIVERY_MODES, setup.deliveryMode),
 }
