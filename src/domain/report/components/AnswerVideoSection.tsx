@@ -1,4 +1,3 @@
-import { IconMicrophone } from '@tabler/icons-react'
 import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode, type Ref, type SyntheticEvent } from 'react'
 
 import { toUserMessage } from '@/shared/api/errorMessage'
@@ -8,6 +7,8 @@ import Chip from '@/shared/ui/Chip'
 
 import type { UseInterviewRecordingsResult } from '../hooks/useInterviewRecordings'
 import type { AnswerRecording, SeekRequest } from '../types/recording'
+
+import AnswerAudioPlayer from './AnswerAudioPlayer'
 
 /**
  * 시안의 영상 자리는 카드보다 짙은 판입니다. 토큰에 이만큼 어두운 색이 없어서
@@ -55,7 +56,7 @@ type PlayerProps = {
 
 /**
  * 문항 하나를 재생합니다. 영상이 있으면 `<video>`, 없으면 녹음을 `<audio>` 로 재생합니다.
- * 재생 바는 브라우저 기본 컨트롤을 씁니다 — 키보드 · 스크린리더 조작을 따로 만들지 않아도 됩니다.
+ * 영상 재생 바는 브라우저 기본 컨트롤을 씁니다. 녹음은 면접 진행 화면 조작 바와 모양을 맞춘 `AnswerAudioPlayer` 로 재생합니다.
  *
  * 주소나 목록 번호가 바뀌면(다른 문항 · 다시 받은 목록) `key` 로 새 요소를 그립니다. 같은 요소에 src 만 바꾸면 실패 상태가 남는 브라우저가
  * 있습니다.
@@ -82,20 +83,14 @@ const Player = forwardRef<HTMLMediaElement, PlayerProps>(function Player({ item,
   }
 
   return (
-    <div className={`${STAGE_CLASS} flex-col gap-4 p-6`}>
-      <span aria-hidden className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-500 text-neutral-0">
-        <IconMicrophone size={28} stroke={2} />
-      </span>
-      <p className="text-body-md text-neutral-300">이 문항은 카메라 없이 답해서 녹음만 들려드려요</p>
-      <audio
+    // 녹음은 그림이 없어 판 높이를 내용에 맞춥니다. 좁은 화면에서 16:9 로 두면 조작 바가 잘립니다
+    <div className="flex w-full items-center justify-center rounded-lg bg-neutral-900 px-4 py-8 sm:aspect-video sm:p-6">
+      <AnswerAudioPlayer
         key={`${generation}:${item.audioUrl ?? 'none'}`}
         ref={ref as Ref<HTMLAudioElement>}
-        src={item.audioUrl ?? undefined}
-        controls
-        preload="metadata"
+        src={item.audioUrl ?? ''}
         onError={handleError}
         onLoadedMetadata={onReady}
-        className="w-full max-w-md"
       />
     </div>
   )
