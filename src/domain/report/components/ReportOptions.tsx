@@ -99,7 +99,7 @@ export default function ReportOptions({
         </div>
 
         <p className="text-body-sm text-neutral-400">
-          재연습 기록은 이 면접 리포트 안에 회차별로 저장됩니다
+          재연습 기록은 이 결과 리포트 안에 회차별로 저장됩니다
         </p>
       </div>
     </Card>

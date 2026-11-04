@@ -23,7 +23,7 @@ import SummarySection from './SummarySection'
 import TimelineSection from './TimelineSection'
 
 /**
- * 면접 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
+ * 결과 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
  *
  * 시안 순서대로 위에서 아래로 한 줄로 쌓습니다.
  * 유틸리티(인쇄 · 공유) → 제목 · 종합 점수 → 리포트 옵션 → 안내 →
