@@ -243,7 +243,7 @@ export default function AnswerVideoSection({ recordings, seek }: Props) {
           <h2 className="text-h2 text-neutral-900">답변 영상</h2>
           {ready && items.length > 0 && (
             <p className="text-body-sm text-neutral-400 tabular-nums">
-              {ready.recordings.hasVideo ? `문항 ${items.length}개` : `문항 ${items.length}개 · 녹음만`}
+              {ready.recordings.hasVideo ? `문항 ${items.length}개` : `문항 ${items.length}개 · 음성만`}
             </p>
           )}
         </div>
@@ -282,7 +282,7 @@ export default function AnswerVideoSection({ recordings, seek }: Props) {
               </p>
             )}
             {!ready.recordings.hasVideo && (
-              <p className="text-body-sm text-neutral-500">카메라를 사용하지 않은 면접이라 녹음만 들려드려요.</p>
+              <p className="text-body-sm text-neutral-500">카메라를 사용하지 않은 면접이라 음성만 들려요.</p>
             )}
           </div>
         )}

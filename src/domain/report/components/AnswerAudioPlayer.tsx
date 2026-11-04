@@ -89,7 +89,7 @@ const AnswerAudioPlayer = forwardRef<HTMLAudioElement, Props>(function AnswerAud
       >
         <IconMicrophone size={32} stroke={1.5} />
       </span>
-      <p className="break-keep text-center text-body-md text-neutral-300">이 문항은 카메라 없이 답해서 녹음만 들려드려요</p>
+      <p className="break-keep text-center text-body-md text-neutral-300">이 문항은 음성만 들려요</p>
 
       <audio
         ref={attach}
