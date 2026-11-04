@@ -32,7 +32,15 @@ function Delta({ label, delta, strong = false }: { label?: string; delta: number
   )
 }
 
-/** 직전 회차 대비 — 「종합 ▲4 · 내용 ▲8 · 말하기 ▼2 · 시선 비교 불가」와 코멘트 */
+/** 두 칸(회차별 종합 점수 · 직전 회차 대비)의 제목 줄. 높이를 같게 둬서 아래 칸의 시작선이 나란히 맞습니다 */
+const COLUMN_HEADER_CLASS = 'flex min-h-7 flex-wrap items-baseline justify-between gap-2'
+
+/**
+ * 직전 회차 대비 — 「종합 ▲4 · 내용 ▲8 · 말하기 ▼2 · 시선 비교 불가」와 코멘트
+ *
+ * 내용은 연한 회색 판에 담고, 판이 왼쪽 막대 그래프 칸과 같은 높이까지 늘어납니다. 글만 두면 그래프보다 짧게 끝나서
+ * 두 칸의 위아래가 어긋나 보였습니다. 판 모양은 아래 "문항별 변화" 목록과 같습니다.
+ */
 function PreviousChange({ previous, trendComment }: { previous: PreviousComparison; trendComment: string | null }) {
   const counts = [
     previous.improvedCount > 0 && `좋아진 문항 ${previous.improvedCount}개`,
@@ -42,31 +50,33 @@ function PreviousChange({ previous, trendComment }: { previous: PreviousComparis
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className={COLUMN_HEADER_CLASS}>
         <h3 className={SUB_TITLE_CLASS}>직전 회차 대비</h3>
         <span className="text-body-sm text-neutral-400">
           {previous.currentRound}회차 vs {previous.previousRound}회차
         </span>
       </div>
 
-      <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-md">
-        <li>
-          <Delta label="종합" delta={previous.overallDelta} strong />
-        </li>
-        {AXES.map((axis) => (
-          <li key={axis}>
-            <Delta label={SCORE_AXIS_LABEL[axis]} delta={previous.axisDelta[axis]} />
+      <div className="flex flex-1 flex-col gap-3 rounded-sm bg-neutral-50 px-5 py-4">
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-md">
+          <li>
+            <Delta label="종합" delta={previous.overallDelta} strong />
           </li>
+          {AXES.map((axis) => (
+            <li key={axis}>
+              <Delta label={SCORE_AXIS_LABEL[axis]} delta={previous.axisDelta[axis]} />
+            </li>
+          ))}
+        </ul>
+
+        {counts.length > 0 && <p className="text-body-sm text-neutral-500">{counts.join(' · ')}</p>}
+
+        {paragraphs.map((paragraph, index) => (
+          <p key={index} className="break-keep text-body-md text-neutral-700">
+            {paragraph}
+          </p>
         ))}
-      </ul>
-
-      {counts.length > 0 && <p className="text-body-sm text-neutral-500">{counts.join(' · ')}</p>}
-
-      {paragraphs.map((paragraph, index) => (
-        <p key={index} className="break-keep text-body-md text-neutral-700">
-          {paragraph}
-        </p>
-      ))}
+      </div>
     </div>
   )
 }
@@ -123,7 +133,9 @@ function ComparisonBody({ comparison }: { comparison: RoundComparison }) {
     <div className="flex flex-col gap-8">
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-3">
-          <h3 className={SUB_TITLE_CLASS}>회차별 종합 점수</h3>
+          <div className={COLUMN_HEADER_CLASS}>
+            <h3 className={SUB_TITLE_CLASS}>회차별 종합 점수</h3>
+          </div>
           <ComparisonRoundBars rounds={comparison.rounds} currentRound={comparison.latestRound} />
         </div>
 
