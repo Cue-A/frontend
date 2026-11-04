@@ -4,7 +4,7 @@ const UNSAFE_FILE_CHARS = /[\\/:*?"<>|]/g
 /**
  * 파일 이름 조각들을 `_` 로 잇습니다. 비어 있는 조각은 빼고, 쓸 수 없는 글자와 공백을 지웁니다.
  *
- * `['큐앤에이', '리포트', '네이버', '기획 직무']` → `큐앤에이_리포트_네이버_기획직무`
+ * `['큐앤에이', '결과 리포트', '네이버', '기획 직무']` → `큐앤에이_결과리포트_네이버_기획직무`
  */
 export function toFileBaseName(parts: (string | null | undefined)[]): string {
   return parts

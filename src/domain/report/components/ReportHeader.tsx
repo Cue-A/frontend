@@ -1,5 +1,6 @@
-import Card from '@/shared/ui/Card'
+import Badge from '@/shared/ui/Badge'
 
+import { totalScoreToneClass } from '../lib/scoreTone'
 import type { Report } from '../types/report'
 
 type Props = {
@@ -33,8 +34,12 @@ function buildDelta(report: Report) {
 }
 
 /**
- * 리포트 제목과 종합 점수 카드입니다. (C-01 상단)
+ * 결과 리포트 제목과 종합 점수입니다. (C-01 상단)
  * 시안대로 점수는 오른쪽에 붙습니다. 좁아지면 아래로 떨어집니다.
+ *
+ * 결과 리포트 수정 시안(이슈 #171): 점수 판의 배경을 없애고, 점수 숫자를 구간별 색으로 칠합니다(`lib/scoreTone.ts`).
+ * 이전 회차 대비 변화는 점수 색과 헷갈리지 않게 연한 배경의 배지로 둡니다 — 22점(빨강) 아래에 초록 글자 "+6점" 이 붙으면
+ * 어느 색이 무엇을 뜻하는지 읽기 어렵습니다.
  */
 export default function ReportHeader({ report }: Props) {
   const delta = buildDelta(report)
@@ -43,32 +48,24 @@ export default function ReportHeader({ report }: Props) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-display text-neutral-900">리포트</h1>
+        <h1 className="text-display text-neutral-900">결과 리포트</h1>
         <p className="text-body-md text-neutral-500">{buildMeta(report)}</p>
       </div>
 
-      {/* 총점이 없으면 카드째 뺍니다. 0점이나 빈 카드로 두면 실제로 그 점수를 받은 것처럼 읽힙니다 (PR #118 리뷰) */}
+      {/* 총점이 없으면 통째로 뺍니다. 0점이나 빈 칸으로 두면 실제로 그 점수를 받은 것처럼 읽힙니다 (PR #118 리뷰) */}
       {report.totalScore !== null && (
-        <Card padding="md" surface="brand" className="w-64">
-          <div className="flex flex-col gap-2">
-            <p className="text-body-sm text-neutral-700">종합 점수</p>
-
-            <p className="flex items-baseline gap-2 tabular-nums">
-              <span className="text-display text-primary-600">{report.totalScore}</span>
-              <span className="text-body-md text-neutral-500">/ 100</span>
-            </p>
-
-            {delta && (
-              <p
-                className={`text-body-sm font-semibold tabular-nums ${
-                  isUp ? 'text-semantic-success' : 'text-semantic-danger'
-                }`}
-              >
-                {delta}
-              </p>
-            )}
-          </div>
-        </Card>
+        <div className="flex flex-col items-end gap-1">
+          <p className="text-body-sm text-neutral-500">종합 점수</p>
+          <p className="flex items-baseline gap-2 tabular-nums">
+            <span className={`text-display ${totalScoreToneClass(report.totalScore)}`}>{report.totalScore}</span>
+            <span className="text-body-md text-neutral-500">/ 100</span>
+          </p>
+          {delta && (
+            <span className="tabular-nums">
+              <Badge tone={isUp ? 'success' : 'danger'}>{delta}</Badge>
+            </span>
+          )}
+        </div>
       )}
     </header>
   )
