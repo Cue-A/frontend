@@ -108,6 +108,14 @@ export default function ReportPage() {
   const exporter = useReportExport(sheetRef, fileBaseName)
   const share = useReportShare(sheetRef, fileBaseName, data ? data.reportId : null)
 
+  // 성장 추이 탭은 회차 비교만 저장합니다. 아직 불러오는 중이거나 못 불러왔으면 제목만 남은 파일이 나와서 저장 · 공유를 잠급니다
+  const exportBlockedReason =
+    view !== 'growth' || comparison.status === 'ready'
+      ? null
+      : comparison.status === 'error'
+        ? '회차 비교를 불러오지 못해 성장 추이는 저장 · 공유할 수 없어요'
+        : '회차 비교를 다 불러오면 저장 · 공유할 수 있어요'
+
   // 본문은 성장 추이 탭에서 숨기기만 해서, 재생 중이던 답변 영상 · 녹음이 보이지 않는 채로 계속 소리가 납니다. 탭을 옮길 때 멈춥니다
   const handleViewChange = (next: ReportView) => {
     if (next !== 'report') {
@@ -174,7 +182,7 @@ export default function ReportPage() {
         인쇄 영역(`sheet`) 바깥에 있습니다. 흑백으로 바꿔도 여기는 그대로 둡니다.
       */}
       <div className="mx-auto w-full max-w-5xl px-6 pt-6">
-        <ReportDocActions exporter={exporter} share={share} />
+        <ReportDocActions exporter={exporter} share={share} blockedReason={exportBlockedReason} />
       </div>
 
       {/*
@@ -285,7 +293,7 @@ export default function ReportPage() {
         </div>
 
         <ExportExclude>
-          <ReportActions exporter={exporter} sessionId={data.sessionId} />
+          <ReportActions exporter={exporter} sessionId={data.sessionId} saveBlockedReason={exportBlockedReason} />
         </ExportExclude>
       </div>
     </div>
