@@ -15,8 +15,9 @@ export default function SessionProgressMeta({ questionNumber, questionTotal, ela
   const current = questionNumber ?? 0
 
   return (
-    <div className="flex items-start gap-4">
-      <div className="flex flex-col items-end gap-1.5 pt-2">
+    // 막대 묶음과 시계 박스를 가로 중심선(세로 가운데)에 맞춘다.
+    <div className="flex items-center gap-4">
+      <div className="flex flex-col items-end gap-1.5">
         <div className="flex gap-1.5" aria-hidden="true">
           {Array.from({ length: questionTotal }, (_, index) => (
             <span key={index} className={`h-1 w-9 rounded-full ${index < current ? 'bg-primary-500' : 'bg-stage-border'}`} />
@@ -27,9 +28,9 @@ export default function SessionProgressMeta({ questionNumber, questionTotal, ela
         </span>
       </div>
 
-      {/* 폭 고정: 숫자 폭이 글자마다 달라(1 · 0 …) 매초 박스가 흔들리지 않게 tabular-nums + 고정 폭을 쓴다. 제한 시간 유무로 폭이 둘 중 하나다. */}
+      {/* 폭 고정: 숫자 폭이 글자마다 달라(1 · 0 …) 매초 박스가 흔들리지 않게 tabular-nums + 고정 폭을 쓴다. 제한 시간 유무로 폭이 둘 중 하나다. 박스 오른쪽 끝이 내 카메라 오른쪽 끝과 맞는다(상단바 오른쪽 여백 = 카메라 right). */}
       <div
-        className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-stage-surface/70 px-4 text-body-md tabular-nums text-stage-text ${
+        className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-stage-surface/30 px-4 text-body-md tabular-nums text-stage-text ${
           limitSec !== null ? 'w-44' : 'w-28'
         }`}
       >
