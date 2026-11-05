@@ -22,7 +22,7 @@ export default function CaptionLine({ caption, isSupported = true }: Props) {
       : '아직 인식된 음성이 없어요'
 
   return (
-    <div className="flex items-center gap-3 border-t border-neutral-200 pt-3.5">
+    <div className="flex min-h-6 items-center gap-3 border-t border-neutral-200 pt-3.5">
       <span className="shrink-0 rounded-xs border border-primary-200 px-2 py-0.5 text-micro text-primary-500">CC</span>
       <p className={`truncate text-body-md ${isSupported && caption ? 'text-neutral-700' : 'text-neutral-400'}`}>{text}</p>
     </div>

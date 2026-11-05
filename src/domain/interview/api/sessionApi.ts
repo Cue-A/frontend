@@ -191,8 +191,8 @@ export async function createSession(
 export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'> & {
   /**
    * 상단바 "면접관 모드" 아래에 보여줄 설정 직무 · 기업명. **표시 전용이라 없어도 면접은 진행됩니다.**
-   * 세션을 만들 때 이 탭에 남겨 둔 값이 있을 때만 채워집니다. 새 탭 · 다른 기기에서 연 면접은 서버 조회 응답이
-   * 주는 경우에만 채워지고(미확인 — 지금 응답 명세에는 없습니다), 아니면 그 줄을 숨깁니다. 기업이 없는(연습 모드) 면접은
+   * 세션을 만들 때 이 탭에 남겨 둔 값이 있을 때만 채워집니다. 서버 조회 응답(`GET /api/interviews/{sessionId}`)에는
+   * 직무 · 기업명이 없어서(리뷰에서 확정), 새 탭 · 다른 기기에서 연 면접은 이 줄을 숨깁니다. 기업이 없는(연습 모드) 면접은
    * `companyName` 이 null 입니다.
    */
   jobRole?: string
@@ -206,17 +206,10 @@ export async function getInterviewOptions(sessionId: string): Promise<InterviewS
   const remembered = recallSessionOptions(sessionId)
   if (remembered) return remembered
 
-  const { hideQuestionText, interviewerStyle, answerTimeLimitSec, jobRole, companyName } = await api.get<InterviewSessionOptionsResponse>(
+  const { hideQuestionText, interviewerStyle, answerTimeLimitSec } = await api.get<InterviewSessionOptionsResponse>(
     `/api/interviews/${sessionId}`,
   )
-  // jobRole · companyName 은 서버가 주는지 확인되지 않았다. 문자열로 오면 쓰고 아니면 표시를 생략한다.
-  const options: InterviewSessionOptions = {
-    hideQuestionText,
-    interviewerStyle,
-    answerTimeLimitSec,
-    ...(typeof jobRole === 'string' && jobRole ? { jobRole } : {}),
-    ...(typeof companyName === 'string' && companyName ? { companyName } : {}),
-  }
+  const options = { hideQuestionText, interviewerStyle, answerTimeLimitSec }
   rememberSessionOptions(sessionId, options)
   return options
 }

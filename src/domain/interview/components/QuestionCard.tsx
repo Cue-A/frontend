@@ -3,6 +3,7 @@ import type { Question } from '../types/interview'
 
 import BookmarkButton from './BookmarkButton'
 import CaptionLine from './CaptionLine'
+import LoadingLine from './LoadingLine'
 import QuestionNumberLabel from './QuestionNumberLabel'
 import QuestionText from './QuestionText'
 import QuestionTypeBadge from './QuestionTypeBadge'
@@ -14,6 +15,8 @@ type Props = {
   sessionId: string
   /** 카드 안 한 줄 자막을 보일지. 자막을 카메라 아래 박스로 보여주는 배치에서는 false. */
   showCaptionLine?: boolean
+  /** 답변 제출 후 진행 문구. 있으면 자막 대신 그 자리에 가운데 정렬로 보여준다(자막은 바로 숨긴다). */
+  loadingLabel?: string | null
   caption?: string | null
   captionSupported?: boolean
 }
@@ -23,6 +26,7 @@ export default function QuestionCard({
   hideQuestionText,
   sessionId,
   showCaptionLine = false,
+  loadingLabel = null,
   caption = null,
   captionSupported = true,
 }: Props) {
@@ -50,7 +54,11 @@ export default function QuestionCard({
         </p>
       )}
 
-      {showCaptionLine && <CaptionLine caption={caption} isSupported={captionSupported} />}
+      {loadingLabel ? (
+        <LoadingLine label={loadingLabel} />
+      ) : (
+        showCaptionLine && <CaptionLine caption={caption} isSupported={captionSupported} />
+      )}
     </section>
   )
 }

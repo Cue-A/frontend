@@ -6,6 +6,9 @@ type Props = {
   remainingSec?: number | null
 }
 
+/** 남은 시간이 이 값 이하로 내려가면 빨간색으로 알린다. */
+const URGENT_SEC = 10
+
 const BAR_HEIGHTS = ['h-2', 'h-4', 'h-6', 'h-4', 'h-5', 'h-3', 'h-2'] as const
 
 /**
@@ -26,7 +29,7 @@ export default function ListeningIndicator({ active, remainingSec = null }: Prop
       </span>
       답변 듣는 중
       {remainingSec !== null && (
-        <span className="tabular-nums text-stage-sub">
+        <span className={`tabular-nums ${active && remainingSec <= URGENT_SEC ? 'text-semantic-danger' : 'text-stage-sub'}`}>
           {active ? formatDuration(remainingSec) : '--:--'} 남음
         </span>
       )}

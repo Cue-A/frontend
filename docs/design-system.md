@@ -154,7 +154,7 @@
 
 **면접 진행 화면(`InterviewSessionPage`) 안에서만 쓴다.** 흰색에 가까운 중심에서 가장자리 연보라로 번지는 방사형 그라디언트를 깐다. Figma 가 확정되면 값과 출처를 맞춘다.
 
-글자 · 버튼 색도 같은 계열 토큰으로 둔다: `stage-card`(질문 카드), `stage-text` · `stage-soft` · `stage-sub` · `stage-muted`(글자 4단계), `stage-cta` · `stage-cta-text` · `stage-cta-hover` · `stage-cta-disabled`(답변 완료 · CC 켜짐). 값은 `styles/tokens.css` 참고.
+글자 · 버튼 색도 같은 계열 토큰으로 둔다: `stage-card`(질문 카드), `stage-text` · `stage-soft` · `stage-sub` · `stage-muted`(글자 4단계), `stage-cta-disabled`(답변 완료 비활성). 답변 완료 버튼은 북마크 버튼과 같은 `primary-100` / `primary-500`. 값은 `styles/tokens.css` 참고.
 
 ---
 

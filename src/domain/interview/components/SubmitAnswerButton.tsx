@@ -4,7 +4,7 @@ type Props = {
   onClick?: () => void
 }
 
-/** "답변 완료 ✓" — 어두운 알약 CTA. 답변 중이 아니면 disabled, submitting 이면 로딩 표시. */
+/** "답변 완료 ✓" — 북마크 버튼과 같은 연보라(primary-100) 알약 CTA. 답변 중이 아니면 disabled, submitting 이면 로딩 표시. */
 export default function SubmitAnswerButton({ disabled, loading, onClick }: Props) {
   return (
     <button
@@ -12,13 +12,13 @@ export default function SubmitAnswerButton({ disabled, loading, onClick }: Props
       disabled={disabled || loading}
       onClick={onClick}
       className={`flex h-13 items-center gap-2 rounded-full px-6 text-body-lg disabled:cursor-not-allowed ${
-        disabled && !loading ? 'bg-stage-cta-disabled text-stage-sub' : 'bg-stage-cta text-stage-cta-text hover:bg-stage-cta-hover'
+        disabled && !loading ? 'bg-stage-cta-disabled text-stage-sub' : 'bg-primary-100 text-primary-500 hover:bg-primary-200'
       }`}
     >
       답변 완료
       {loading ? (
         <span
-          className="h-4 w-4 animate-spin rounded-full border-2 border-stage-cta-text border-t-transparent"
+          className="h-4 w-4 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"
           aria-hidden="true"
         />
       ) : (

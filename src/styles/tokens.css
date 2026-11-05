@@ -151,10 +151,7 @@
   --color-stage-soft: #46464f; /* 한 단계 옅은 글자 */
   --color-stage-sub: #70707b; /* 보조 글자 */
   --color-stage-muted: #a8a8b3; /* 안내 · 빈 상태 글자 */
-  --color-stage-cta: #26262b; /* 답변 완료 · CC 켜짐 */
-  --color-stage-cta-text: #ffffff;
-  --color-stage-cta-hover: #46464f;
-  --color-stage-cta-disabled: #e5e5ea;
+  --color-stage-cta-disabled: #e5e5ea; /* 답변 완료 비활성 배경 */
 
   /* ---------------------------------------------------------------------
    * 배경 장식 원 모션 (AnalyzingPage 전용)
