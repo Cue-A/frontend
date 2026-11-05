@@ -3,11 +3,12 @@
  *
  * ⚠️ **백엔드에 성장 관리용 API 가 없습니다.** `growth`(Goal · Badge · UserBadge · Streak)와 `calendar`(CalendarEvent)
  * 엔티티만 있고 컨트롤러가 없어서(Cue-A/backend main, 2026-10-30 확인) 시안을 보고 프론트가 먼저 정한 모양입니다.
+ * 가장 최근 리포트만 백엔드 홈 API(`GET /api/home/recent-reports?limit=1`)로 받습니다.
  * 서버 응답 모양은 `api/growthResponse.ts` 에 따로 두고 api 파일에서 옮겨 담습니다 (docs/01-conventions.md "타입").
  */
 
 /* ---------------------------------------------------------------------------
- * 성장 요약 — `GET /api/growth`
+ * 성장 요약 — `GET /api/growth` + `GET /api/home/recent-reports?limit=1`
  *
  * 회차별 점수 추이 · 이전 회차 대비 변화는 여기 없습니다. 리포트 도메인의 회차 비교 API
  * (`GET /api/reports/{reportId}/comparison`)를 `latestInterview.reportId` 로 따로 부릅니다 — AI 가 계산해서 몇 초 걸리고

@@ -11,24 +11,30 @@ import {
   type CalendarEventResponse,
   type CalendarMonthResponse,
   type GrowthOverviewResponse,
+  type LatestReportListResponse,
   type WeeklyGoalResponse,
 } from './growthResponse'
 
 import './growthMock'
 
 /*
- * 성장 관리 API 입니다. **모두 백엔드에 없는 API 입니다.** 경로 · 본문 · 응답 모양 모두 프론트 임시안이고
- * 목업(`missingInBackend`)이 답합니다. 엔티티는 있습니다 — growth(Goal · Badge · UserBadge · Streak) · calendar(CalendarEvent).
+ * 성장 관리 API 입니다. 가장 최근 리포트(`/api/home/recent-reports`)만 백엔드에 있고, **나머지는 백엔드에 없는 API 입니다.**
+ * 경로 · 본문 · 응답 모양 모두 프론트 임시안이고 목업(`missingInBackend`)이 답합니다. 엔티티는 있습니다 —
+ * growth(Goal · Badge · UserBadge · Streak) · calendar(CalendarEvent).
  */
 
 /**
- * 이번 주 목표 · 배지 · 가장 최근 리포트. `GET /api/growth`
+ * 이번 주 목표 · 배지(`GET /api/growth`)와 가장 최근 리포트(`GET /api/home/recent-reports?limit=1`).
  *
  * 점수 추이 · 이전 회차 대비 변화는 가장 최근 리포트로 회차 비교(`GET /api/reports/{reportId}/comparison`)를 따로 부릅니다.
+ * 리포트 id 를 실서버에서 받아야 실서버 회차 비교가 그 리포트를 찾습니다.
  */
 export async function getGrowthOverview() {
-  const response = await api.get<GrowthOverviewResponse>('/api/growth')
-  return toGrowthOverview(response)
+  const [response, latestReports] = await Promise.all([
+    api.get<GrowthOverviewResponse>('/api/growth'),
+    api.get<LatestReportListResponse>('/api/home/recent-reports?limit=1'),
+  ])
+  return toGrowthOverview(response, latestReports)
 }
 
 /**

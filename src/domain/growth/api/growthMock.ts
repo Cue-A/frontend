@@ -26,7 +26,8 @@ import type {
  * - `empty` — 막 가입해서 아무 기록이 없는 사용자
  *
  * 점수 추이 · 이전 회차 대비 변화는 리포트 도메인의 회차 비교 목업(`report/api/reportComparisonMock.ts`)이 답합니다.
- * 여기서는 시나리오마다 그 목업이 알아보는 "가장 최근 리포트" id 를 내려줍니다 (`LATEST_REPORT_ID`).
+ * 그 기준이 되는 가장 최근 리포트는 홈 목업(`home/api/homeMock.ts` 의 `/api/home/recent-reports?limit=1`)이 이 시나리오를
+ * 읽어서 시나리오마다 회차 비교 목업이 알아보는 id 를 내려줍니다.
  *
  * 주소 뒤에 `?mock=first` 처럼 붙여 바꿉니다. 고른 값은 이 탭(sessionStorage)에 남습니다 (홈 목업과 같은 방식).
  *
@@ -69,19 +70,6 @@ const BADGES: GrowthOverviewResponse['badges'] = [
   { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', tone: 'success', earnedAt: null },
 ]
 
-/**
- * 시나리오별 가장 최근 리포트. 회차 비교 목업(`report/api/reportComparisonMock.ts` 의 `MOCK_COMPARISON_REPORT_IDS`)과
- * 같은 글자여야 그 경우의 응답이 옵니다. 도메인끼리 api 를 가져다 쓰지 않는 규칙이라 여기 다시 적습니다.
- */
-const LATEST_REPORT_ID: Record<Exclude<Scenario, 'empty'>, string> = {
-  sample: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa005',
-  first: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa001',
-  partial: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa104',
-  'compare-error': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa503',
-  'compare-loose': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa777',
-  'compare-empty': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa000',
-}
-
 /** 목표 수정은 시나리오마다 따로 기억합니다. 시나리오를 바꿔도 앞서 고친 값이 섞이지 않게 */
 const goalOverride = new Map<Scenario, number>()
 
@@ -94,14 +82,12 @@ function weeklyGoalOf(scenario: Scenario): WeeklyGoalResponse | null {
 function buildOverview(scenario: Scenario): GrowthOverviewResponse {
   if (scenario === 'empty') {
     return {
-      latestReport: null,
       weeklyGoal: weeklyGoalOf(scenario),
       badges: BADGES.map((badge) => ({ ...badge, earnedAt: null })),
     }
   }
 
   return {
-    latestReport: { reportId: LATEST_REPORT_ID[scenario], companyName: '네이버', jobRole: '기획 직무' },
     weeklyGoal: weeklyGoalOf(scenario),
     badges: scenario === 'first' ? BADGES.map((badge, index) => (index === 0 ? badge : { ...badge, earnedAt: null })) : BADGES,
   }

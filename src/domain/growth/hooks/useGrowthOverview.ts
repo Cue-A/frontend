@@ -26,7 +26,8 @@ type State =
 
 /**
  * 성장 관리의 이번 주 목표 · 배지와, 점수 추이 · 이전 회차 대비 변화의 기준이 될 가장 최근 리포트입니다.
- * (`GET /api/growth` — 백엔드에 없어 목업이 답합니다)
+ * 목표 · 배지는 `GET /api/growth`(백엔드에 없어 목업이 답합니다), 가장 최근 리포트는 `GET /api/home/recent-reports?limit=1`
+ * (백엔드에 있습니다) 입니다.
  *
  * 점수 추이 · 이전 회차 대비 변화는 여기서 받은 리포트로 회차 비교(`useReportComparison`)를 따로 부릅니다.
  * 캘린더도 달을 넘길 때마다 다시 받아야 해서 따로 받습니다(`useCalendarMonth`).

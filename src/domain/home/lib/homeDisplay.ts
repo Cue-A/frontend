@@ -1,4 +1,4 @@
-import type { InterviewKind, MonthlyActivity } from '../types/home'
+import type { MonthlyActivity } from '../types/home'
 
 import { daysBetween, parseIsoDate, startOfToday } from './homeDate'
 
@@ -13,14 +13,6 @@ export function scoreTone(score: number): Tone {
   if (score >= 85) return 'success'
   if (score >= 70) return 'warning'
   return 'danger'
-}
-
-/** 최근 리포트 행 왼쪽 네모. 시안: BE(보라) · FE(파랑) · 인성(주황) */
-export const INTERVIEW_KIND_DISPLAY: Record<InterviewKind, { short: string; tone: Tone }> = {
-  BACKEND: { short: 'BE', tone: 'brand' },
-  FRONTEND: { short: 'FE', tone: 'info' },
-  PERSONALITY: { short: '인성', tone: 'warning' },
-  OTHER: { short: '기타', tone: 'neutral' },
 }
 
 /**
