@@ -323,3 +323,22 @@
     }
   }
 }
+
+/* ---------------------------------------------------------------------
+ * Animation · 답변 녹음 파형 (이슈 #168)
+ * 사용처: AnswerAudioPlayer. 막대마다 animation-delay 를 다르게 줘서 차례로 오르내린다.
+ * motion-safe: 와 함께 써서 "동작 줄이기" 설정 사용자는 건너뛴다.
+ * --------------------------------------------------------------------- */
+@theme {
+  --animate-wave-bar: wave-bar 0.9s ease-in-out infinite;
+
+  @keyframes wave-bar {
+    0%,
+    100% {
+      transform: scaleY(0.5);
+    }
+    50% {
+      transform: scaleY(1.25);
+    }
+  }
+}
