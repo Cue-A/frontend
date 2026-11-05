@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
+
+import { REPORT_VIEW_GROWTH, REPORT_VIEW_PARAM } from '@/app/routes'
 
 import { useAxisRetry } from '../hooks/useAxisRetry'
 import { useFailedReportSession } from '../hooks/useFailedReportSession'
@@ -21,7 +23,7 @@ import ImprovedAnswerSection from './ImprovedAnswerSection'
 import ReportActions from './ReportActions'
 import ReportDocActions from './ReportDocActions'
 import ReportHeader from './ReportHeader'
-import ReportOptions from './ReportOptions'
+import ReportOptions, { type ReportView } from './ReportOptions'
 import ScoreSection from './ScoreSection'
 import SummarySection from './SummarySection'
 import TimelineSection from './TimelineSection'
@@ -35,6 +37,13 @@ import TimelineSection from './TimelineSection'
  * → 다음 단계
  *
  * 인재상 코멘트는 기업을 고른 면접에서만 나옵니다. 시안에 없던 자리라 요약 바로 아래에 붙였습니다.
+ *
+ * 리포트 옵션의 `이번 회차 리포트` · `성장 추이 보기` 는 이 화면 안의 탭입니다(주소 `?view=growth`, 이슈 #183).
+ * 회차 비교는 리포트 본문(세부 점수 아래)에도 있고, 성장 추이 탭은 그것만 따로 보여줍니다. 리포트 본문은 탭을 바꿔도 내리지
+ * 않고 숨기기만 해서, 돌아왔을 때 보던 답변 영상 · 펼친 칸이 그대로입니다.
+ *
+ * **저장 · 공유는 지금 보는 탭 그대로 나갑니다.** 이번 회차 리포트 탭이면 본문 전체, 성장 추이 탭이면 회차 비교입니다.
+ * 성장 추이 탭에서 만든 파일은 이름 끝에 `_성장추이` 를 붙여 본문 파일과 헷갈리지 않게 합니다.
  *
  * 리포트 본문 판(`sheetRef`)은 이미지 · PDF 로 저장할 수 있습니다(이슈 #143). 화면을 다루는 도구(옵션 카드 ·
  * 다시 분석 버튼 · 다음 단계)와 파일에서 볼 수 없는 답변 영상 자리는 `ExportExclude` 로 감싸 저장에서 뺍니다.
@@ -79,9 +88,23 @@ export default function ReportPage() {
     videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view: ReportView = searchParams.get(REPORT_VIEW_PARAM) === REPORT_VIEW_GROWTH ? 'growth' : 'report'
+  // 탭을 바꿀 때마다 기록이 쌓이면 뒤로 가기가 탭만 오가서, 주소만 바꿉니다(replace)
+  const changeView = (next: ReportView) =>
+    setSearchParams(
+      (previous) => {
+        const params = new URLSearchParams(previous)
+        if (next === 'growth') params.set(REPORT_VIEW_PARAM, REPORT_VIEW_GROWTH)
+        else params.delete(REPORT_VIEW_PARAM)
+        return params
+      },
+      { replace: true },
+    )
   // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
   const sheetRef = useRef<HTMLDivElement | null>(null)
-  const fileBaseName = data ? reportFileBaseName(data) : '큐앤에이_결과리포트'
+  const reportFileName = data ? reportFileBaseName(data) : '큐앤에이_결과리포트'
+  const fileBaseName = view === 'growth' ? `${reportFileName}_성장추이` : reportFileName
   const exporter = useReportExport(sheetRef, fileBaseName)
   const share = useReportShare(sheetRef, fileBaseName, data ? data.reportId : null)
 
@@ -163,6 +186,8 @@ export default function ReportPage() {
           <ReportOptions
             attempts={data.attempts}
             currentAttempt={data.attempt}
+            view={view}
+            onViewChange={changeView}
             options={options}
             onChange={setOptions}
             available={{
@@ -174,72 +199,82 @@ export default function ReportPage() {
           />
         </ExportExclude>
 
-        {/*
-          총점 상한은 일반 안내보다 먼저 보여줍니다. "왜 점수가 낮지" 는 리포트를
-          열자마자 드는 질문이라, 아래쪽에 있으면 못 보고 지나갑니다.
-        */}
-        {data.scoreGateReason && (
-          <p
-            role="status"
-            className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
-          >
-            총점에 상한이 걸렸어요 — {data.scoreGateReason}
-          </p>
+        {/* 성장 추이 탭. 저장하면 이 회차 비교가 나갑니다. 로딩 자리 표시 · 오류 안내는 본문과 같이 뺍니다 */}
+        {view === 'growth' && (
+          <ExportExclude when={comparison.status !== 'ready'}>
+            <ComparisonSection comparison={comparison} />
+          </ExportExclude>
         )}
 
-        {data.notices.map((notice) => (
-          <p
-            key={notice}
-            role="status"
-            className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
-          >
-            ⚠ {notice}
-          </p>
-        ))}
+        {/* 성장 추이 탭에서는 숨깁니다. 화면 · 인쇄 · 이미지 모두 지금 보는 탭만 나갑니다 */}
+        <div className={`flex-col gap-6 ${view === 'report' ? 'flex' : 'hidden'}`}>
+          {/*
+            총점 상한은 일반 안내보다 먼저 보여줍니다. "왜 점수가 낮지" 는 리포트를
+            열자마자 드는 질문이라, 아래쪽에 있으면 못 보고 지나갑니다.
+          */}
+          {data.scoreGateReason && (
+            <p
+              role="status"
+              className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
+            >
+              총점에 상한이 걸렸어요 — {data.scoreGateReason}
+            </p>
+          )}
 
-        <SummarySection
-          summary={data.summary}
-          subtitle={[data.jobRole, data.interviewDate].filter(Boolean).join(' · ')}
-        />
+          {data.notices.map((notice) => (
+            <p
+              key={notice}
+              role="status"
+              className="rounded-sm bg-badge-warning-bg p-4 text-body-md text-badge-warning-text"
+            >
+              ⚠ {notice}
+            </p>
+          ))}
 
-        {data.companyComment && (
-          <CompanyCommentSection comment={data.companyComment} companyName={data.companyName} />
-        )}
+          <SummarySection
+            summary={data.summary}
+            subtitle={[data.jobRole, data.interviewDate].filter(Boolean).join(' · ')}
+          />
 
-        <ScoreSection
-          metrics={metrics}
-          subMetrics={data.subMetrics}
-          comment={data.metricsComment}
-          retry={retry}
-        />
+          {data.companyComment && (
+            <CompanyCommentSection comment={data.companyComment} companyName={data.companyName} />
+          )}
 
-        {/* 다 불러온 비교 내용만 저장에 넣습니다. 로딩 자리 표시 · 오류 안내(다시 시도 버튼)는 파일에 남지 않게 뺍니다 (PR #158 리뷰) */}
-        <ExportExclude when={comparison.status !== 'ready'}>
-          <ComparisonSection comparison={comparison} />
-        </ExportExclude>
+          <ScoreSection
+            metrics={metrics}
+            subMetrics={data.subMetrics}
+            comment={data.metricsComment}
+            retry={retry}
+          />
 
-        {/* 파일에서는 재생할 수 없어 저장에서 뺍니다 */}
-        <ExportExclude>
-          <div ref={videoSectionRef} className="scroll-mt-6">
-            {/* 다른 리포트로 옮기면 고른 문항 · 재생 위치를 처음부터 다시 잡습니다 */}
-            <AnswerVideoSection
-              key={data.reportId}
-              recordings={recordings}
-              seek={seek?.reportId === data.reportId ? seek : null}
-            />
-          </div>
-        </ExportExclude>
+          {/* 다 불러온 비교 내용만 저장에 넣습니다. 로딩 자리 표시 · 오류 안내(다시 시도 버튼)는 파일에 남지 않게 뺍니다 (PR #158 리뷰) */}
+          <ExportExclude when={comparison.status !== 'ready'}>
+            <ComparisonSection comparison={comparison} />
+          </ExportExclude>
 
-        <TimelineSection
-          turns={data.summary.turns}
-          timeline={timeline}
-          showMarkers={options.showTimelineMarkers}
-          onSeek={canSeek ? handleSeek : undefined}
-        />
+          {/* 파일에서는 재생할 수 없어 저장에서 뺍니다 */}
+          <ExportExclude>
+            <div ref={videoSectionRef} className="scroll-mt-6">
+              {/* 다른 리포트로 옮기면 고른 문항 · 재생 위치를 처음부터 다시 잡습니다 */}
+              <AnswerVideoSection
+                key={data.reportId}
+                recordings={recordings}
+                seek={seek?.reportId === data.reportId ? seek : null}
+              />
+            </div>
+          </ExportExclude>
 
-        {options.showImprovedAnswer && data.improvedAnswer && (
-          <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
-        )}
+          <TimelineSection
+            turns={data.summary.turns}
+            timeline={timeline}
+            showMarkers={options.showTimelineMarkers}
+            onSeek={canSeek ? handleSeek : undefined}
+          />
+
+          {options.showImprovedAnswer && data.improvedAnswer && (
+            <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
+          )}
+        </div>
 
         <ExportExclude>
           <ReportActions exporter={exporter} sessionId={data.sessionId} />
