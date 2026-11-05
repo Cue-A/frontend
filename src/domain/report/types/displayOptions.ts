@@ -4,7 +4,11 @@
  * 새로고침하면 기본값으로 돌아가는 게 맞다고 봤습니다.
  */
 export type DisplayOptions = {
-  showTimeline: boolean
+  /**
+   * XAI 타임라인의 **마커 트랙**을 보일지. 끄면 트랙만 빠지고 타임라인 칸(문항별 점수 · 근거 목록 · 구간 보기)은 그대로입니다.
+   * 전에는 칸 전체를 켜고 껐는데, 마커를 끄고 싶은 사람이 점수와 근거까지 잃을 필요는 없어서 바꿨습니다. (PR #173 리뷰)
+   */
+  showTimelineMarkers: boolean
   showImprovedAnswer: boolean
   /** 축 키를 `vision` → `gaze` 로 맞추면서 여기도 같이 바꿨습니다 (PR #50 리뷰) */
   showGaze: boolean
@@ -13,7 +17,7 @@ export type DisplayOptions = {
 }
 
 export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
-  showTimeline: true,
+  showTimelineMarkers: true,
   showImprovedAnswer: true,
   showGaze: true,
   printMono: false,

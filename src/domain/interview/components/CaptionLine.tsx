@@ -8,7 +8,7 @@ type Props = {
 const MAX_CHARS = 70
 
 /**
- * 질문 카드 안 한 줄 자막입니다 ("CC 저는 데이터 분석 프로젝트에서…").
+ * 질문 카드 안 한 줄 자막입니다 ("저는 데이터 분석 프로젝트에서…"). 켜고 끄는 건 하단 독의 CC 버튼이다.
  * 답변이 길어지면 앞부분을 잘라 **가장 최근에 인식된 말**이 보이게 한다. 한 줄 말줄임(…)으로 두면 첫머리만 남아서
  * 지금 하는 말이 안 보인다.
  */
@@ -22,8 +22,7 @@ export default function CaptionLine({ caption, isSupported = true }: Props) {
       : '아직 인식된 음성이 없어요'
 
   return (
-    <div className="flex min-h-6 items-center gap-3 border-t border-neutral-200 pt-3.5">
-      <span className="shrink-0 rounded-xs border border-primary-200 px-2 py-0.5 text-micro text-primary-500">CC</span>
+    <div className="flex min-h-6 items-center border-t border-neutral-200 pt-3.5">
       <p className={`truncate text-body-md ${isSupported && caption ? 'text-neutral-700' : 'text-neutral-400'}`}>{text}</p>
     </div>
   )

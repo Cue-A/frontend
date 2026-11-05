@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
-import { toDeviceCheck } from '@/app/routes'
+import { SESSION_SETUP_COMPANY_PARAM, toDeviceCheck } from '@/app/routes'
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
 
@@ -47,10 +47,16 @@ const DEFAULT_MINUTES = estimateDurationMinutes(DEFAULT_QUESTION_COUNT, DEFAULT_
  *
  * 위에 단계 표시, 아래에 두 칸. 왼쪽 흰 카드에서 조건을 고르고 오른쪽 요약에서
  * 확인한 뒤 장치 테스트로 넘어갑니다. 좁은 화면에서는 요약이 아래로 내려갑니다.
+ *
+ * 주소에 `?companyId=` 가 있으면 기업 맞춤 질문을 켜고 그 기업을 골라 둡니다(기업 상세의 "이 기업으로 면접 연습하기",
+ * 이슈 #162). 고른 뒤에는 주소에서 지웁니다 — 남겨 두면 새로고침하거나 장치 테스트에서 돌아올 때 사용자가 바꾼 기업을
+ * 다시 덮어씁니다. 고른 값은 다른 칸처럼 이 탭에 남아 있어서 새로고침해도 그대로입니다.
  */
 export default function SessionSetupPage() {
   const navigate = useNavigate()
-  const { setup, patch, dropUnknownCompany, missing, canStart } = useSessionSetup()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const presetCompanyId = searchParams.get(SESSION_SETUP_COMPANY_PARAM)
+  const { setup, patch, dropUnknownCompany, missing, canStart } = useSessionSetup(presetCompanyId)
   const jobRoleId = useId()
   const answerSecondsId = useId()
   const questionCountId = useId()
@@ -58,6 +64,18 @@ export default function SessionSetupPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (presetCompanyId === null) return
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        next.delete(SESSION_SETUP_COMPANY_PARAM)
+        return next
+      },
+      { replace: true },
+    )
+  }, [presetCompanyId, setSearchParams])
 
   useEffect(() => {
     let alive = true

@@ -1,7 +1,6 @@
 import { useState, type RefObject } from 'react'
 
 import type { SubmitErrorState } from '../hooks/useInterviewSession'
-import type { CaptionLayout } from '../lib/captionLayout'
 import type { InterviewerStyle, Question, SessionPhase } from '../types/interview'
 
 import AnswerControlBar from './AnswerControlBar'
@@ -33,8 +32,6 @@ type Props = {
   cameraFailureMessage?: string | null
   caption: string | null
   captionSupported?: boolean
-  /** 자막 배치 비교용 임시 prop (lib/captionLayout.ts). 기본은 시안의 카드 안 한 줄. */
-  captionLayout?: CaptionLayout
 
   /** 질문 음성 <audio> 에 물릴 콜백 ref. useQuestionAudio 가 준다. */
   onAudioElement?: (element: HTMLAudioElement | null) => void
@@ -75,7 +72,6 @@ export default function InterviewSessionPage({
   cameraFailureMessage = null,
   caption,
   captionSupported,
-  captionLayout = 'inline',
   onAudioElement,
   question,
   hideQuestionText,
@@ -88,7 +84,6 @@ export default function InterviewSessionPage({
   remainingSec = null,
 }: Props) {
   const [captionVisible, setCaptionVisible] = useState(true)
-  const isInlineCaption = captionLayout === 'inline'
   // 답변을 제출한 뒤에는 자막을 바로 숨기고 그 자리에 진행 문구를 보여준다. 진행 문구가 아직 안 왔으면(업로드 중) 기본 문구를 쓴다.
   const isSubmitted = phase === 'submitting' || phase === 'waitingNextQuestion'
   const loadingLabel = isSubmitted ? (phase === 'waitingNextQuestion' && progressLabel ? progressLabel : SUBMITTING_LABEL) : null
@@ -124,9 +119,6 @@ export default function InterviewSessionPage({
             videoRef={videoRef}
             hasStream={hasCameraStream}
             cameraFailureMessage={cameraFailureMessage}
-            caption={caption}
-            captionSupported={captionSupported}
-            showCaptionPanel={!isInlineCaption && captionVisible}
           />
         </div>
 
@@ -143,7 +135,7 @@ export default function InterviewSessionPage({
           question={question}
           hideQuestionText={hideQuestionText}
           sessionId={sessionId}
-          showCaptionLine={isInlineCaption && captionVisible}
+          showCaptionLine={captionVisible}
           loadingLabel={loadingLabel}
           caption={caption}
           captionSupported={captionSupported}

@@ -51,7 +51,7 @@ export function recallSessionOptions(sessionId: string): InterviewSessionOptions
   const saved = loadDraft(draftName(sessionId))
   if (typeof saved !== 'object' || saved === null) return null
 
-  const { interviewerStyle, hideQuestionText, answerTimeLimitSec, jobRole, companyName } = saved as Record<string, unknown>
+  const { interviewerStyle, hideQuestionText, answerTimeLimitSec } = saved as Record<string, unknown>
   const validStyle = interviewerStyle === 'friendly' || interviewerStyle === 'pressure'
   const validTime = answerTimeLimitSec === null || (typeof answerTimeLimitSec === 'number' && answerTimeLimitSec > 0)
 
@@ -60,12 +60,49 @@ export function recallSessionOptions(sessionId: string): InterviewSessionOptions
     return null
   }
 
-  // 표시 전용 값이라 모양이 맞지 않으면 버리기만 하고 저장분 전체를 지우지는 않는다.
-  return {
-    interviewerStyle,
-    hideQuestionText,
-    answerTimeLimitSec,
-    ...(typeof jobRole === 'string' && jobRole ? { jobRole } : {}),
-    ...(typeof companyName === 'string' && companyName ? { companyName } : {}),
+  return { interviewerStyle, hideQuestionText, answerTimeLimitSec }
+}
+
+/**
+ * 장치 테스트의 "면접 요약"과 면접 화면 상단의 "기업 · 직무"가 보여줄, 세션을 만들 때의 직무 · 기업명 · 질문 수입니다.
+ *
+ * 조회 API(`GET /api/interviews/{sessionId}`)에는 이 둘이 없어서 서버에서 다시 읽을 수 없습니다. 그래서 옵션 설정에서
+ * 고른 값이 아니라 **그 세션을 만들 때의 값**을 세션별로 남깁니다. 옵션을 바꾼 뒤 예전 장치 테스트 주소로 돌아와도
+ * 요약이 그 세션의 값을 보여줍니다. 새로 연 탭 · 다른 기기에는 남긴 값이 없어서 null 이고, 화면은 빈 표시("-")를 둡니다.
+ *
+ * 면접 화면이 읽는 옵션(`rememberSessionOptions`)과 저장 이름을 따로 둡니다. 옵션의 저장 모양을 바꾸지 않아서 이미 남아
+ * 있는 값을 그대로 읽습니다.
+ */
+export type SessionSummary = {
+  jobRole: string
+  /** 기업을 고르지 않은 면접(연습 모드)이면 null. 면접 화면 상단의 "기업 · 직무" 표시에 쓴다 */
+  companyName: string | null
+  questionCount: number
+}
+
+const summaryDraftName = (sessionId: string) => `interviewSummary:${sessionId}`
+
+const summaryMemory = new Map<string, SessionSummary>()
+
+export function rememberSessionSummary(sessionId: string, summary: SessionSummary) {
+  summaryMemory.set(sessionId, summary)
+  saveDraft(summaryDraftName(sessionId), summary)
+}
+
+/** 이 세션을 만들 때 남긴 직무 · 기업명 · 질문 수입니다. 없거나 모양이 맞지 않으면 null 입니다 */
+export function recallSessionSummary(sessionId: string): SessionSummary | null {
+  const remembered = summaryMemory.get(sessionId)
+  if (remembered) return remembered
+
+  const saved = loadDraft(summaryDraftName(sessionId))
+  if (typeof saved !== 'object' || saved === null) return null
+
+  const { jobRole, companyName, questionCount } = saved as Record<string, unknown>
+  if (typeof jobRole !== 'string' || !jobRole || !Number.isInteger(questionCount) || (questionCount as number) <= 0) {
+    removeDraft(summaryDraftName(sessionId))
+    return null
   }
+
+  // 기업명은 나중에 더한 값이라 예전에 남긴 값에는 없다 — 없으면 null 로 본다.
+  return { jobRole, companyName: typeof companyName === 'string' && companyName ? companyName : null, questionCount: questionCount as number }
 }

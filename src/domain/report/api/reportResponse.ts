@@ -14,7 +14,6 @@
  * | 회차 · 회차 칩 (`attempt` · `attempts`) | 1 · 빈 목록 — 칩 줄이 안 보입니다 | 응답에 없음 |
  * | 지난 회차 대비 (`totalScoreDelta`) | null — 안 그립니다 | 응답에 없음 |
  * | 세부 점수 소제목 (`metricsComment`) | null — 안 그립니다 | 응답에 없음 |
- * | 답변 영상 (`video`) | null — 절이 안 보입니다 | 재생 주소 API 없음 |
  * | 면접 흐름 · 잘한 점 시각 | null | 근거 시각은 **답변 오디오 기준**이라 영상 위치가 아닙니다 |
  * | 면접 흐름 상태 (`안정` · `보통` · `흔들림`) | 문항 점수로 나눕니다 (80 · 60) | 응답에 없음 |
  * | 한 줄 총평 · 문항 코멘트 (`summary` · `questions[].comment`) | 오면 쓰고, 없으면 그 칸만 비웁니다 | 노션 명세에는 있는데 백엔드 응답(main)에 아직 없음 |
@@ -543,7 +542,7 @@ function toHighlights(
 }
 
 /**
- * 개선 답변 예시입니다. 화면은 한 문항만 보여주므로 첫 번째 것을 씁니다.
+ * 답변 개선 방향입니다. 화면은 한 문항만 보여주므로 첫 번째 것을 씁니다.
  * 백엔드는 내용 점수가 낮은 문항을 최대 2개 보내고, 없으면 빈 배열입니다 — 그때는 절이 사라집니다.
  */
 function toImprovedAnswer(detail: ReportDetailResponse, questions: QuestionResultResponse[]): ImprovedAnswer | null {
@@ -609,7 +608,6 @@ export function toReport(detail: ReportDetailResponse): Report {
     metricsComment: null,
 
     improvedAnswer: toImprovedAnswer(detail, questions),
-    video: null,
     retry: toRetryState(detail.retry),
   }
 }

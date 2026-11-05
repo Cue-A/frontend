@@ -201,7 +201,7 @@ const GAZE_SKIPPED: AxisResponse = {
   evidence: [],
 }
 
-/** 개선 답변 예시. 백엔드는 내용 점수가 낮은 문항을 최대 2개 보냅니다. 화면은 첫 번째만 씁니다 */
+/** 답변 개선 방향. 백엔드는 내용 점수가 낮은 문항을 최대 2개 보냅니다. 화면은 첫 번째만 씁니다 */
 const IMPROVED_ANSWERS: ReportDetailResponse['improvedAnswers'] = [
   {
     questionId: 'q3',
@@ -316,8 +316,8 @@ function withoutSummary(detail: ReportDetailResponse): ReportDetailResponse {
 }
 
 /**
- * **지금 백엔드 응답 그대로**인 회차입니다. 한 줄 총평 · 문항 코멘트 키가 없고, 개선 답변 예시도 빈 배열입니다.
- * 총평 칸 · 흐름의 코멘트 줄 · 개선 답변 절과 토글이 모두 사라지는지 이 회차로 봅니다.
+ * **지금 백엔드 응답 그대로**인 회차입니다. 한 줄 총평 · 문항 코멘트 키가 없고, 답변 개선 방향도 빈 배열입니다.
+ * 총평 칸 · 흐름의 코멘트 줄 · 답변 개선 방향 절과 토글이 모두 사라지는지 이 회차로 봅니다.
  */
 const NO_EXTRAS: ReportDetailResponse = {
   ...withoutSummary(LATEST),
@@ -480,6 +480,17 @@ export function setMockRetry(reportId: string, info: ReportRetryInfoResponse | n
 function mockDetailOf(reportId: string): ReportDetailResponse {
   const base = SCENARIOS[reportId] ?? { ...LATEST, reportId }
   return { ...withRecovered(base, recoveredAxes.get(reportId)), retry: retryInfos.get(reportId) ?? null }
+}
+
+/** 타임라인 목업(`timelineMock.ts`)이 쓰는 상세 응답입니다. 다시 분석해서 살아난 축까지 반영돼 있습니다 */
+export function mockReportDetail(reportId: string): ReportDetailResponse {
+  return mockDetailOf(reportId)
+}
+
+/** 재생목록 목업(`recordingsMock.ts`)이 세션 id 로 그 리포트를 찾습니다. 목업 리포트의 세션이 아니면 null 입니다 */
+export function mockReportOfSession(sessionId: string): ReportDetailResponse | null {
+  const reportId = Object.keys(SCENARIOS).find((id) => SCENARIOS[id].sessionId === sessionId)
+  return reportId ? mockDetailOf(reportId) : null
 }
 
 /**

@@ -233,6 +233,17 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 - 남은 결정: 폴더 이동 화면(`PATCH /api/practice-records/folder`)을 만들 때 백엔드에 "폴더 없음" 필터와 개수를 요청하고 다시 넣습니다.
 - 걸리는 작업: `domain/practice/components/FolderCards.tsx` · `api/practiceApi.ts`.
 
+### Q18. 🟡 기업 탐색 목록 카드에 업종이 없습니다
+
+기업 목록 `GET /api/companies` 는 면접 옵션 설정의 기업 고르기 계약이라 `companyId · name` 만 줍니다(Cue-A/backend#86).
+업종 · 핵심 가치는 상세 `GET /api/companies/{companyId}` 에만 있습니다(backend#101). 상세의 인재상 설명(`talentProfile`)은
+기업 시드(backend#112)에 값이 없어 지금은 모두 null 입니다.
+
+- **임시 결정: 목록 카드에는 기업 이름만 둡니다** (이슈 #162). 카드마다 상세를 부르면 기업 수만큼 요청이 나갑니다.
+  인재상 설명 칸은 값이 있을 때만 보입니다.
+- 남은 결정: 목록 응답에 업종(`industry`)을 더해 달라고 백엔드에 요청할지, 인재상 설명을 채울지.
+- 걸리는 작업: `domain/company/components/CompaniesPage.tsx` · `CompanyDetailPage.tsx`.
+
 ---
 
 ## 그 외

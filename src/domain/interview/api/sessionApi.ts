@@ -9,7 +9,12 @@ import {
   type SessionSetup,
 } from '../types/sessionSetup'
 
-import { recallSessionOptions, rememberSessionOptions, toSessionOptions } from './sessionOptionsDraft'
+import {
+  recallSessionOptions,
+  rememberSessionOptions,
+  rememberSessionSummary,
+  toSessionOptions,
+} from './sessionOptionsDraft'
 import './sessionMock'
 
 /**
@@ -164,13 +169,15 @@ export async function createSession(
   const session = await api.post<CreatedSession>('/api/interviews', body)
   // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 서버가 저장한 값이 응답에 있으면 그 값을, 없으면 요청값을 남깁니다
   // (`getInterviewOptions` · sessionOptionsDraft.ts)
-  // 직무 · 기업명은 서버 응답에 없어서 요청한 설정에서 가져온다 (상단바 표시용).
+  rememberSessionOptions(session.sessionId, savedOptionsOf(session) ?? toSessionOptions(setup))
+  // 직무 · 기업명 · 질문 수는 조회 API 에 없어서 만들 때의 값을 남깁니다. 장치 테스트의 면접 요약(이슈 #132)과 면접 화면
+  // 상단 "기업 · 직무" 표시가 같이 읽는다. 기업명은 요청한 기업 id 로 목록에서 찾는다.
   const companyId = toCompanyId(setup)
   const companyName = companyId === null ? null : (companies.find((company) => company.companyId === String(companyId))?.name ?? null)
-  rememberSessionOptions(session.sessionId, {
-    ...(savedOptionsOf(session) ?? toSessionOptions(setup)),
-    jobRole: setup.jobRole.trim(),
+  rememberSessionSummary(session.sessionId, {
+    jobRole: body.jobRole,
     companyName,
+    questionCount: session.questionTotal ?? body.questionCount,
   })
   return session
 }
@@ -188,16 +195,7 @@ export async function createSession(
  * 응답의 면접관 스타일은 소문자(friendly · pressure), 답변 시간은 "제한 없음"이면 null 이다. 답변 시간을 저장하기
  * 전에 만든 과거 세션도 null 로 온다 — 실제 설정값을 알 수 없어서 서버가 "제한 없음"으로 본다.
  */
-export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'> & {
-  /**
-   * 상단바 "면접관 모드" 아래에 보여줄 설정 직무 · 기업명. **표시 전용이라 없어도 면접은 진행됩니다.**
-   * 세션을 만들 때 이 탭에 남겨 둔 값이 있을 때만 채워집니다. 서버 조회 응답(`GET /api/interviews/{sessionId}`)에는
-   * 직무 · 기업명이 없어서(리뷰에서 확정), 새 탭 · 다른 기기에서 연 면접은 이 줄을 숨깁니다. 기업이 없는(연습 모드) 면접은
-   * `companyName` 이 null 입니다.
-   */
-  jobRole?: string
-  companyName?: string | null
-}
+export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'>
 
 /** `GET /api/interviews/{sessionId}` 응답입니다. 화면은 `sessionId` 를 빼고 씁니다 */
 type InterviewSessionOptionsResponse = InterviewSessionOptions & { sessionId: string }
