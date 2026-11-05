@@ -108,6 +108,14 @@ export default function ReportPage() {
   const exporter = useReportExport(sheetRef, fileBaseName)
   const share = useReportShare(sheetRef, fileBaseName, data ? data.reportId : null)
 
+  // 본문은 성장 추이 탭에서 숨기기만 해서, 재생 중이던 답변 영상 · 녹음이 보이지 않는 채로 계속 소리가 납니다. 탭을 옮길 때 멈춥니다
+  const handleViewChange = (next: ReportView) => {
+    if (next !== 'report') {
+      sheetRef.current?.querySelectorAll<HTMLMediaElement>('video, audio').forEach((media) => media.pause())
+    }
+    changeView(next)
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-50 p-6">
@@ -187,7 +195,7 @@ export default function ReportPage() {
             attempts={data.attempts}
             currentAttempt={data.attempt}
             view={view}
-            onViewChange={changeView}
+            onViewChange={handleViewChange}
             options={options}
             onChange={setOptions}
             available={{
