@@ -192,6 +192,58 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
 - 걸리는 작업: `domain/document/components/DocumentRenameDialog.tsx`.
 
+### Q16. 🟡 마이페이지 확장 화면의 API 가 아직 서버에 없습니다
+
+기능명세서 "사용자" 도메인(MY-1~3)의 프로필 · 계정 정보는 API 명세서를 받았지만(진행 상태 "시작 전"), 명함 API 는
+백엔드 시작 전이고 "알림 설정"은 기능명세서 자체에 없는 항목입니다. 관심 기업은 백엔드 #101 로 생겼습니다.
+성우님이 PR #112 로 만들던 화면을 이슈 #162 에서 다시 작업했습니다. (커뮤니티는 이번 범위에서 뺐습니다)
+
+- **임시 결정: 아래 경로로 목업(`missingInBackend`)이 답하게 두고 화면을 완성했습니다.**
+  - 프로필 조회 · 수정: API 명세서 그대로 `GET · PATCH /api/users/me/profile`.
+    - 응답 `userId · userName · email · profileImageUrl · introduction · targetJobRole · careerLevel · schoolName · major · graduationYear`
+    - 수정은 바꾼 칸만 보냅니다. 빈 본문은 `EMPTY_UPDATE_REQUEST` 라 바뀐 게 없으면 저장 버튼을 잠급니다
+    - 화면은 이름 · 직무(50자)만 고칩니다. 자기소개 · 경력 단계 · 학교 · 전공 · 졸업연도는 시안이 없어 아직 그리지 않았습니다
+    - 프로필 사진은 주소(`profileImageUrl`)만 받고 올릴 API 가 없어 "사진 변경" 을 넣지 않았습니다
+    - "계정 탈퇴하기" 는 명세 피드백에 따라 프로필에서 빼고 계정 설정에만 둡니다
+  - 계정 정보: API 명세서 그대로 `GET /api/users/me/account` (이메일 · 가입일 · 로그인 수단별 연결일 · 비밀번호 유무)
+  - 이메일 변경 `PATCH /api/users/me/email` · 비밀번호 변경 `PATCH /api/users/me/password` 은 명세만 받았고 화면은 다음 작업입니다
+  - 관심 기업: 백엔드 #101 계약 그대로 `GET /api/companies/interests`, `POST · DELETE /api/companies/{companyId}/interest`.
+    배포 서버에도 있어서(2026-11 재배포) 목업 표시(`missingInBackend`)를 지웠습니다. `companies` 를 켜면 실제 서버로 갑니다
+  - 알림 설정: `GET · PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로입니다.
+    PATCH 는 바꾼 항목만 보냅니다
+  - 명함: API 명세서 그대로 `POST · GET · PATCH /api/users/me/business-card`. "이미지 다운로드"는 프론트가 미리보기를
+    PNG 로 찍어 내려받습니다(리포트 저장과 같은 캡처). "공유하기"는 공유 링크 발급이 필요해 비활성입니다
+- 남은 결정 (백엔드에 확인 중)
+  - 프로필 · 계정 API 명세의 응답 모양(`code` · `ACCESS_TOKEN_EXPIRED` 등)이 지금 서버 공통 응답(`errorCode` · `TOKEN_EXPIRED`)과
+    다릅니다. 프론트 토큰 재발급이 `TOKEN_EXPIRED` 에 걸려 있어 기존 공통 응답을 따르는지 확인이 필요합니다
+  - 프로필의 `userName` 과 `GET /api/users/me` 의 `nickname` 이 같은 값인지 (프론트는 같은 값으로 보고 화면 머리를 바꿉니다)
+  - 프로필 직무(50자)와 면접 직무 `jobRole`(100자) 길이를 맞출지
+  - 프로필 사진 업로드 방식, 회원 탈퇴 API, 알림 설정 · 명함의 실제 계약, 명함 공유 방식
+- 걸리는 작업: `domain/user/components/ProfilePage.tsx` · `AccountSettingsPage.tsx` · `NotificationSettingsPage.tsx` ·
+  `BusinessCardPage.tsx`, `domain/user/api/userApi.ts` · `userMock.ts`.
+
+### Q17. 🟡 연습 기록 "기타" 카드 — 폴더에 넣지 않은 기록만 거르는 조건이 없습니다
+
+시안의 폴더 카드 줄은 전체 · 내 폴더들 · 기타(폴더에 넣지 않은 세션) 순서입니다. 연습 기록 목록
+`GET /api/practice-records` 는 `folderId` 로 한 폴더만 거를 수 있고 "폴더 없음" 조건이 없으며, 폴더 목록
+`GET /api/folders` 에도 그 개수가 없습니다(Cue-A/backend#92 · #97). 폴더로 옮기는 화면도 아직 없어서 지금은 기타가
+전체와 같습니다.
+
+- **임시 결정: "기타" 카드를 두지 않습니다** (이슈 #167). 전체 · 내 폴더들만 보입니다.
+- 남은 결정: 폴더 이동 화면(`PATCH /api/practice-records/folder`)을 만들 때 백엔드에 "폴더 없음" 필터와 개수를 요청하고 다시 넣습니다.
+- 걸리는 작업: `domain/practice/components/FolderCards.tsx` · `api/practiceApi.ts`.
+
+### Q18. 🟡 기업 탐색 목록 카드에 업종이 없습니다
+
+기업 목록 `GET /api/companies` 는 면접 옵션 설정의 기업 고르기 계약이라 `companyId · name` 만 줍니다(Cue-A/backend#86).
+업종 · 핵심 가치는 상세 `GET /api/companies/{companyId}` 에만 있습니다(backend#101). 상세의 인재상 설명(`talentProfile`)은
+기업 시드(backend#112)에 값이 없어 지금은 모두 null 입니다.
+
+- **임시 결정: 목록 카드에는 기업 이름만 둡니다** (이슈 #162). 카드마다 상세를 부르면 기업 수만큼 요청이 나갑니다.
+  인재상 설명 칸은 값이 있을 때만 보입니다.
+- 남은 결정: 목록 응답에 업종(`industry`)을 더해 달라고 백엔드에 요청할지, 인재상 설명을 채울지.
+- 걸리는 작업: `domain/company/components/CompaniesPage.tsx` · `CompanyDetailPage.tsx`.
+
 ---
 
 ## 그 외
@@ -212,20 +264,6 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   있고, 카메라 실패 시 시선 점수가 제외된다는 안내 문구도 이 전제로 추가했습니다.
 - 남은 결정: 팀 확정 — 카메라도 필수로 갈지, 선택으로 남길지.
 - 걸리는 작업: `domain/interview/lib/canStartInterview.ts` 만 고치면 됩니다.
-
-### Q10. 🟡 답변 시간 선택지가 확정되지 않았습니다
-
-A-05 시안에는 "질문당 90초" 한 값만 보입니다. 드롭다운인데 나머지 선택지가 시안에 없어서
-프론트가 임시로 채웠습니다. (PR #13)
-
-- **임시 값**: 답변 시간 60 / 90 / 120초 + 제한 없음
-- **서버가 이 값을 받지 않습니다.** 세션 시작 요청(`InterviewStartRequest`)에 답변 시간 자리가
-  없어서 PR #66 에서 요청 본문에서 뺐습니다. 지금은 A-05 화면(설정 요약 · 예상 소요 시간)에만
-  쓰입니다. 면접 진행(B-01)의 카운트다운은 이 값이 아니라 세션 옵션 목업의 고정값(90초)을 씁니다
-  (이슈 #54 "확인이 필요한 것" 1번)
-- 남은 결정: 답변 시간을 서버가 받을지, 받는다면 허용 범위. 기대하던
-  `GET /api/v1/interviews/options/defaults` (INT-2)는 api 명세서 v0.2 에 없습니다
-- 걸리는 작업: `domain/interview/types/sessionSetup.ts` 의 `ANSWER_SECONDS_CHOICES`
 
 ### Q11. 🟡 총 예상 소요 시간 계산 기준
 

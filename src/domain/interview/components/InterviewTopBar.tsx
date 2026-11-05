@@ -1,27 +1,29 @@
 import type { InterviewerStyle } from '../types/interview'
 
+import ElapsedSessionProgressMeta from './ElapsedSessionProgressMeta'
 import ExitButton from './ExitButton'
 import InterviewerStyleBadge from './InterviewerStyleBadge'
 import RecordingIndicator from './RecordingIndicator'
-import SessionProgressMeta from './SessionProgressMeta'
 
 type Props = {
   onExit?: () => void
-  recordingElapsedSec: number
+  recordingStartedAt: number | null
   interviewerStyle: InterviewerStyle
   questionNumber: number | null
   questionTotal: number
-  sessionElapsedSec: number
+  sessionStartedAt: number | null
+  isSessionFinished: boolean
   sessionLimitSec: number | null
 }
 
 export default function InterviewTopBar({
   onExit,
-  recordingElapsedSec,
+  recordingStartedAt,
   interviewerStyle,
   questionNumber,
   questionTotal,
-  sessionElapsedSec,
+  sessionStartedAt,
+  isSessionFinished,
   sessionLimitSec,
 }: Props) {
   return (
@@ -30,16 +32,17 @@ export default function InterviewTopBar({
     <header className="grid h-18 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-neutral-200 bg-neutral-0 px-10">
       <div className="flex items-center gap-4">
         <ExitButton onClick={onExit} />
-        <RecordingIndicator elapsedSec={recordingElapsedSec} />
+        {recordingStartedAt !== null && <RecordingIndicator />}
       </div>
 
       <InterviewerStyleBadge interviewerStyle={interviewerStyle} />
 
       <div className="justify-self-end">
-        <SessionProgressMeta
+        <ElapsedSessionProgressMeta
           questionNumber={questionNumber}
           questionTotal={questionTotal}
-          elapsedSec={sessionElapsedSec}
+          sessionStartedAt={sessionStartedAt}
+          isSessionFinished={isSessionFinished}
           limitSec={sessionLimitSec}
         />
       </div>

@@ -28,6 +28,8 @@ const TIP_ROTATE_MS = 5000
 export const ANALYSIS_TIMEOUT_MS = 10 * 60 * 1000
 
 export type AnalysisFailure = {
+  /** 실패 코드. 화면이 재연습으로 보낼지 정할 때 씁니다 (이슈 #152) */
+  code: string
   /** 사용자에게 보여줄 문구 */
   message: string
   /** true 면 "다시 분석하기" 로 등록을 다시 부를 수 있습니다 */
@@ -176,7 +178,7 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
       settled = true
       forgetReportId(sessionId)
       console.error('리포트 분석 실패 code=%s retryable=%s', code, retryable)
-      setFailure({ message: toUserMessage(code, ANALYSIS_MESSAGES), retryable })
+      setFailure({ code, message: toUserMessage(code, ANALYSIS_MESSAGES), retryable })
     }
 
     const advance = (stage: string) => {
@@ -268,6 +270,7 @@ export function useAnalysisProgress(sessionId: string | undefined): AnalysisProg
           const code = cause instanceof ApiError ? cause.code : 'UNKNOWN'
           console.error('리포트 분석 등록 실패 code=%s', code)
           setFailure({
+            code,
             message: toUserMessage(code, ANALYSIS_MESSAGES),
             retryable: !FINAL_REQUEST_ERRORS.has(code),
           })

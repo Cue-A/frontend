@@ -1,12 +1,22 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { useAxisRetry } from '../hooks/useAxisRetry'
+import { useFailedReportSession } from '../hooks/useFailedReportSession'
+import { useInterviewRecordings } from '../hooks/useInterviewRecordings'
 import { useReport } from '../hooks/useReport'
+import { useReportComparison } from '../hooks/useReportComparison'
+import { useReportExport } from '../hooks/useReportExport'
+import { useReportShare } from '../hooks/useReportShare'
+import { useReportTimeline } from '../hooks/useReportTimeline'
+import { reportFileBaseName } from '../lib/reportExport'
 import { DEFAULT_DISPLAY_OPTIONS } from '../types/displayOptions'
+import type { SeekRequest } from '../types/recording'
 
 import AnswerVideoSection from './AnswerVideoSection'
 import CompanyCommentSection from './CompanyCommentSection'
+import ComparisonSection from './ComparisonSection'
+import ExportExclude from './ExportExclude'
 import ImprovedAnswerSection from './ImprovedAnswerSection'
 import ReportActions from './ReportActions'
 import ReportDocActions from './ReportDocActions'
@@ -17,14 +27,18 @@ import SummarySection from './SummarySection'
 import TimelineSection from './TimelineSection'
 
 /**
- * 면접 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
+ * 결과 리포트 화면입니다. (C-01 리포트 확인 / 개선안)
  *
  * 시안 순서대로 위에서 아래로 한 줄로 쌓습니다.
  * 유틸리티(인쇄 · 공유) → 제목 · 종합 점수 → 리포트 옵션 → 안내 →
- * 이번 면접 요약 → (인재상 코멘트) → 세부 점수 → 답변 영상 → XAI 타임라인 → 개선 답변 예시
+ * 이번 면접 요약 → (인재상 코멘트) → 세부 점수 → 답변 영상 → XAI 타임라인 → 답변 개선 방향
  * → 다음 단계
  *
  * 인재상 코멘트는 기업을 고른 면접에서만 나옵니다. 시안에 없던 자리라 요약 바로 아래에 붙였습니다.
+ *
+ * 리포트 본문 판(`sheetRef`)은 이미지 · PDF 로 저장할 수 있습니다(이슈 #143). 화면을 다루는 도구(옵션 카드 ·
+ * 다시 분석 버튼 · 다음 단계)와 파일에서 볼 수 없는 답변 영상 자리는 `ExportExclude` 로 감싸 저장에서 뺍니다.
+ * 켜 둔 표시 옵션과 인쇄용 흑백은 저장에도 그대로 들어갑니다.
  *
  * 사이드바 없이 혼자 그립니다. 시안에 사이드바가 없고 자체 상단바를 쓰기 때문에
  * AppLayout 밖에 두었습니다. (router.tsx)
@@ -34,9 +48,42 @@ import TimelineSection from './TimelineSection'
  */
 export default function ReportPage() {
   const { reportId } = useParams()
-  const { data, isLoading, error, reload } = useReport(reportId)
+  const { data, isLoading, error, errorCode, reload } = useReport(reportId)
+  // 분석이 실패한 리포트도 재연습할 수 있어서, 어느 면접인지 상태 조회로 찾아 "다시 연습하기" 를 재연습으로 잇습니다
+  const failedReport = useFailedReportSession(reportId, errorCode === 'REPORT_FAILED')
   const retry = useAxisRetry(reportId, data, reload)
+  // 회차 비교는 리포트를 먼저 그린 뒤 따로 부릅니다(AI 가 계산해서 몇 초 걸림). 다시 분석으로 점수가 바뀌면 새로 부릅니다.
+  // 총점이 같아도 축 점수만 바뀌는 재분석이 있어서, 축 점수까지 버전에 넣습니다 — 회차 비교가 축별 변화도 보여줍니다 (PR #158 리뷰)
+  const scoreVersion = data ? [data.status, data.totalScore, ...data.metrics.map((metric) => metric.score)].join(':') : ''
+  const comparison = useReportComparison(data ? data.reportId : null, {
+    subject: '이 리포트',
+    version: data ? scoreVersion : undefined,
+  })
+  // 답변 영상 · XAI 타임라인 근거도 리포트를 그린 뒤 따로 부릅니다(이슈 #168). 근거는 다시 분석하면 바뀌어서 같은 버전을 씁니다
+  const recordings = useInterviewRecordings(data ? data.sessionId : null)
+  const timeline = useReportTimeline(data ? data.reportId : null, scoreVersion)
+  const [seek, setSeek] = useState<SeekRequest | null>(null)
+  const videoSectionRef = useRef<HTMLDivElement | null>(null)
+
+  // 타임라인의 마커 · "구간 보기": 답변 영상을 그 문항 · 시각으로 옮기고 영상이 보이게 올립니다
+  const recordingIds = recordings.status === 'ready' ? recordings.recordings.items.map((item) => item.questionId) : null
+  const canSeek = recordingIds !== null && recordingIds.length > 0
+  const hasTimelineMarkers =
+    timeline.status === 'ready' && timeline.timeline.questions.some((question) => question.evidence.length > 0)
+  const handleSeek = (questionId: string, seconds: number, fallbackQuestionId: string) => {
+    if (!recordingIds || !data) return
+    const reportId = data.reportId
+    const target = recordingIds.includes(questionId) ? questionId : fallbackQuestionId
+    if (!recordingIds.includes(target)) return
+    setSeek((previous) => ({ reportId, questionId: target, seconds, key: (previous?.key ?? 0) + 1 }))
+    videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const [options, setOptions] = useState(DEFAULT_DISPLAY_OPTIONS)
+  // 훅은 아래 분기보다 먼저 불러야 해서, 아직 리포트가 없을 때 쓸 이름을 둡니다. 저장 버튼은 리포트를 그린 뒤에만 보입니다
+  const sheetRef = useRef<HTMLDivElement | null>(null)
+  const fileBaseName = data ? reportFileBaseName(data) : '큐앤에이_결과리포트'
+  const exporter = useReportExport(sheetRef, fileBaseName)
+  const share = useReportShare(sheetRef, fileBaseName, data ? data.reportId : null)
 
   if (isLoading) {
     return (
@@ -50,7 +97,7 @@ export default function ReportPage() {
     return (
       <div className="flex min-h-screen flex-col items-start gap-4 bg-neutral-50 p-6">
         <p className="text-body-md text-neutral-700">{error ?? '리포트를 찾을 수 없어요.'}</p>
-        <ReportActions />
+        <ReportActions sessionId={failedReport.sessionId ?? undefined} checking={failedReport.checking} />
       </div>
     )
   }
@@ -77,8 +124,8 @@ export default function ReportPage() {
   /*
     "시선 지표 포함" 을 끄면 시선 **점수**를 뺍니다. 다만 아래 두 경우의 시선 줄은 남깁니다. (PR #92 리뷰)
 
-    - **분석이 실패한 줄**(`retryAxis`): 점수가 아니라 "다시 분석" 버튼이 있는 줄입니다. 같이 빼면 위쪽 안내는
-      "세부 점수에서 빠진 항목만 다시 분석할 수 있어요" 라고 하는데 정작 누를 버튼이 없습니다
+    - **분석이 실패한 줄**(`retryAxis`): 점수가 아니라 다시 분석할 항목입니다. 같이 빼면 아래 "다시 분석" 칸
+      (`RetryPanel`)이 시선을 다시 분석한다고 적지 않는데, 백엔드는 실패한 축을 전부 돌려서 시선도 같이 바뀝니다
     - **방금 다시 분석해서 살아난 줄**: 누른 결과가 눈앞에서 사라지고 총점만 바뀌면 무엇이 바뀌었는지 알 수 없습니다.
       다른 회차로 옮기거나 새로고침하면 토글대로 다시 빠집니다
   */
@@ -90,13 +137,13 @@ export default function ReportPage() {
     : data.metrics.filter((metric) => metric.key !== 'gaze' || keepGazeRow(metric))
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 print:min-h-0 print:bg-neutral-0">
       {/*
         유틸리티 줄은 리포트 내용이 아니라 이 화면을 다루는 도구라, 시안에서도
         인쇄 영역(`sheet`) 바깥에 있습니다. 흑백으로 바꿔도 여기는 그대로 둡니다.
       */}
       <div className="mx-auto w-full max-w-5xl px-6 pt-6">
-        <ReportDocActions />
+        <ReportDocActions exporter={exporter} share={share} />
       </div>
 
       {/*
@@ -104,23 +151,28 @@ export default function ReportPage() {
         토큰을 흑백 세트로 따로 만들면 화면마다 두 벌을 관리해야 합니다.
       */}
       <div
-        className={`mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 ${
+        ref={sheetRef}
+        data-report-sheet
+        className={`mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 print:max-w-none print:p-0 ${
           options.printMono ? 'grayscale' : ''
         }`}
       >
         <ReportHeader report={data} />
 
-        <ReportOptions
-          attempts={data.attempts}
-          currentAttempt={data.attempt}
-          options={options}
-          onChange={setOptions}
-          available={{
-            showTimeline: data.summary.turns.length > 0,
-            showImprovedAnswer: data.improvedAnswer !== null,
-            showGaze: data.metrics.some((metric) => metric.key === 'gaze'),
-          }}
-        />
+        <ExportExclude>
+          <ReportOptions
+            attempts={data.attempts}
+            currentAttempt={data.attempt}
+            options={options}
+            onChange={setOptions}
+            available={{
+              // 마커를 그릴 근거가 있을 때만 토글을 둡니다. 근거가 없으면 눌러도 바뀌는 게 없습니다
+              showTimelineMarkers: hasTimelineMarkers,
+              showImprovedAnswer: data.improvedAnswer !== null,
+              showGaze: data.metrics.some((metric) => metric.key === 'gaze'),
+            }}
+          />
+        </ExportExclude>
 
         {/*
           총점 상한은 일반 안내보다 먼저 보여줍니다. "왜 점수가 낮지" 는 리포트를
@@ -161,15 +213,37 @@ export default function ReportPage() {
           retry={retry}
         />
 
-        {data.video && <AnswerVideoSection video={data.video} />}
+        {/* 다 불러온 비교 내용만 저장에 넣습니다. 로딩 자리 표시 · 오류 안내(다시 시도 버튼)는 파일에 남지 않게 뺍니다 (PR #158 리뷰) */}
+        <ExportExclude when={comparison.status !== 'ready'}>
+          <ComparisonSection comparison={comparison} />
+        </ExportExclude>
 
-        {options.showTimeline && <TimelineSection turns={data.summary.turns} />}
+        {/* 파일에서는 재생할 수 없어 저장에서 뺍니다 */}
+        <ExportExclude>
+          <div ref={videoSectionRef} className="scroll-mt-6">
+            {/* 다른 리포트로 옮기면 고른 문항 · 재생 위치를 처음부터 다시 잡습니다 */}
+            <AnswerVideoSection
+              key={data.reportId}
+              recordings={recordings}
+              seek={seek?.reportId === data.reportId ? seek : null}
+            />
+          </div>
+        </ExportExclude>
+
+        <TimelineSection
+          turns={data.summary.turns}
+          timeline={timeline}
+          showMarkers={options.showTimelineMarkers}
+          onSeek={canSeek ? handleSeek : undefined}
+        />
 
         {options.showImprovedAnswer && data.improvedAnswer && (
           <ImprovedAnswerSection improvedAnswer={data.improvedAnswer} />
         )}
 
-        <ReportActions />
+        <ExportExclude>
+          <ReportActions exporter={exporter} sessionId={data.sessionId} />
+        </ExportExclude>
       </div>
     </div>
   )

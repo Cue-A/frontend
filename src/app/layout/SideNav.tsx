@@ -40,7 +40,8 @@ type NavItem = {
  * 갈 곳 없는 링크를 눌러 404 로 떨어지는 것보다 준비 중이라고 보이는 편이 낫습니다.
  *
  * "내 보관함" 의 하위 항목은 전에 보관함 화면 안의 두 번째 패널(LibraryPanel)에 있던 것입니다. 패널을 없애고
- * 사이드바로 옮겼습니다 — 하위 항목 셋 중 둘이 준비 중이라 패널이 화면 폭만 차지했습니다.
+ * 사이드바로 옮겼습니다 — 하위 항목 셋 중 둘이 준비 중이라 패널이 화면 폭만 차지했습니다. 연습 기록 시안에도 같은
+ * 패널이 있지만 같은 이유로 이 하위 메뉴를 씁니다.
  *
  * 아이콘은 Tabler outline 입니다 (docs/design-system.md §7).
  */
@@ -53,23 +54,26 @@ const NAV_ITEMS: NavItem[] = [
     // 하위 항목이 있어서 이 줄은 여닫기 버튼입니다. `to` 는 이동이 아니라 "켜진 메뉴" 판단에만 씁니다.
     to: ROUTES.LIBRARY_DOCUMENTS,
     matchPrefix: LIBRARY_PREFIX,
-    children: [{ label: '자소서 · 포트폴리오', to: ROUTES.LIBRARY_DOCUMENTS }, { label: '연습 기록' }, { label: '질문 은행' }],
+    children: [
+      { label: '자소서 · 포트폴리오', to: ROUTES.LIBRARY_DOCUMENTS },
+      { label: '연습 기록', to: ROUTES.LIBRARY_PRACTICE },
+      { label: '질문 은행', to: ROUTES.LIBRARY_QUESTIONS },
+    ],
   },
-  { label: '성장 관리', Icon: IconChartLine },
+  { label: '성장 관리', Icon: IconChartLine, to: ROUTES.GROWTH },
   {
     label: '마이페이지',
     Icon: IconUser,
     // 내 보관함과 같은 여닫기 줄입니다. 메뉴 목록 화면(/mypage)은 상단 프로필 메뉴의 "마이페이지" 로 갑니다.
     to: ROUTES.MYPAGE,
     matchPrefix: ROUTES.MYPAGE,
-    // 마이페이지 시안의 여섯 메뉴 그대로입니다. 지금 화면이 있는 건 계정 설정뿐입니다.
+    // 마이페이지 메뉴입니다. 시안의 "관심 질문" 은 질문 은행 북마크와 같은 기능이라 뺐습니다 (MyPage.tsx).
     children: [
-      { label: '프로필' },
-      { label: '나만의 명함 생성' },
-      { label: '관심 기업' },
-      { label: '관심 질문' },
+      { label: '프로필', to: ROUTES.MYPAGE_PROFILE },
+      { label: '나만의 명함 생성', to: ROUTES.MYPAGE_BUSINESS_CARD },
+      { label: '관심 기업', to: ROUTES.MYPAGE_INTERESTS },
       { label: '계정 설정', to: ROUTES.MYPAGE_ACCOUNT },
-      { label: '알림 설정' },
+      { label: '알림 설정', to: ROUTES.MYPAGE_NOTIFICATIONS },
     ],
   },
   { label: '커뮤니티', Icon: IconUsers },

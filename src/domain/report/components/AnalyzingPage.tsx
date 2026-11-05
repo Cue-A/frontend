@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { ROUTES, toReport } from '@/app/routes'
+import { ROUTES, toReplay, toReport } from '@/app/routes'
 import Button from '@/shared/ui/Button'
 import Logo from '@/shared/ui/Logo'
 
 import { useAnalysisProgress } from '../hooks/useAnalysisProgress'
+import { REPLAY_SUGGESTED_ERRORS } from '../lib/analysisErrorMessage'
 import { ANALYSIS_STAGES } from '../types/analysis'
 
 /**
@@ -202,7 +203,11 @@ export default function AnalyzingPage() {
         */}
         <div className="flex min-h-44 w-full max-w-md items-start justify-center">
           {failure ? (
-            <AnalysisFailedNotice message={failure.message} onRetry={failure.retryable ? retry : null} />
+            <AnalysisFailedNotice
+              message={failure.message}
+              onRetry={failure.retryable ? retry : null}
+              replayTo={sessionId && REPLAY_SUGGESTED_ERRORS.has(failure.code) ? toReplay(sessionId) : null}
+            />
           ) : isTimedOut ? (
             <AnalysisTimedOutNotice />
           ) : (
@@ -257,10 +262,22 @@ function AnalysisTimedOutNotice() {
  * 분석이 실패했을 때 팁 자리에 붙는 안내입니다.
  *
  * 다시 요청해서 풀릴 수 있는 실패(`retryable`)에만 "다시 분석하기" 를 둡니다. 다시 요청하면 백엔드가 같은
- * reportId 로 처음부터 다시 돌립니다. 풀리지 않는 실패(답변이 너무 적음 등)에는 버튼을 두지 않습니다 —
+ * reportId 로 처음부터 다시 돌립니다. 풀리지 않는 실패(답변이 너무 적음 등)에는 그 버튼을 두지 않습니다 —
  * 눌러도 같은 안내가 다시 뜨기 때문입니다. 나갈 길은 왼쪽 위 "홈으로" 입니다.
+ *
+ * **"같은 질문으로 다시 연습하기"** 는 재연습 설정으로 갑니다(이슈 #152). 면접이 끝났으면 리포트가 실패해도 저장된
+ * 질문으로 재연습할 수 있습니다. 다시 분석해서 풀릴 수 있으면 그게 먼저라 보조 버튼으로, 아니면 주 버튼으로 둡니다.
+ * 자기소개서가 지워졌거나 기업을 쓸 수 없어 재연습이 막히면 재연습 화면이 이유와 새 면접 길을 알려줍니다.
  */
-function AnalysisFailedNotice({ message, onRetry }: { message: string; onRetry: (() => void) | null }) {
+function AnalysisFailedNotice({
+  message,
+  onRetry,
+  replayTo,
+}: {
+  message: string
+  onRetry: (() => void) | null
+  replayTo: string | null
+}) {
   return (
     <div
       role="alert"
@@ -271,10 +288,19 @@ function AnalysisFailedNotice({ message, onRetry }: { message: string; onRetry: 
         <p className="break-keep text-body-sm text-neutral-700">{message}</p>
       </div>
 
-      {onRetry && (
-        <Button size="sm" variant="primary" onClick={onRetry}>
-          다시 분석하기
-        </Button>
+      {(onRetry || replayTo) && (
+        <div className="flex flex-wrap justify-center gap-3">
+          {onRetry && (
+            <Button size="sm" variant="primary" onClick={onRetry}>
+              다시 분석하기
+            </Button>
+          )}
+          {replayTo && (
+            <Button size="sm" variant={onRetry ? 'secondary' : 'primary'} to={replayTo}>
+              같은 질문으로 다시 연습하기
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )

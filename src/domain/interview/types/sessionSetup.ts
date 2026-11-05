@@ -47,9 +47,9 @@ export const NO_TIME_LIMIT = 'NONE'
 /**
  * 답변 시간(초). 시안의 "질문당 90초" 가 기본값입니다.
  *
- * 기능명세서 INT-2 에 "질문당 응답 제한 시간 또는 제한 없음"으로 되어 있어
- * 제한 없음을 넣었습니다. 나머지 값은 아직 확정이 아닙니다.
- * (docs/90-open-questions.md Q10)
+ * 기능명세서 INT-2 에 "질문당 응답 제한 시간 또는 제한 없음"으로 되어 있어 제한 없음을 넣었습니다.
+ * 서버도 60 · 90 · 120 · null(제한 없음)만 받습니다 — 다른 값을 넣으면 세션 시작이 `INVALID_REQUEST` 로
+ * 거절됩니다. (Cue-A/backend#100)
  */
 export const ANSWER_SECONDS_CHOICES: Choice<string>[] = [
   { value: '60', label: '질문당 60초' },
@@ -84,7 +84,23 @@ export const DEFAULT_QUESTION_COUNT = 6
 /** 목록에 없는 기업을 고를 때 쓰는 값입니다. 이때 인재상을 직접 받습니다. */
 export const CUSTOM_COMPANY = 'CUSTOM'
 
+/**
+ * 기업 목록 응답 한 건입니다. (Cue-A/backend#86 `CompanyResponse`)
+ *
+ * `companyId` 는 기업의 숫자 PK 입니다. 세션 시작 요청(`InterviewStartRequest.companyId`)에도 숫자로 보냅니다.
+ * 기업 목록 API(`sessionApi.ts`)와 목업(`sessionMock.ts`)이 같이 써서 여기 둡니다 — 둘 중 한쪽에 두면 서로를
+ * 불러오게 됩니다. (PR #150 리뷰)
+ */
+export type CompanyResponse = {
+  companyId: number
+  name: string
+}
+
 export type Company = {
+  /**
+   * 기업 id. 서버는 숫자로 주는데 화면에서는 **문자열**로 씁니다 — 드롭다운 값과 바로 비교하려고 받을 때 바꿉니다
+   * (`sessionApi.ts` 의 `toCompany`). 서버로 보낼 때 다시 숫자가 됩니다
+   */
   companyId: string
   name: string
 }

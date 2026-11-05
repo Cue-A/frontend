@@ -1,5 +1,6 @@
 import { IconCalendar } from '@tabler/icons-react'
 
+import { ROUTES } from '@/app/routes'
 import { toUserMessage } from '@/shared/api/errorMessage'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
@@ -9,6 +10,7 @@ import { formatDateRange } from '../lib/homeDate'
 import { practicePeriodOf } from '../lib/practicePeriod'
 import type { PracticePeriod } from '../types/home'
 
+import CardLink from './CardLink'
 import PeriodTabs from './PeriodTabs'
 import PracticeHeatmap from './PracticeHeatmap'
 import ScoreTrendChart from './ScoreTrendChart'
@@ -32,6 +34,9 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 /**
  * 연습 기록 카드 — 왼쪽 잔디, 오른쪽 점수 추이, 오른쪽 위 기간 탭.
+ *
+ * 머리 줄 끝의 "전체보기" 는 내 보관함 > 연습 기록으로 갑니다. 다른 홈 카드처럼 링크 하나로 두고, 잔디 · 그래프 자체는 누를 수
+ * 없게 둡니다 — 판 전체를 링크로 만들면 기간 탭을 누르려다 화면이 넘어가고, 화면 읽기 프로그램이 무엇을 누르는지 읽지 못합니다.
  *
  * 기간 표시(`06.18 – 08.26`)는 시안에서 버튼처럼 생겼지만 날짜를 직접 고르는 기능은 시안 어디에도 정의가
  * 없어서 **보여주기만** 합니다. 기간은 탭으로만 바꿉니다.
@@ -64,6 +69,7 @@ export default function PracticeRecordCard({ period, onPeriodChange, practice }:
               {formatDateRange(record.startDate, record.endDate)}
             </span>
           )}
+          <CardLink label="전체보기" to={ROUTES.LIBRARY_PRACTICE} />
         </div>
       </div>
 

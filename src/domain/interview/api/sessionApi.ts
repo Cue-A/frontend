@@ -1,13 +1,38 @@
 import { api } from '@/shared/api/apiClient'
 
 import type { AnswerSubmission, InterviewOptions } from '../types/interview'
-import { CUSTOM_COMPANY, type Company, type InterviewerStyle, type SessionSetup } from '../types/sessionSetup'
+import {
+  CUSTOM_COMPANY,
+  type Company,
+  type CompanyResponse,
+  type InterviewerStyle,
+  type SessionSetup,
+} from '../types/sessionSetup'
 
-import { recallSessionOptions, rememberSessionOptions, toSessionOptions } from './sessionOptionsDraft'
+import {
+  recallSessionOptions,
+  rememberSessionOptions,
+  rememberSessionSummary,
+  toSessionOptions,
+} from './sessionOptionsDraft'
 import './sessionMock'
 
-export function getCompanies() {
-  return api.get<Company[]>('/api/companies')
+/**
+ * 화면에서는 id 를 **문자열로 바꿔** 씁니다. (이슈 #149)
+ *
+ * 기업 드롭다운(`<select>`)의 값은 브라우저가 늘 문자열로 돌려줍니다. id 를 숫자 그대로 두면 고른 값(`"1"`)과 목록의
+ * id(`1`)가 `===` 로 맞지 않아서, 설정 요약에 기업명 대신 "선택 안 함" 이 나옵니다. 그래서 응답을 받는 이 자리에서만
+ * 바꾸고, 화면(드롭다운 · 설정 요약 · 이 탭에 남기는 설정값)은 문자열 하나로 씁니다. 서버로 보낼 때는 `toCompanyId` 가
+ * 다시 숫자로 바꿉니다.
+ */
+function toCompany(response: CompanyResponse): Company {
+  return { companyId: String(response.companyId), name: response.name }
+}
+
+/** 기업 목록입니다. 백엔드는 `verified` 인 기업만 이름순으로 주고, 등록된 기업이 없으면 빈 배열입니다 */
+export async function getCompanies(): Promise<Company[]> {
+  const list = await api.get<CompanyResponse[]>('/api/companies')
+  return list.map(toCompany)
 }
 
 /**
@@ -17,7 +42,6 @@ export function getCompanies() {
  * (Cue-A/backend#46). 값은 그대로 문서의 UUID 입니다.
  *
  * 화면의 설정 중 **서버가 받지 않는 값은 싣지 않습니다.** 받을 자리가 없어서 보내도 버려집니다.
- * - `answerSeconds` — 서버 요청에 없습니다 (#54 확인 필요 1번, docs/90-open-questions.md Q10)
  * - `customCulture`(목록에 없는 기업의 인재상 직접 입력) — 서버 요청에 없습니다. 서버는 등록된
  *   기업 id 만 받고, 인재상은 그 기업 정보로 서버가 만듭니다
  */
@@ -37,16 +61,28 @@ type InterviewStartRequest = {
    * (Cue-A/backend#70). 서버는 생략하면 false 로 봅니다
    */
   hideQuestionText: boolean
+  /**
+   * 질문 하나의 답변 제한 시간(초). 60 · 90 · 120, "제한 없음"이면 null 입니다. (Cue-A/backend#100 · 이슈 #161)
+   *
+   * **늘 싣습니다.** 서버는 이 필드가 없으면 기본값 90초로 저장하고, null 이 와야 "제한 없음"으로 저장합니다.
+   * 빼먹으면 "제한 없음"을 골라도 90초가 되어서 생략할 수 있는 칸으로 두지 않습니다. 그 밖의 값은 `INVALID_REQUEST` 입니다.
+   * 이 필드를 모르는 서버(backend#100 전)는 그냥 버립니다
+   */
+  answerTimeLimitSec: number | null
+  /**
+   * 재연습이면 원래 면접의 세션 id (몇 회차든 상관없음). 없으면 새 면접입니다. (Cue-A/backend#78 · 이슈 #152)
+   * 재연습이면 위 고정 옵션 다섯 개(`documentId` · `companyId` · `jobRole` · `questionCount` · `persona`)가
+   * 최초 면접과 같아야 합니다. 다르면 `INVALID_REQUEST` 입니다
+   */
+  sourceSessionId?: string
 }
 
 /**
- * 기업 id 를 서버 모양(숫자)으로 바꿉니다. 바꿀 수 없으면 null — 연습 모드로 시작합니다.
+ * 기업 id 를 서버 모양(숫자)으로 되돌립니다. 바꿀 수 없으면 null — 연습 모드로 시작합니다.
  *
- * ⚠️ 지금 기업 목록(`GET /api/companies`)은 **백엔드에 없고 목업뿐**이라 id 가 `'naver'` 같은
- * 문자열입니다. 서버는 `verified` 인 기업의 숫자 id 만 받고, 모르는 id 는 `INVALID_REQUEST` 로
- * 거절합니다. 문자열 id 를 그대로 보내면 면접 시작이 통째로 실패하므로, 숫자가 아니면 빼고
- * 보냅니다. 기업 목록 API 가 생기면 id 가 숫자로 와서 이 함수는 그대로 동작합니다.
- * (#54 확인 필요 11번 — 프론트 · 백엔드 · AI 의 companyId 모양이 서로 다름)
+ * 화면은 기업 id 를 문자열로 들고 있습니다(`toCompany` 참고). 서버는 `verified` 인 기업의 숫자 id 만 받고, 모르는
+ * id 는 `INVALID_REQUEST` 로 거절합니다. 숫자로 못 바꾸는 값(예: 예전 목업 id `'naver'` 가 이 탭에 남은 경우)을
+ * 그대로 보내면 면접 시작이 통째로 실패하므로 빼고 보냅니다.
  */
 function toCompanyId(setup: SessionSetup): number | null {
   if (!setup.useCompanyQuestion || !setup.companyId || setup.companyId === CUSTOM_COMPANY) return null
@@ -75,6 +111,7 @@ function toCreateBody(setup: SessionSetup): InterviewStartRequest {
     persona: setup.interviewerStyle,
     questionCount: setup.questionCount,
     hideQuestionText: setup.deliveryMode === 'VOICE_ONLY',
+    answerTimeLimitSec: setup.answerSeconds,
   }
 }
 
@@ -83,6 +120,31 @@ export type CreatedSession = {
   sessionId: string
   /** 고른 문항 수 (되묻기 제외). 진행률 "N / 전체" 의 전체입니다 */
   questionTotal: number
+  /** 재연습이 실제로 적용됐는지. 새 면접이면 false 입니다 (Cue-A/backend#78) */
+  replayApplied?: boolean
+  /**
+   * 서버에 실제로 저장된 세션 옵션입니다. 요청값이 아니라 저장값이라 서버와 어긋나지 않습니다. (Cue-A/backend#100)
+   * 면접관 스타일은 요청(`FRIENDLY`)과 달리 소문자(`friendly`)로 옵니다. 답변 시간은 "제한 없음"이면 null 입니다.
+   *
+   * backend#100 전 서버면 이 셋이 없습니다. 그때는 요청값을 대신 씁니다 (`savedOptionsOf`)
+   */
+  hideQuestionText?: boolean
+  interviewerStyle?: InterviewOptions['interviewerStyle']
+  answerTimeLimitSec?: number | null
+}
+
+/**
+ * 시작 응답에 실린 저장된 옵션입니다. 셋 중 하나라도 없거나 모양이 다르면 null 입니다 — 응답에 옵션을 싣지 않는
+ * 서버라서, 부르는 쪽이 요청값(`toSessionOptions`)을 대신 씁니다.
+ */
+function savedOptionsOf(session: CreatedSession): InterviewSessionOptions | null {
+  const { hideQuestionText, interviewerStyle, answerTimeLimitSec } = session
+
+  if (typeof hideQuestionText !== 'boolean') return null
+  if (interviewerStyle !== 'friendly' && interviewerStyle !== 'pressure') return null
+  if (answerTimeLimitSec !== null && typeof answerTimeLimitSec !== 'number') return null
+
+  return { hideQuestionText, interviewerStyle, answerTimeLimitSec }
 }
 
 /**
@@ -96,11 +158,17 @@ export type CreatedSession = {
  *   아니면 `DOCUMENT_NOT_FOUND` · `UPLOAD_NOT_COMPLETED` · `UNSUPPORTED_FILE_FORMAT`
  * - 문항 수: 3 · 6 · 9. 아니면 `INVALID_QUESTION_COUNT`
  * - 분당 10회 (`RATE_LIMIT_EXCEEDED`)
+ *
+ * 재연습은 `sourceSessionId` 를 같이 넘깁니다. 고정 옵션은 재연습 조건 조회(`getReplayOptions`) 값 그대로여야 합니다.
  */
-export async function createSession(setup: SessionSetup) {
-  const session = await api.post<CreatedSession>('/api/interviews', toCreateBody(setup))
-  // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 조회 API 가 없어서입니다 (`getInterviewOptions` · sessionOptionsDraft.ts)
-  rememberSessionOptions(session.sessionId, toSessionOptions(setup))
+export async function createSession(setup: SessionSetup, { sourceSessionId }: { sourceSessionId?: string } = {}) {
+  const body: InterviewStartRequest = sourceSessionId ? { ...toCreateBody(setup), sourceSessionId } : toCreateBody(setup)
+  const session = await api.post<CreatedSession>('/api/interviews', body)
+  // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 서버가 저장한 값이 응답에 있으면 그 값을, 없으면 요청값을 남깁니다
+  // (`getInterviewOptions` · sessionOptionsDraft.ts)
+  rememberSessionOptions(session.sessionId, savedOptionsOf(session) ?? toSessionOptions(setup))
+  // 장치 테스트의 면접 요약이 보여줄 직무 · 질문 수 — 조회 API 에 없어서 만들 때의 값을 남깁니다 (이슈 #132)
+  rememberSessionSummary(session.sessionId, { jobRole: body.jobRole, questionCount: session.questionTotal ?? body.questionCount })
   return session
 }
 
@@ -110,20 +178,28 @@ export async function createSession(setup: SessionSetup) {
  * questionCountLabel · interviewerCount 는 지금까지 만들어진 B-01/B-01-2 UI 어디에서도
  * 쓰이지 않는다.
  *
- * GET /api/interviews/{sessionId} 는 백엔드에 아직 없는 엔드포인트다. 그래서 **세션을 만들 때 남겨 둔 값을 먼저
- * 쓴다** (`createSession` · sessionOptionsDraft.ts). 남긴 값이 없을 때만(다른 탭 · 기기에서 연 면접) 이 API 로
- * 가고, 지금은 목업이 고정값을 돌려준다.
+ * **세션을 만들 때 이 탭에 남겨 둔 값을 먼저 쓴다** (`createSession` · sessionOptionsDraft.ts). 남긴 값은 시작 응답의
+ * 저장값이라 서버와 같아서, 같은 탭에서는 조회 API 를 부르지 않는다. 남긴 값이 없을 때만(새로 연 탭 · 다른 기기)
+ * `GET /api/interviews/{sessionId}` 로 서버에 저장된 값을 읽고, 이 탭에 남겨 둔다. (Cue-A/backend#100 · 이슈 #161)
  *
- * 면접관 스타일은 옵션 설정이 대문자(FRIENDLY · PRESSURE), 면접 화면이 소문자(friendly · pressure)라
- * `toSessionOptions` 에서 바꾼다. 백엔드에 조회 API 가 생기면 서버 값을 먼저 쓰도록 바꾸고 남겨 둔 값은 지운다.
+ * 응답의 면접관 스타일은 소문자(friendly · pressure), 답변 시간은 "제한 없음"이면 null 이다. 답변 시간을 저장하기
+ * 전에 만든 과거 세션도 null 로 온다 — 실제 설정값을 알 수 없어서 서버가 "제한 없음"으로 본다.
  */
 export type InterviewSessionOptions = Pick<InterviewOptions, 'interviewerStyle' | 'hideQuestionText' | 'answerTimeLimitSec'>
+
+/** `GET /api/interviews/{sessionId}` 응답입니다. 화면은 `sessionId` 를 빼고 씁니다 */
+type InterviewSessionOptionsResponse = InterviewSessionOptions & { sessionId: string }
 
 export async function getInterviewOptions(sessionId: string): Promise<InterviewSessionOptions> {
   const remembered = recallSessionOptions(sessionId)
   if (remembered) return remembered
 
-  return api.get<InterviewSessionOptions>(`/api/interviews/${sessionId}`)
+  const { hideQuestionText, interviewerStyle, answerTimeLimitSec } = await api.get<InterviewSessionOptionsResponse>(
+    `/api/interviews/${sessionId}`,
+  )
+  const options = { hideQuestionText, interviewerStyle, answerTimeLimitSec }
+  rememberSessionOptions(sessionId, options)
+  return options
 }
 
 /**

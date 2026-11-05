@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { loadDraft, removeDraft, saveDraft } from '@/shared/lib/draftStorage'
 
@@ -36,9 +36,14 @@ export function loadSavedSessionSetup(): SessionSetup | null {
   return parseSavedSessionSetup(loadDraft(DRAFT_NAME))
 }
 
-/** 남겨 둔 값이 있으면 그걸로, 없거나 모양이 맞지 않으면 처음 값으로 시작합니다 */
-function restoreSetup(): SessionSetup {
-  return loadSavedSessionSetup() ?? INITIAL_SETUP
+/**
+ * 남겨 둔 값이 있으면 그걸로, 없거나 모양이 맞지 않으면 처음 값으로 시작합니다.
+ * 미리 고를 기업이 있으면(기업 상세의 "이 기업으로 면접 연습하기") 기업 맞춤 질문을 켜고 그 기업으로 바꿉니다. 나머지 칸은
+ * 남겨 둔 값 그대로입니다.
+ */
+function restoreSetup(presetCompanyId: string | null): SessionSetup {
+  const setup = loadSavedSessionSetup() ?? INITIAL_SETUP
+  return presetCompanyId ? { ...setup, useCompanyQuestion: true, companyId: presetCompanyId } : setup
 }
 
 /**
@@ -55,6 +60,11 @@ export type UseSessionSetupResult = {
   setup: SessionSetup
   /** 한 항목만 바꿉니다. patch({ jobRole: '프론트엔드 개발자' }) */
   patch: (changes: Partial<SessionSetup>) => void
+  /**
+   * 고른 기업이 받아 온 기업 목록에 없으면 비웁니다. 기업 목록을 **받은 뒤에만** 부릅니다 (못 받았을 때 부르면 멀쩡한 값이
+   * 지워집니다)
+   */
+  dropUnknownCompany: (knownCompanyIds: string[]) => void
   /** 아직 안 고른 필수 항목 이름들. 비어 있으면 시작할 수 있습니다 */
   missing: string[]
   canStart: boolean
@@ -68,9 +78,12 @@ export type UseSessionSetupResult = {
  * 그려지면서 `useState` 가 처음 값으로 돌아갔습니다. 바뀔 때마다 저장하고, 다시 들어오면 그 값으로 시작합니다.
  * 면접을 실제로 시작하면 지웁니다(`clearSavedSessionSetup`). 로그아웃하면 토큰과 같이 지워집니다
  * (재발급 실패로 강제 로그아웃될 때는 남고, 다른 계정이 로그인하면 지워집니다 — shared/lib/draftStorage).
+ *
+ * `presetCompanyId` 는 **처음 그릴 때 한 번만** 봅니다. 그 뒤에 사용자가 기업을 바꾸면 그 값을 따릅니다. 목록에 없는 기업이면
+ * 목록을 받은 뒤 `dropUnknownCompany` 가 비웁니다.
  */
-export function useSessionSetup(): UseSessionSetupResult {
-  const [setup, setSetup] = useState<SessionSetup>(restoreSetup)
+export function useSessionSetup(presetCompanyId: string | null = null): UseSessionSetupResult {
+  const [setup, setSetup] = useState<SessionSetup>(() => restoreSetup(presetCompanyId))
 
   useEffect(() => {
     saveDraft(DRAFT_NAME, setup)
@@ -79,6 +92,21 @@ export function useSessionSetup(): UseSessionSetupResult {
   const patch = (changes: Partial<SessionSetup>) => {
     setSetup((previous) => ({ ...previous, ...changes }))
   }
+
+  /*
+    이 탭에 남겨 둔 기업이 지금 목록에 없을 수 있습니다 — 예전 목업 id(`'naver'`)이거나, 서버에서 그 기업이 내려갔을 때.
+    그대로 두면 설정 요약은 "미선택" 인데 시작 버튼은 켜져 있어서,
+    - 숫자로 못 바꾸는 id 는 연습 모드로 조용히 시작하고
+    - 숫자로 바뀌는 낡은 id(`'5'`)는 서버가 `INVALID_REQUEST` 로 시작을 거절합니다
+    그래서 목록을 받으면 없는 기업은 비웁니다. 비우면 "기업 선택" 이 빠진 항목으로 잡혀 다시 고르게 됩니다. (PR #150 리뷰)
+  */
+  const dropUnknownCompany = useCallback((knownCompanyIds: string[]) => {
+    setSetup((previous) => {
+      const { companyId } = previous
+      if (!companyId || companyId === CUSTOM_COMPANY || knownCompanyIds.includes(companyId)) return previous
+      return { ...previous, companyId: null }
+    })
+  }, [])
 
   const missing: string[] = []
 
@@ -101,6 +129,7 @@ export function useSessionSetup(): UseSessionSetupResult {
   return {
     setup,
     patch,
+    dropUnknownCompany,
     missing,
     canStart: missing.length === 0,
   }

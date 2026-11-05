@@ -274,6 +274,23 @@ Tailwind 기본 radius 스케일과 값이 달라 **오버라이드가 필요**�
 
 ---
 
+## 8.5 Animation Tokens
+
+*출처: `src/styles/tokens.css` — 주기와 keyframes 는 이 파일 한 곳에서만 관리한다.*
+
+| 토큰 | 값 | 쓰는 자리 |
+|---|---|---|
+| `animate-blob-drift-1` | 18s ease-in-out infinite | 분석 중 화면 배경 번짐 (PR #84 리뷰) |
+| `animate-blob-drift-2` | 24s ease-in-out infinite | 위와 같음, 주기를 달리해 겹쳐 움직이게 한다 |
+| `animate-avatar-blink` | 4.6s infinite | 면접관 아바타 눈 깜빡임 |
+| `animate-avatar-breathe` | 4s ease-in-out infinite | 면접관 아바타 호흡 (위아래 3px) |
+| `animate-avatar-nod` | 3s ease-in-out infinite | 답변 제출 후 대기 중 끄덕임 (기울임 없이 위아래만) |
+
+- `animate-[...]` arbitrary value 없이 `animate-spin` 처럼 토큰 클래스로 쓴다.
+- **"동작 줄이기" 를 존중한다.** `avatar-*` 는 `motion-safe:animate-avatar-*`, `blob-drift` 는 `motion-reduce:animate-none` 을 함께 붙인다.
+
+---
+
 ## 9. 다음 단계
 
 CSS 구현(`src/styles/tokens.css`)과 Figma 값 대조·실제 렌더링 검증까지는 완료된 상태. 남은 일:

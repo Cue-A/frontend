@@ -11,9 +11,12 @@ import SessionSidePanel from './SessionSidePanel'
 
 type Props = {
   onExit?: () => void
-  recordingElapsedSec: number
+  /** 답변 녹화 시작 시각(epoch ms). 녹화 중이 아니면 null — REC 표시를 숨긴다. */
+  recordingStartedAt: number | null
   interviewerStyle: InterviewerStyle
-  sessionElapsedSec: number
+  /** 첫 질문 도착 시각(epoch ms). 면접 누적 시간의 기준이다. */
+  sessionStartedAt: number | null
+  isSessionFinished: boolean
   sessionLimitSec: number | null
 
   deviceStatus: DeviceStatus
@@ -25,6 +28,7 @@ type Props = {
   hasCameraStream: boolean
   cameraFailureMessage?: string | null
   caption: string | null
+  captionSupported?: boolean
 
   /** 질문 음성 <audio> 에 물릴 콜백 ref. useQuestionAudio 가 준다. */
   onAudioElement?: (element: HTMLAudioElement | null) => void
@@ -32,6 +36,8 @@ type Props = {
   question: Question
   hideQuestionText: boolean
   phase: SessionPhase
+  /** 면접관 아바타를 고르는 기준(세션 단위로 고정). */
+  sessionId: string
   onSubmitAnswer?: () => void
   progressLabel?: string | null
   needsRerecord?: boolean
@@ -46,9 +52,10 @@ type Props = {
  */
 export default function InterviewSessionPage({
   onExit,
-  recordingElapsedSec,
+  recordingStartedAt,
   interviewerStyle,
-  sessionElapsedSec,
+  sessionStartedAt,
+  isSessionFinished,
   sessionLimitSec,
   deviceStatus,
   deviceStatusMessage,
@@ -57,10 +64,12 @@ export default function InterviewSessionPage({
   hasCameraStream,
   cameraFailureMessage = null,
   caption,
+  captionSupported,
   onAudioElement,
   question,
   hideQuestionText,
   phase,
+  sessionId,
   onSubmitAnswer,
   progressLabel = null,
   needsRerecord = false,
@@ -74,11 +83,12 @@ export default function InterviewSessionPage({
     <div className="flex min-h-screen min-w-5xl flex-col bg-neutral-50">
       <InterviewTopBar
         onExit={onExit}
-        recordingElapsedSec={recordingElapsedSec}
+        recordingStartedAt={recordingStartedAt}
         interviewerStyle={interviewerStyle}
         questionNumber={question.questionNumber}
         questionTotal={question.questionTotal}
-        sessionElapsedSec={sessionElapsedSec}
+        sessionStartedAt={sessionStartedAt}
+        isSessionFinished={isSessionFinished}
         sessionLimitSec={sessionLimitSec}
       />
 
@@ -98,15 +108,18 @@ export default function InterviewSessionPage({
             hasStream={hasCameraStream}
             cameraFailureMessage={cameraFailureMessage}
             caption={caption}
+            captionSupported={captionSupported}
           />
         </div>
 
-        <div className="flex flex-1 items-center justify-center">
-          <InterviewerAvatarStage speakingIntensity={speakingIntensity} />
+        {/* items-end · -mb-4: 아바타 몸통 아래쪽이 위 gap-4 를 지나 QuestionCard 윗면에 바로 얹히게 한다. */}
+        <div className="-mb-4 flex flex-1 items-end justify-center">
+          <InterviewerAvatarStage speakingIntensity={speakingIntensity} sessionId={sessionId} phase={phase} interviewerStyle={interviewerStyle} />
         </div>
 
         {/* 질문 음성 재생 전용. 컨트롤은 안 보여주고 useQuestionAudio/useAudioAmplitude 가 소스·재생을 관리한다. */}
-        <audio ref={onAudioElement} hidden />
+        {/* crossOrigin: 음성 파일(S3)이 다른 출처라서, 없으면 Web Audio 를 거친 소리가 무음이 된다(입뿐 아니라 질문 음성이 안 들린다). 지우지 말 것 — 저장소 CORS 헤더와 짝이다. */}
+        <audio ref={onAudioElement} crossOrigin="anonymous" hidden />
 
         <QuestionCard
           question={question}

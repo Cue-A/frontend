@@ -14,7 +14,6 @@
  * | 회차 · 회차 칩 (`attempt` · `attempts`) | 1 · 빈 목록 — 칩 줄이 안 보입니다 | 응답에 없음 |
  * | 지난 회차 대비 (`totalScoreDelta`) | null — 안 그립니다 | 응답에 없음 |
  * | 세부 점수 소제목 (`metricsComment`) | null — 안 그립니다 | 응답에 없음 |
- * | 답변 영상 (`video`) | null — 절이 안 보입니다 | 재생 주소 API 없음 |
  * | 면접 흐름 · 잘한 점 시각 | null | 근거 시각은 **답변 오디오 기준**이라 영상 위치가 아닙니다 |
  * | 면접 흐름 상태 (`안정` · `보통` · `흔들림`) | 문항 점수로 나눕니다 (80 · 60) | 응답에 없음 |
  * | 한 줄 총평 · 문항 코멘트 (`summary` · `questions[].comment`) | 오면 쓰고, 없으면 그 칸만 비웁니다 | 노션 명세에는 있는데 백엔드 응답(main)에 아직 없음 |
@@ -486,25 +485,64 @@ function toOverview(questions: QuestionResultResponse[]): OverviewFact[] {
 /** 잘한 점 · 아쉬운 점은 각각 이만큼만 보여줍니다. 시안이 두세 줄입니다 */
 const MAX_HIGHLIGHTS = 3
 
+/** 근거 한 건을 화면 문장으로 바꿉니다. 어느 답변 이야기인지 알 수 있게 문항 번호를 앞에 붙입니다. 예) `Q2 · …` */
+function toHighlightText(item: EvidenceResponse, numberOf: Map<string, number>): string | null {
+  const text = toText(item.comment) ?? toText(item.label)
+  if (text === null) return null
+
+  const number = numberOf.get(item.questionId)
+  return number === undefined ? text : `Q${number} · ${text}`
+}
+
 /**
  * 잘한 점 · 아쉬운 점입니다. 세 축의 근거(`evidence`)에서 그 종류만 모읍니다.
  *
  * 응답에 따로 목록이 없어서 근거를 씁니다. 문장은 `comment` 를 쓰고, 비었으면 배지 이름(`label`)으로 둡니다.
  * 시각은 답변 오디오 기준이라 영상 위치로 쓸 수 없어서 null 입니다.
+ *
+ * **축마다 하나씩 먼저 고르고, 남는 칸을 내용 → 말하기 → 시선 순서로 채웁니다.** (이슈 #147)
+ * 전에는 세 축을 순서대로 이어 붙여 앞에서 3개를 잘랐습니다. 내용 근거가 문항마다 최대 2개라 거의 항상 3칸을 먼저
+ * 채워서, 시선 근거("○초~○초 구간에서 화면 밖을 응시했습니다")는 응답에 있어도 화면에 나오지 않았습니다.
+ * 고른 뒤에는 축 순서대로 묶어 보여줍니다.
  */
-function toHighlights(detail: ReportDetailResponse, kind: 'strength' | 'weakness'): Highlight[] {
-  const texts = AXIS_ORDER.flatMap((key) => axisOf(detail, key).evidence ?? [])
-    .filter((item) => item.kind === kind)
-    .map((item) => toText(item.comment) ?? toText(item.label))
-    .filter((text): text is string => text !== null)
+function toHighlights(
+  detail: ReportDetailResponse,
+  questions: QuestionResultResponse[],
+  kind: 'strength' | 'weakness',
+): Highlight[] {
+  const numberOf = new Map(questions.map((question) => [question.questionId, question.questionNumber]))
 
-  return [...new Set(texts)]
+  // 축별 문장 목록. 같은 문장은 축을 넘어서도 한 번만 씁니다
+  const seen = new Set<string>()
+  const byAxis = AXIS_ORDER.map((key) => {
+    const texts: string[] = []
+    for (const item of axisOf(detail, key).evidence ?? []) {
+      if (item.kind !== kind) continue
+      const text = toHighlightText(item, numberOf)
+      if (text === null || seen.has(text)) continue
+      seen.add(text)
+      texts.push(text)
+    }
+    return texts
+  })
+
+  // 근거가 있는 축마다 한 칸씩 먼저 주고, 남는 칸은 앞 축부터 채웁니다
+  const taken = byAxis.map((texts) => Math.min(texts.length, 1))
+  let left = MAX_HIGHLIGHTS - taken.reduce((sum, count) => sum + count, 0)
+  byAxis.forEach((texts, index) => {
+    const extra = Math.max(0, Math.min(left, texts.length - taken[index]))
+    taken[index] += extra
+    left -= extra
+  })
+
+  return byAxis
+    .flatMap((texts, index) => texts.slice(0, taken[index]))
     .slice(0, MAX_HIGHLIGHTS)
     .map((text) => ({ text, startSeconds: null, endSeconds: null }))
 }
 
 /**
- * 개선 답변 예시입니다. 화면은 한 문항만 보여주므로 첫 번째 것을 씁니다.
+ * 답변 개선 방향입니다. 화면은 한 문항만 보여주므로 첫 번째 것을 씁니다.
  * 백엔드는 내용 점수가 낮은 문항을 최대 2개 보내고, 없으면 빈 배열입니다 — 그때는 절이 사라집니다.
  */
 function toImprovedAnswer(detail: ReportDetailResponse, questions: QuestionResultResponse[]): ImprovedAnswer | null {
@@ -559,8 +597,8 @@ export function toReport(detail: ReportDetailResponse): Report {
       verdict: toText(detail.summary),
       overview: toOverview(questions),
       turns: toTurns(questions),
-      strengths: toHighlights(detail, 'strength'),
-      weaknesses: toHighlights(detail, 'weakness'),
+      strengths: toHighlights(detail, questions, 'strength'),
+      weaknesses: toHighlights(detail, questions, 'weakness'),
     },
 
     companyComment: toText(detail.companyComment),
@@ -570,7 +608,6 @@ export function toReport(detail: ReportDetailResponse): Report {
     metricsComment: null,
 
     improvedAnswer: toImprovedAnswer(detail, questions),
-    video: null,
     retry: toRetryState(detail.retry),
   }
 }

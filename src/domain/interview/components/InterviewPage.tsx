@@ -8,6 +8,7 @@ import Button from '@/shared/ui/Button'
 import { useAnswerRecording } from '../hooks/useAnswerRecording'
 import { useInterviewSession } from '../hooks/useInterviewSession'
 import { useInterviewSessionOptions } from '../hooks/useInterviewSessionOptions'
+import { useLiveCaption } from '../hooks/useLiveCaption'
 import { useMediaStream } from '../hooks/useMediaStream'
 import { useQuestionAudio } from '../hooks/useQuestionAudio'
 import type { InterviewSessionOptions } from '../api/sessionApi'
@@ -85,7 +86,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const [isExitRequested, setIsExitRequested] = useState(false)
 
   const { camera, mic, videoStream, audioRecordingStream, videoRecordingStream } = useMediaStream(initialDeviceStatus, initialDeviceIds)
-  const { uploadStatus, startRecording, stopAndUpload } = useAnswerRecording(sessionId, audioRecordingStream, videoRecordingStream)
+  const { uploadStatus, recordingStartedAt, startRecording, stopAndUpload } = useAnswerRecording(sessionId, audioRecordingStream, videoRecordingStream)
 
   // 녹화 업로드가 끝나야 실제 제출을 부를 수 있어서(아래 pendingSubmit effect 주석
   // 참고), 수동 제출·타임아웃 제출 둘 다 "제출 의도"만 여기 적어두고 stopAndUpload 를
@@ -103,6 +104,8 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const session = useInterviewSession(sessionId, options.answerTimeLimitSec, handleAnswerTimeout)
   const { beginSubmit, submitAnswer, cancelSubmit } = session
   const { setAudioElement, amplitude } = useQuestionAudio(session.question, session.notifyPresentationDone)
+  // 답변 중에만 브라우저 음성 인식(Web Speech API)으로 자막을 만든다 — 화면 표시 전용, 서버 전송 없음.
+  const { caption, isSupported: captionSupported } = useLiveCaption(session.phase === 'answering', session.question?.questionId)
 
   // 뒤로가기 등 인앱 이동으로 세션을 잃지 않도록 막는다(#26 — X 버튼·beforeunload 만으로는
   // 브라우저 뒤로가기가 안 잡혔다). "확인" 누른 직후의 navigate(ROUTES.HOME) 호출도
@@ -120,11 +123,17 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   // 안 바뀌니 다시 시도할 계기가 없어서 화면이 계속 비게 된다. session.question 이 처음
   // 생기는 시점(= <video> 가 처음 마운트되는 시점)도 의존성에 넣어서, 그때 videoStream 이
   // 이미 준비돼 있으면 그 시점에 다시 대입한다.
+  //
+  // 의존성은 questionId 가 아니라 "질문이 있는가(boolean)" 여야 한다 — questionId 로 두면 질문이
+  // 바뀔 때마다 같은 스트림을 srcObject 에 다시 넣는데, 같은 값이어도 대입하면 미디어 로드가
+  // 다시 돌아 두 번째 질문부터 미리보기가 멈춘다(#154). 같은 스트림이면 대입도 건너뛴다.
+  const hasQuestion = session.question !== null
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = videoStream
+    const video = videoRef.current
+    if (video && video.srcObject !== videoStream) {
+      video.srcObject = videoStream
     }
-  }, [videoStream, session.question?.questionId])
+  }, [videoStream, hasQuestion])
 
   // 새 질문에서 'answering' 이 되면(재녹음으로 되돌아온 경우 포함) 녹화를 새로 시작한다.
   // startRecording 자체가 "스트림 없음/이미 녹화 중"을 걸러줘서 여기선 조건 없이 부른다.
@@ -282,11 +291,11 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
       <InterviewSessionPage
         videoRef={videoRef}
         onExit={() => setIsExitRequested(true)}
-        // TODO(B-01-4): REC 표시(경과 시간)는 녹화 시작 시점을 노출하는 후속 작업 몫이다.
-        recordingElapsedSec={0}
+        recordingStartedAt={recordingStartedAt}
         interviewerStyle={options.interviewerStyle}
-        // TODO(B-01-4): 세션 전체 경과·제한 시간은 아직 이 이슈 범위가 아니다.
-        sessionElapsedSec={0}
+        sessionStartedAt={session.sessionStartedAt}
+        isSessionFinished={session.isFinished}
+        // 면접 전체 제한 시간은 없다 — 경과 시간만 표시한다.
         sessionLimitSec={null}
         deviceStatus={deviceStatus.status}
         deviceStatusMessage={deviceStatus.message}
@@ -294,12 +303,12 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         hasCameraStream={camera.status === 'available'}
         cameraFailureMessage={camera.status === 'failed' && camera.failureReason ? CAMERA_FAILURE_MESSAGE[camera.failureReason] : null}
         onAudioElement={setAudioElement}
-        // 실시간 자막은 범위 제외가 확정 사항이다(백엔드 WS 메시지에 발화 전사 채널이 없음) —
-        // LiveCaptionPanel 은 B-01-1 의 빈 상태 UI를 그대로 쓴다.
-        caption={null}
+        caption={caption}
+        captionSupported={captionSupported}
         question={session.question}
         hideQuestionText={options.hideQuestionText}
         phase={session.phase}
+        sessionId={sessionId}
         onSubmitAnswer={handleSubmitAnswer}
         progressLabel={session.progressLabel}
         needsRerecord={session.needsRerecord}

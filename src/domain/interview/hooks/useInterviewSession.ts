@@ -41,6 +41,8 @@ export type UseInterviewSessionResult = {
   needsRerecord: boolean
   submitError: SubmitErrorState | null
   isFinished: boolean
+  /** 첫 질문이 도착한 시각(epoch ms). 면접 누적 시간의 기준이며 한 번 정해지면 바뀌지 않는다. */
+  sessionStartedAt: number | null
   sessionEnd: SessionEndPush | null
   /**
    * 첫 질문이 90초 넘게 오지 않았다는 신호. 백엔드에 catch-up 버퍼가 없어(#54 2-3,
@@ -121,6 +123,7 @@ export function useInterviewSession(
   const [progressLabel, setProgressLabel] = useState<string | null>(null)
   const [needsRerecord, setNeedsRerecord] = useState(false)
   const [submitError, setSubmitError] = useState<SubmitErrorState | null>(null)
+  const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null)
   const [sessionEnd, setSessionEnd] = useState<SessionEndPush | null>(null)
   const [remainingSec, setRemainingSec] = useState<number | null>(answerTimeLimitSec)
   const [firstQuestionTimedOut, setFirstQuestionTimedOut] = useState(false)
@@ -146,6 +149,7 @@ export function useInterviewSession(
 
   const handleQuestion = useCallback((next: Question) => {
     setQuestion(next)
+    setSessionStartedAt((prev) => prev ?? Date.now())
     setProgressLabel(null)
     setNeedsRerecord(false)
     setSubmitError(null)
@@ -378,6 +382,7 @@ export function useInterviewSession(
     needsRerecord,
     submitError,
     isFinished: phase === 'finished',
+    sessionStartedAt,
     sessionEnd,
     remainingSec,
     firstQuestionTimedOut,

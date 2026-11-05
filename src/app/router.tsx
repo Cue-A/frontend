@@ -2,17 +2,27 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import KakaoCallbackPage from '@/domain/auth/components/KakaoCallbackPage'
 import LoginPage from '@/domain/auth/components/LoginPage'
+import CompaniesPage from '@/domain/company/components/CompaniesPage'
+import CompanyDetailPage from '@/domain/company/components/CompanyDetailPage'
 import DeviceCheckPage from '@/domain/interview/components/DeviceCheckPage'
 import InterviewPage from '@/domain/interview/components/InterviewPage'
 import InterviewSessionPreview from '@/domain/interview/components/InterviewSessionPreview'
 import LibraryDocumentsPage from '@/domain/document/components/LibraryDocumentsPage'
+import GrowthPage from '@/domain/growth/components/GrowthPage'
 import HomePage from '@/domain/home/components/HomePage'
+import ReplaySetupPage from '@/domain/interview/components/ReplaySetupPage'
 import SessionSetupPage from '@/domain/interview/components/SessionSetupPage'
 import LandingPage from '@/domain/landing/components/LandingPage'
+import PracticeRecordsPage from '@/domain/practice/components/PracticeRecordsPage'
+import QuestionBankPage from '@/domain/question/components/QuestionBankPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
 import ReportPage from '@/domain/report/components/ReportPage'
 import AccountSettingsPage from '@/domain/user/components/AccountSettingsPage'
+import BusinessCardPage from '@/domain/user/components/BusinessCardPage'
+import InterestsPage from '@/domain/user/components/InterestsPage'
 import MyPage from '@/domain/user/components/MyPage'
+import NotificationSettingsPage from '@/domain/user/components/NotificationSettingsPage'
+import ProfilePage from '@/domain/user/components/ProfilePage'
 import WithdrawPage from '@/domain/user/components/WithdrawPage'
 
 import AppLayout, { type AppLayoutHandle } from './layout/AppLayout'
@@ -67,8 +77,18 @@ export const router = createBrowserRouter([
             handle: { fullBleed: true } satisfies AppLayoutHandle,
           },
           { path: ROUTES.SESSION_SETUP, element: <SessionSetupPage /> },
+          { path: ROUTES.REPLAY, element: <ReplaySetupPage /> },
           { path: ROUTES.LIBRARY_DOCUMENTS, element: <LibraryDocumentsPage /> },
+          { path: ROUTES.LIBRARY_PRACTICE, element: <PracticeRecordsPage /> },
+          { path: ROUTES.LIBRARY_QUESTIONS, element: <QuestionBankPage /> },
+          { path: ROUTES.GROWTH, element: <GrowthPage /> },
+          { path: ROUTES.COMPANIES, element: <CompaniesPage /> },
+          { path: ROUTES.COMPANY, element: <CompanyDetailPage /> },
           { path: ROUTES.MYPAGE, element: <MyPage /> },
+          { path: ROUTES.MYPAGE_PROFILE, element: <ProfilePage /> },
+          { path: ROUTES.MYPAGE_INTERESTS, element: <InterestsPage /> },
+          { path: ROUTES.MYPAGE_NOTIFICATIONS, element: <NotificationSettingsPage /> },
+          { path: ROUTES.MYPAGE_BUSINESS_CARD, element: <BusinessCardPage /> },
           { path: ROUTES.MYPAGE_ACCOUNT, element: <AccountSettingsPage /> },
           { path: ROUTES.MYPAGE_WITHDRAW, element: <WithdrawPage /> },
         ],

@@ -12,13 +12,33 @@ export const ROUTES = {
   HOME: '/home',
   SESSION_SETUP: '/interviews/new',
   DEVICE_CHECK: '/interviews/:sessionId/device-check',
+  /** 재연습 설정. `sessionId` 는 다시 볼 면접(몇 회차든)입니다 (이슈 #152) */
+  REPLAY: '/interviews/:sessionId/replay',
   INTERVIEW: '/interviews/:sessionId',
   ANALYZING: '/interviews/:sessionId/analyzing',
   REPORT: '/reports/:reportId',
   /** C-02 내 보관함 > 자소서 · 포트폴리오 (이슈 #59) */
   LIBRARY_DOCUMENTS: '/library/documents',
-  /** 마이페이지 메뉴 목록. 지금은 계정 설정만 열려 있습니다 */
+  /** 내 보관함 > 연습 기록. 지난 모의면접을 폴더 · 상태로 거르고 리포트를 다시 봅니다 */
+  LIBRARY_PRACTICE: '/library/practice',
+  /** 내 보관함 > 질문 은행. 공통 질문과 면접에서 쌓인 질문을 보고, 다시 볼 질문은 북마크합니다 (이슈 #138) */
+  LIBRARY_QUESTIONS: '/library/questions',
+  /** C-04 성장 관리 — 회차별 점수 추이 · 이번 주 목표 · 배지 · 면접 캘린더 (이슈 #136) */
+  GROWTH: '/growth',
+  /** 기업 탐색 — 검증된 기업 목록과 관심 등록 (이슈 #162) */
+  COMPANIES: '/companies',
+  /** 기업 상세 — 업종 · 핵심 가치 · 행동지표, 이 기업으로 면접 연습하기 */
+  COMPANY: '/companies/:companyId',
+  /** 마이페이지 메뉴 목록 */
   MYPAGE: '/mypage',
+  /** 마이페이지 > 프로필 — 이름 · 직무 수정, 이메일은 보기만 */
+  MYPAGE_PROFILE: '/mypage/profile',
+  /** 마이페이지 > 관심 기업 */
+  MYPAGE_INTERESTS: '/mypage/interests',
+  /** 마이페이지 > 알림 설정 */
+  MYPAGE_NOTIFICATIONS: '/mypage/notifications',
+  /** 마이페이지 > 나만의 명함 생성 */
+  MYPAGE_BUSINESS_CARD: '/mypage/business-card',
   /** 마이페이지 > 계정 설정 — 로그아웃 · 회원 탈퇴 */
   MYPAGE_ACCOUNT: '/mypage/account',
   /** 계정 설정 > 계정 탈퇴하기 — 이유 고르기 · 최종 확인 */
@@ -29,12 +49,46 @@ export const ROUTES = {
 
 /**
  * 내 보관함 아래 화면들의 공통 앞부분. 사이드바가 "내 보관함" 칸을 켤지 정할 때 씁니다.
- * 지금은 자소서 · 포트폴리오뿐이고, 연습 기록 · 질문 은행이 생기면 같은 앞부분 아래에 둡니다.
+ * 자소서 · 포트폴리오 · 연습 기록 · 질문 은행이 이 아래에 있습니다.
  */
 export const LIBRARY_PREFIX = '/library'
 
+/** 성장 관리 주소에 붙여 이번 주 목표 창을 바로 엽니다. `/growth?open=goal` (이슈 #142) */
+export const GROWTH_OPEN_PARAM = 'open'
+export const GROWTH_OPEN_GOAL = 'goal'
+/** 성장 관리의 면접 캘린더 자리. `/growth#calendar` 로 들어오면 그 자리로 내려갑니다 (이슈 #142) */
+export const GROWTH_CALENDAR_ID = 'calendar'
+
+/**
+ * 성장 관리로 가는 주소입니다. 홈에서 들어올 때 어디를 보여줄지 고릅니다. (이슈 #142)
+ * - `goal` — 이번 주 목표 창을 열어서 (홈 "목표 수정 · 목표 정하기")
+ * - `calendar` — 면접 캘린더로 내려가서 (홈 "다가오는 면접일 · 전체보기")
+ */
+export function toGrowth(focus?: 'goal' | 'calendar') {
+  if (focus === 'goal') return `${ROUTES.GROWTH}?${GROWTH_OPEN_PARAM}=${GROWTH_OPEN_GOAL}`
+  if (focus === 'calendar') return `${ROUTES.GROWTH}#${GROWTH_CALENDAR_ID}`
+  return ROUTES.GROWTH
+}
+
+/** 옵션 설정 주소에 붙여 기업을 미리 골라 둡니다. `/interviews/new?companyId=6` (기업 상세의 "이 기업으로 면접 연습하기") */
+export const SESSION_SETUP_COMPANY_PARAM = 'companyId'
+
+/** 면접 옵션 설정으로 갑니다. 기업 id 를 주면 기업 맞춤 질문을 켜고 그 기업을 골라 둡니다 */
+export function toSessionSetup(companyId?: string) {
+  if (!companyId) return ROUTES.SESSION_SETUP
+  return `${ROUTES.SESSION_SETUP}?${SESSION_SETUP_COMPANY_PARAM}=${encodeURIComponent(companyId)}`
+}
+
+export function toCompany(companyId: string) {
+  return `/companies/${encodeURIComponent(companyId)}`
+}
+
 export function toDeviceCheck(sessionId: string) {
   return `/interviews/${sessionId}/device-check`
+}
+
+export function toReplay(sessionId: string) {
+  return `/interviews/${sessionId}/replay`
 }
 
 export function toInterview(sessionId: string) {

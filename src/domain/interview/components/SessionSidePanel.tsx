@@ -8,13 +8,14 @@ type Props = {
   hasStream: boolean
   cameraFailureMessage?: string | null
   caption: string | null
+  captionSupported?: boolean
 }
 
-export default function SessionSidePanel({ videoRef, hasStream, cameraFailureMessage = null, caption }: Props) {
+export default function SessionSidePanel({ videoRef, hasStream, cameraFailureMessage = null, caption, captionSupported = true }: Props) {
   return (
     <div className="flex w-72 shrink-0 flex-col gap-6">
       <SelfCameraPreview videoRef={videoRef} hasStream={hasStream} failureMessage={cameraFailureMessage} />
-      <LiveCaptionPanel caption={caption} />
+      <LiveCaptionPanel caption={caption} isSupported={captionSupported} />
     </div>
   )
 }

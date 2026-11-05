@@ -1,3 +1,4 @@
+import { formatDate } from '@/shared/lib/formatDate'
 import { formatFileSize } from '@/shared/lib/formatFileSize'
 
 import type { DocumentSummary, DocumentType } from '../types/document'
@@ -48,16 +49,6 @@ export function formatBadgeOf(document: DocumentSummary): string {
   const dot = name.lastIndexOf('.')
   const extension = dot < 0 ? '' : name.slice(dot + 1).toUpperCase()
   return extension || 'FILE'
-}
-
-/** `2026-09-20T14:02:11+09:00` → `2026.09.20` (보는 사람의 시간대 기준) */
-export function formatDate(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return '-'
-
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}.${month}.${day}`
 }
 
 /** 등록일 · 용량 칸. 직접 작성한 문서는 파일 크기가 없습니다. */

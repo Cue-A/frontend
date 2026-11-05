@@ -1,3 +1,4 @@
+import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
 import type { RetryAxis } from '../types/report'
@@ -112,6 +113,15 @@ const CONTENT_EVIDENCE: EvidenceResponse[] = [
     label: '근거 부족',
     comment: '선택 이유를 설명했으나 비교 대상이 제시되지 않았습니다.',
   },
+  {
+    // 내용 근거는 문항마다 최대 2개라 아쉬운 점만으로 3칸을 넘기기 쉽습니다. 시선이 밀려나지 않는지 보려고 하나 더 둡니다
+    questionId: 'q2',
+    tStart: 20.5,
+    tEnd: 34,
+    kind: 'weakness',
+    label: '일반론',
+    comment: '지원 동기가 회사 소개 문구에 머물러 본인 경험과 이어지지 않았습니다.',
+  },
 ]
 
 const SPEECH_EVIDENCE: EvidenceResponse[] = [
@@ -122,6 +132,26 @@ const SPEECH_EVIDENCE: EvidenceResponse[] = [
     kind: 'weakness',
     label: '침묵',
     comment: '예상 밖 질문에서 8초 동안 말이 멈췄습니다.',
+  },
+]
+
+/** 시선 근거. AI 는 화면 밖을 본 구간을 문장으로 줍니다 */
+const GAZE_EVIDENCE: EvidenceResponse[] = [
+  {
+    questionId: 'q2',
+    tStart: 12,
+    tEnd: 18,
+    kind: 'weakness',
+    label: '시선 회피',
+    comment: '12초~18초 구간에서 화면 밖을 응시했습니다.',
+  },
+  {
+    questionId: 'q1',
+    tStart: 0,
+    tEnd: 40,
+    kind: 'strength',
+    label: '시선 안정',
+    comment: '답변 내내 화면을 안정적으로 바라봤습니다.',
   },
 ]
 
@@ -147,6 +177,16 @@ const SPEECH_OK: AxisResponse = {
   evidence: SPEECH_EVIDENCE,
 }
 
+const GAZE_OK: AxisResponse = {
+  status: 'ok',
+  errorCode: null,
+  reason: null,
+  score: 74,
+  display: 4,
+  metrics: {},
+  evidence: GAZE_EVIDENCE,
+}
+
 function failedAxis(errorCode: string): AxisResponse {
   return { status: 'failed', errorCode, reason: null, score: null, display: null, metrics: null, evidence: [] }
 }
@@ -161,7 +201,7 @@ const GAZE_SKIPPED: AxisResponse = {
   evidence: [],
 }
 
-/** 개선 답변 예시. 백엔드는 내용 점수가 낮은 문항을 최대 2개 보냅니다. 화면은 첫 번째만 씁니다 */
+/** 답변 개선 방향. 백엔드는 내용 점수가 낮은 문항을 최대 2개 보냅니다. 화면은 첫 번째만 씁니다 */
 const IMPROVED_ANSWERS: ReportDetailResponse['improvedAnswers'] = [
   {
     questionId: 'q3',
@@ -190,6 +230,7 @@ export const MOCK_REPORT_IDS = {
   noCamera: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c02',
   latest: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c03',
   bothFailed: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c04',
+  allAxes: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c05',
 } as const
 
 /**
@@ -275,8 +316,8 @@ function withoutSummary(detail: ReportDetailResponse): ReportDetailResponse {
 }
 
 /**
- * **지금 백엔드 응답 그대로**인 회차입니다. 한 줄 총평 · 문항 코멘트 키가 없고, 개선 답변 예시도 빈 배열입니다.
- * 총평 칸 · 흐름의 코멘트 줄 · 개선 답변 절과 토글이 모두 사라지는지 이 회차로 봅니다.
+ * **지금 백엔드 응답 그대로**인 회차입니다. 한 줄 총평 · 문항 코멘트 키가 없고, 답변 개선 방향도 빈 배열입니다.
+ * 총평 칸 · 흐름의 코멘트 줄 · 답변 개선 방향 절과 토글이 모두 사라지는지 이 회차로 봅니다.
  */
 const NO_EXTRAS: ReportDetailResponse = {
   ...withoutSummary(LATEST),
@@ -324,6 +365,32 @@ const BOTH_FAILED: ReportDetailResponse = {
 }
 
 /**
+ * **세 축이 모두 분석된** 회차입니다. 잘한 점 · 아쉬운 점에 축마다 하나씩 들어가는지 이 회차로 봅니다. (이슈 #147)
+ * 내용 근거만으로 아쉬운 점 3칸이 넘치지만, 말하기 · 시선 근거가 한 칸씩 먼저 들어가야 합니다.
+ */
+const ALL_AXES: ReportDetailResponse = {
+  ...LATEST,
+  reportId: MOCK_REPORT_IDS.allAxes,
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e05',
+  status: 'COMPLETED',
+  overall: {
+    score: 80,
+    display: 4,
+    gated: false,
+    gateReason: null,
+    partial: false,
+    axesUsed: ['content', 'speech', 'gaze'],
+    axesFailed: [],
+  },
+  axes: { content: CONTENT_OK, speech: SPEECH_OK, gaze: GAZE_OK },
+  questions: toQuestions({
+    axes: (score) => ({ content: score + 2, speech: score - 4, gaze: score - 6 }),
+    comments: 'all',
+  }),
+  createdAt: '2026-07-22T11:10:00+09:00',
+}
+
+/**
  * 리포트별로 다른 상태를 보여줍니다. 연동 전에 화면 분기를 눈으로 확인하는 용도입니다.
  * 목록에 없는 id 는 `latest` 모양에 id 만 바꿔 돌려줍니다 — 분석 중 화면(B-02)이 목업에서 여는 리포트가 이것입니다.
  */
@@ -332,6 +399,7 @@ const SCENARIOS: Record<string, ReportDetailResponse> = {
   [MOCK_REPORT_IDS.noCamera]: NO_CAMERA,
   [MOCK_REPORT_IDS.noExtras]: NO_EXTRAS,
   [MOCK_REPORT_IDS.bothFailed]: BOTH_FAILED,
+  [MOCK_REPORT_IDS.allAxes]: ALL_AXES,
 }
 
 /**
@@ -355,7 +423,8 @@ const RECOVERED_AXIS: Record<RetryAxis, AxisResponse> = {
     metrics: { hesitationScore: 35, speechRateCv: 0.31, repetitionCount: 4 },
     evidence: [],
   },
-  gaze: { status: 'ok', errorCode: null, reason: null, score: 74, display: 4, metrics: {}, evidence: [] },
+  // 세 축 회차(`ALL_AXES`)와 같은 객체를 쓰면 한쪽을 고칠 때 다른 쪽도 같이 바뀝니다. 값만 복사해 따로 둡니다 (PR #148 리뷰)
+  gaze: { ...GAZE_OK, evidence: [...GAZE_EVIDENCE] },
 }
 
 const AXIS_KEYS: AxisKey[] = ['content', 'speech', 'gaze']
@@ -413,6 +482,17 @@ function mockDetailOf(reportId: string): ReportDetailResponse {
   return { ...withRecovered(base, recoveredAxes.get(reportId)), retry: retryInfos.get(reportId) ?? null }
 }
 
+/** 타임라인 목업(`timelineMock.ts`)이 쓰는 상세 응답입니다. 다시 분석해서 살아난 축까지 반영돼 있습니다 */
+export function mockReportDetail(reportId: string): ReportDetailResponse {
+  return mockDetailOf(reportId)
+}
+
+/** 재생목록 목업(`recordingsMock.ts`)이 세션 id 로 그 리포트를 찾습니다. 목업 리포트의 세션이 아니면 null 입니다 */
+export function mockReportOfSession(sessionId: string): ReportDetailResponse | null {
+  const reportId = Object.keys(SCENARIOS).find((id) => SCENARIOS[id].sessionId === sessionId)
+  return reportId ? mockDetailOf(reportId) : null
+}
+
 /**
  * 재시도 목업(`reportRetryMock.ts`)이 보는 값만 꺼냅니다 — 리포트 상태 · 총점 · 실패한 축 · 재시도 상태.
  * 실제 서버처럼 리포트가 `PARTIAL` 인지, 이미 도는 중인지, 어느 축을 다시 돌릴지를 이걸로 정합니다.
@@ -427,4 +507,18 @@ export function mockRetryTarget(reportId: string) {
   }
 }
 
-registerMock('GET', '/api/reports/:reportId', ({ reportId }) => mockDetailOf(reportId))
+/**
+ * **분석이 실패한** 리포트입니다. 조회는 409 `REPORT_FAILED` 이고, 상태 조회(`reportRequestMock.ts`)는 `FAILED` 와
+ * 세션 id 를 줍니다. 리포트 실패 화면의 "다시 연습하기" 가 재연습으로 이어지는지 이 리포트로 봅니다. (이슈 #152)
+ */
+export const MOCK_FAILED_REPORT = {
+  reportId: 'b1f0c6a2-7d3e-4a51-9c28-5e1f0a7b3c09',
+  sessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e09',
+} as const
+
+registerMock('GET', '/api/reports/:reportId', ({ reportId }) => {
+  if (reportId === MOCK_FAILED_REPORT.reportId) {
+    throw new ApiError('REPORT_FAILED', '리포트 생성에 실패했습니다')
+  }
+  return mockDetailOf(reportId)
+})
