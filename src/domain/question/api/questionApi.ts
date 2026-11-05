@@ -7,6 +7,7 @@ import {
   toCommonQuestion,
   type BookmarkListResponse,
   type BookmarkMemoResponse,
+  type CommonFavoriteResponse,
   type CommonQuestionListResponse,
 } from './questionResponse'
 
@@ -68,11 +69,35 @@ function bookmarkPath(sessionId: string, questionId: string) {
 }
 
 /**
- * 공통 질문 목록. `GET /api/common-questions`
+ * 공통 질문 목록. `GET /api/common-questions` — 즐겨찾기한 질문이 위입니다.
  *
  * **백엔드에 없는 API 입니다.** 경로 · 응답 모양 모두 프론트 임시안이고 목업이 답합니다 (questionResponse.ts).
  */
 export async function getCommonQuestions(): Promise<CommonQuestion[]> {
   const response = await api.get<CommonQuestionListResponse>('/api/common-questions')
   return response.questions.map(toCommonQuestion)
+}
+
+/**
+ * 공통 질문 즐겨찾기 켜기 · 끄기. `PUT /api/common-questions/{questionId}/favorite`
+ *
+ * 서버에는 **바뀔 상태**를 보냅니다. 이미 그 상태면 아무것도 바꾸지 않고 성공입니다 (북마크와 같은 방식).
+ * **백엔드에 없는 API 입니다.** 임시안이고 목업이 답합니다.
+ */
+export function setCommonFavorite(questionId: string, favorite: boolean) {
+  return api.put<CommonFavoriteResponse>(commonPath(questionId, '/favorite'), { favorite })
+}
+
+/**
+ * 공통 질문 메모 쓰기 · 수정 · 삭제. `PATCH /api/common-questions/{questionId}` — 북마크 메모와 같은 규칙입니다
+ * (비우면 삭제, 최대 500자). 돌려주는 값이 저장된 메모입니다(지웠으면 null).
+ * **백엔드에 없는 API 입니다.** 임시안이고 목업이 답합니다.
+ */
+export async function updateCommonMemo(questionId: string, memo: string) {
+  const response = await api.patch<BookmarkMemoResponse>(commonPath(questionId), { memo })
+  return response.memo
+}
+
+function commonPath(questionId: string, suffix = '') {
+  return `/api/common-questions/${encodeURIComponent(questionId)}${suffix}`
 }
