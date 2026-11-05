@@ -139,7 +139,7 @@
    * 출처: 면접 진행 화면 리디자인 (Figma 노드 미확정 — 확정되면 값 · 출처를 맞춘다)
    *
    * 면접 진행 화면(InterviewSessionPage)에서만 쓴다. 흰색에 가까운 중심에서 가장자리 연보라(primary 계열)로 번지는
-   * 방사형 그라디언트와 그 위에 얹는 알약 · 원형 버튼 색이다. (처음 시안은 다크였는데 밝은 색으로 되돌렸다)
+   * 방사형 그라디언트와 그 위에 얹는 알약 · 원형 버튼 색이다.
    * ------------------------------------------------------------------- */
   --color-stage-bg: #f1effe; /* 화면 가장자리 — primary-100(#e4e1fe)보다 훨씬 옅은 연보라 */
   --color-stage-glow: #ffffff; /* 아바타 뒤 중심 빛 */
@@ -346,29 +346,7 @@
   }
 }
 
-/* 면접 진행 화면 배경: 아바타 뒤 중심에서 가장자리로 번지는 방사형. 색은 stage 토큰을 따라가서 다크 전환에도 같이 바뀐다. */
+/* 면접 진행 화면 배경: 아바타 뒤 중심에서 가장자리로 번지는 방사형. 색은 stage 토큰을 따른다. */
 @utility bg-stage-gradient {
   background-image: radial-gradient(ellipse at 50% 42%, var(--color-stage-glow), var(--color-stage-bg) 70%);
-}
-
-/**
- * 면접 진행 화면 다크 버전 (비교용). `InterviewSessionPage` 루트에 `data-stage-theme="dark"` 가 붙으면 위 `stage-*`
- * 값만 덮어쓴다 — 컴포넌트는 같은 클래스를 쓰고 색만 바뀐다. 기본(라이트)과 어느 쪽으로 갈지 정해지면 안 쓰는 쪽을
- * 지운다. 값은 처음 다크 시안(이미지)을 옮긴 것이다.
- */
-[data-stage-theme='dark'] {
-  --color-stage-bg: #0e0e11;
-  --color-stage-glow: #2b2b31;
-  --color-stage-surface: #232328;
-  --color-stage-surface-hover: #2e2e35;
-  --color-stage-border: #3a3a42;
-  --color-stage-card: #ffffff;
-  --color-stage-text: #ffffff;
-  --color-stage-soft: #d4d4da;
-  --color-stage-sub: #a8a8b3;
-  --color-stage-muted: #70707b;
-  --color-stage-cta: #ffffff;
-  --color-stage-cta-text: #26262b;
-  --color-stage-cta-hover: #e5e5ea;
-  --color-stage-cta-disabled: #2e2e35;
 }

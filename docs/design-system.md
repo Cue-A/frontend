@@ -156,8 +156,6 @@
 
 글자 · 버튼 색도 같은 계열 토큰으로 둔다: `stage-card`(질문 카드), `stage-text` · `stage-soft` · `stage-sub` · `stage-muted`(글자 4단계), `stage-cta` · `stage-cta-text` · `stage-cta-hover` · `stage-cta-disabled`(답변 완료 · CC 켜짐). 값은 `styles/tokens.css` 참고.
 
-**다크 버전(비교용).** 처음 시안의 다크도 남겨 뒀다. `InterviewSessionPage` 루트에 `data-stage-theme="dark"` 가 붙으면 위 토큰 값만 덮어쓰고, 컴포넌트는 같은 클래스를 쓴다. 실제 화면은 주소 뒤 `?stage=dark`, 프리뷰(`/dev/interview-preview`)는 "배경" 버튼으로 전환한다. 한쪽으로 정해지면 안 쓰는 쪽(`tokens.css` 맨 아래 블록, `lib/stageTheme.ts`)을 지운다.
-
 ---
 
 ## 3. Typography Tokens

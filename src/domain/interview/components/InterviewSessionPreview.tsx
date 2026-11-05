@@ -5,7 +5,6 @@ import type { DeviceStatus, InterviewerStyle, Question, QuestionType, SessionPha
 import DeviceStatusChip from './DeviceStatusChip'
 import InterviewSessionPage from './InterviewSessionPage'
 import QuestionCard from './QuestionCard'
-import type { StageTheme } from '../lib/stageTheme'
 
 /**
  * B-01 확인용 프리뷰입니다. 실제 서비스 라우트가 아니라 개발 중 시안 대조용이고,
@@ -100,7 +99,6 @@ type PreviewState = {
   needsRerecord: boolean
   showSubmitError: boolean
   remainingSec: number | null
-  stageTheme: StageTheme
 }
 
 const INITIAL_STATE: PreviewState = {
@@ -117,7 +115,6 @@ const INITIAL_STATE: PreviewState = {
   needsRerecord: false,
   showSubmitError: false,
   remainingSec: null,
-  stageTheme: 'light',
 }
 
 const REMAINING_SEC_OPTIONS = ['none', '5', '45', '90'] as const
@@ -165,12 +162,6 @@ function LiveFullWidthPreview() {
       </div>
 
       <div className="flex flex-wrap gap-4 rounded-lg border border-neutral-200 bg-neutral-0 p-4">
-        <ControlGroup
-          label="배경 (라이트 / 다크)"
-          value={state.stageTheme}
-          options={['light', 'dark'] as const}
-          onChange={set('stageTheme')}
-        />
         <ControlGroup label="questionType" value={state.questionType} options={QUESTION_TYPES} onChange={set('questionType')} />
         <ControlGroup
           label="hideQuestionText"
@@ -263,7 +254,6 @@ function LiveFullWidthPreview() {
           onExit={() => {}}
           recordingStartedAt={previewStartedAt - 13_000}
           interviewerStyle={state.interviewerStyle}
-          stageTheme={state.stageTheme}
           jobRole="데이터 분석"
           companyName="네이버"
           sessionStartedAt={previewStartedAt - 324_000}

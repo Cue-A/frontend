@@ -2,7 +2,6 @@ import { useState, type RefObject } from 'react'
 
 import type { SubmitErrorState } from '../hooks/useInterviewSession'
 import type { CaptionLayout } from '../lib/captionLayout'
-import type { StageTheme } from '../lib/stageTheme'
 import type { DeviceStatus, InterviewerStyle, Question, SessionPhase } from '../types/interview'
 
 import AnswerControlBar from './AnswerControlBar'
@@ -37,8 +36,6 @@ type Props = {
   captionSupported?: boolean
   /** 자막 배치 비교용 임시 prop (lib/captionLayout.ts). 기본은 시안의 카드 안 한 줄. */
   captionLayout?: CaptionLayout
-  /** 배경 테마 비교용 임시 prop (lib/stageTheme.ts). 기본은 라이트. */
-  stageTheme?: StageTheme
 
   /** 질문 음성 <audio> 에 물릴 콜백 ref. useQuestionAudio 가 준다. */
   onAudioElement?: (element: HTMLAudioElement | null) => void
@@ -78,7 +75,6 @@ export default function InterviewSessionPage({
   caption,
   captionSupported,
   captionLayout = 'inline',
-  stageTheme = 'light',
   onAudioElement,
   question,
   hideQuestionText,
@@ -98,11 +94,9 @@ export default function InterviewSessionPage({
     // 반응형 레이아웃은 아직 설계되지 않았고(디자인 시안도 데스크톱 1장 기준), 이보다
     // 좁은 뷰포트는 시안 검증 대상이 아니다 — 요소가 겹치는 대신 가로 스크롤이 생기게 한다.
     <div
-      data-stage-theme={stageTheme}
       className="flex min-h-screen min-w-5xl flex-col bg-stage-bg bg-stage-gradient"
     >
       <InterviewTopBar
-        onExit={onExit}
         recordingStartedAt={recordingStartedAt}
         interviewerStyle={interviewerStyle}
         jobRole={jobRole}

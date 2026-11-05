@@ -4,7 +4,7 @@ type Props = {
   onClick?: () => void
 }
 
-/** "답변 완료 ✓" — 강조색 알약 CTA(라이트는 어두운 알약, 다크는 흰 알약). 답변 중이 아니면 disabled, submitting 이면 로딩 표시. */
+/** "답변 완료 ✓" — 어두운 알약 CTA. 답변 중이 아니면 disabled, submitting 이면 로딩 표시. */
 export default function SubmitAnswerButton({ disabled, loading, onClick }: Props) {
   return (
     <button
