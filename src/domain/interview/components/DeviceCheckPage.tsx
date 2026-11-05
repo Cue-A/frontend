@@ -14,10 +14,9 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ROUTES, toInterview } from '@/app/routes'
 
 import { useDeviceCheck } from '../hooks/useDeviceCheck'
-import { clearSavedSessionSetup, loadSavedSessionSetup } from '../hooks/useSessionSetup'
+import { clearSavedSessionSetup } from '../hooks/useSessionSetup'
 import { canStartInterview } from '../lib/canStartInterview'
 import { readReplayDeviceCheckState } from '../lib/replayDeviceCheckState'
-import { setupSummaryValues } from '../lib/setupSummaryValues'
 import type {
   DeviceCheckState,
   DeviceFailureReason,
@@ -31,14 +30,8 @@ import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 import Select from '@/shared/ui/Select'
 
+import DeviceCheckSummaryCard from './DeviceCheckSummaryCard'
 import InterviewFlowHeader from './InterviewFlowHeader'
-
-const SUMMARY_ROWS = [
-  { label: '직무', toValue: setupSummaryValues.jobRole },
-  { label: '질문 수', toValue: setupSummaryValues.questionCount },
-  { label: '답변 시간', toValue: setupSummaryValues.answerTime },
-  { label: '면접관', toValue: setupSummaryValues.interviewer },
-] as const
 
 /**
  * 환경 체크 4항목입니다. 조명·주변소음·네트워크는 `useDeviceCheck` 의 실측 로직을
@@ -193,19 +186,13 @@ export default function DeviceCheckPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
 
-  // 옵션 설정에서 고른 값(이 탭의 sessionStorage). 처음 한 번만 읽는다 — "면접 시작하기" 가 저장된 값을
-  // 지우는데(clearSavedSessionSetup), 매 렌더 읽으면 화면이 넘어가기 전에 패널이 빈 표시("-")로 되돌아간다.
-  // 주소를 바로 열었거나 새 탭이거나 저장된 값의 모양이 깨져 있으면 null 이고, 그땐 빈 표시를 둔다.
+  // 면접 요약은 서버에 만들어진 세션의 값으로 채웁니다 (이슈 #132 · DeviceCheckSummaryCard).
+  // 옵션 설정이 이 탭에 남겨 둔 지금 값이 아니라서, 옵션을 바꾼 뒤 예전 주소로 돌아와도 어긋나지 않습니다.
   //
-  // TODO(session-detail-api): 세션 조회 API(GET /api/interviews/{sessionId})가 생기면 이 탭 저장값 대신
-  // 서버값으로 바꾼다. 면접 화면은 "면접 시작하기" 에서 저장값이 지워지므로 이 값을 읽을 수 없다 —
-  // "음성만 듣기" 일 때 질문 글을 숨기는 것도 임시로 저장값을 읽지 말고 이 API 를 기다린다.
-  //
-  // 재연습(이슈 #152)은 옵션 설정을 거치지 않아서 이 탭 저장값이 재연습 조건이 아닙니다. 재연습 화면이 화면 이동 값으로
-  // 넘긴 조건을 먼저 쓰고, "← 옵션" 도 재연습 화면으로 돌려보냅니다.
+  // 재연습(이슈 #152)은 옵션 설정을 거치지 않아서, 재연습 화면이 화면 이동 값으로 넘긴 조건을 먼저 쓰고,
+  // "← 옵션" 도 재연습 화면으로 돌려보냅니다.
   const location = useLocation()
   const [replay] = useState(() => readReplayDeviceCheckState(location.state))
-  const [savedSetup] = useState(() => replay?.replaySetup ?? loadSavedSessionSetup())
 
   const {
     camera,
@@ -497,26 +484,7 @@ export default function DeviceCheckPage() {
               </ul>
             </Card>
 
-            <Card padding="lg" className="flex flex-col gap-4">
-              <h2 className="text-body-lg font-semibold text-neutral-900">면접 요약</h2>
-              <dl className="flex flex-col">
-                {SUMMARY_ROWS.map(({ label, toValue }) => (
-                  <div
-                    key={label}
-                    className="flex justify-between gap-4 border-b border-neutral-200 py-2.5 last:border-b-0"
-                  >
-                    <dt className="text-body-sm text-neutral-500">{label}</dt>
-                    {savedSetup ? (
-                      <dd className="text-body-sm font-semibold text-neutral-900">{toValue(savedSetup)}</dd>
-                    ) : (
-                      <dd className="text-body-sm text-neutral-300" aria-label="값 없음">
-                        -
-                      </dd>
-                    )}
-                  </div>
-                ))}
-              </dl>
-            </Card>
+            <DeviceCheckSummaryCard sessionId={sessionId} replaySetup={replay?.replaySetup ?? null} />
 
             {/* 주변소음이 "시끄러움"일 때만 뜬다 (이슈 #83, 시안 참고). 다른 환경 체크
                 항목(조명·네트워크)은 행의 배지로 충분하다고 보고 배너를 따로 안 둔다 —
