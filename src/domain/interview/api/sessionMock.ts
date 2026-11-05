@@ -1,31 +1,16 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
-
-import type { CompanyResponse } from '../types/sessionSetup'
+import { MOCK_COMPANIES } from '@/shared/api/mockCompanies'
 
 import { mockReplayOptionsOf } from './replayMock'
 import { advanceMockSession } from './sessionSocketMock'
 
-/**
- * 기업 목록 목업입니다. 시안에 "약 30개 기업의 인재상 데이터가 등록되어 있어요"
- * 라고 되어 있는데, 실제 목록은 백엔드가 가지고 있습니다. 여기서는 드롭다운이
- * 그려지는지 확인할 만큼만 넣어둡니다.
- *
- * **백엔드 응답 모양 그대로** 숫자 id 입니다(Cue-A/backend#86). 전에는 `'naver'` 같은 문자열이라 화면 비교는
- * 맞았지만, 세션 시작 때 숫자로 못 바꿔서 기업 맞춤 질문이 목업에서 한 번도 실리지 않았습니다. (이슈 #149)
- * 순서도 백엔드처럼 이름 오름차순입니다.
- */
-const COMPANIES: CompanyResponse[] = [
-  { companyId: 1, name: '네이버' },
-  { companyId: 2, name: '당근' },
-  { companyId: 3, name: '라인' },
-  { companyId: 4, name: '우아한형제들' },
-  { companyId: 5, name: '카카오' },
-  { companyId: 6, name: '쿠팡' },
-  { companyId: 7, name: '토스' },
-]
-
-registerMock('GET', '/api/companies', () => COMPANIES)
+/*
+  기업 목록(`GET /api/companies`) 목업은 기업 도메인(company/api/companyMock.ts)이 답합니다. 옵션 설정의 기업 고르기와 기업
+  탐색이 같은 API 라 한 곳에만 등록합니다. 아래 세션 시작 목업은 같은 데이터(shared/api/mockCompanies.ts)로 기업 id 를 봅니다.
+  id 는 **백엔드 응답 모양 그대로** 숫자입니다(Cue-A/backend#86 · 이슈 #149).
+*/
+const KNOWN_COMPANY_IDS = new Set(MOCK_COMPANIES.map((company) => company.companyId))
 
 /**
  * 면접 세션 생성 목업입니다. 검사 순서와 에러 코드는 백엔드 `InterviewStartService` 를 따랐습니다.
@@ -134,7 +119,7 @@ registerMock('POST', '/api/interviews', (_params, body) => {
     // 서버는 Long 이라 문자열 id 는 요청 해석 단계에서 거절됩니다.
     throw new ApiError('INVALID_REQUEST', `companyId 는 숫자여야 합니다 (${String(request.companyId)})`)
   }
-  if (typeof request.companyId === 'number' && !COMPANIES.some((company) => company.companyId === request.companyId)) {
+  if (typeof request.companyId === 'number' && !KNOWN_COMPANY_IDS.has(request.companyId)) {
     // 서버는 등록된(verified) 기업만 받습니다. 목록에 없는 id 는 INVALID_REQUEST 입니다.
     throw new ApiError('INVALID_REQUEST', `등록되지 않은 기업입니다 (${request.companyId})`)
   }
