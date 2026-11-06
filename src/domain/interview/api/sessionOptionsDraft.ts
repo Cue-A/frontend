@@ -62,3 +62,44 @@ export function recallSessionOptions(sessionId: string): InterviewSessionOptions
 
   return { interviewerStyle, hideQuestionText, answerTimeLimitSec }
 }
+
+/**
+ * 장치 테스트의 "면접 요약"이 보여줄, 세션을 만들 때의 직무와 질문 수입니다.
+ *
+ * 조회 API(`GET /api/interviews/{sessionId}`)에는 이 둘이 없어서 서버에서 다시 읽을 수 없습니다. 그래서 옵션 설정에서
+ * 고른 값이 아니라 **그 세션을 만들 때의 값**을 세션별로 남깁니다. 옵션을 바꾼 뒤 예전 장치 테스트 주소로 돌아와도
+ * 요약이 그 세션의 값을 보여줍니다. 새로 연 탭 · 다른 기기에는 남긴 값이 없어서 null 이고, 화면은 빈 표시("-")를 둡니다.
+ *
+ * 면접 화면이 읽는 옵션(`rememberSessionOptions`)과 저장 이름을 따로 둡니다. 옵션의 저장 모양을 바꾸지 않아서 이미 남아
+ * 있는 값을 그대로 읽습니다.
+ */
+export type SessionSummary = {
+  jobRole: string
+  questionCount: number
+}
+
+const summaryDraftName = (sessionId: string) => `interviewSummary:${sessionId}`
+
+const summaryMemory = new Map<string, SessionSummary>()
+
+export function rememberSessionSummary(sessionId: string, summary: SessionSummary) {
+  summaryMemory.set(sessionId, summary)
+  saveDraft(summaryDraftName(sessionId), summary)
+}
+
+/** 이 세션을 만들 때 남긴 직무 · 질문 수입니다. 없거나 모양이 맞지 않으면 null 입니다 */
+export function recallSessionSummary(sessionId: string): SessionSummary | null {
+  const remembered = summaryMemory.get(sessionId)
+  if (remembered) return remembered
+
+  const saved = loadDraft(summaryDraftName(sessionId))
+  if (typeof saved !== 'object' || saved === null) return null
+
+  const { jobRole, questionCount } = saved as Record<string, unknown>
+  if (typeof jobRole !== 'string' || !jobRole || !Number.isInteger(questionCount) || (questionCount as number) <= 0) {
+    removeDraft(summaryDraftName(sessionId))
+    return null
+  }
+
+  return { jobRole, questionCount: questionCount as number }
+}

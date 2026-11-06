@@ -25,6 +25,10 @@ export const ROUTES = {
   LIBRARY_QUESTIONS: '/library/questions',
   /** C-04 성장 관리 — 회차별 점수 추이 · 이번 주 목표 · 배지 · 면접 캘린더 (이슈 #136) */
   GROWTH: '/growth',
+  /** 기업 탐색 — 검증된 기업 목록과 관심 등록 (이슈 #162) */
+  COMPANIES: '/companies',
+  /** 기업 상세 — 업종 · 핵심 가치 · 행동지표, 이 기업으로 면접 연습하기 */
+  COMPANY: '/companies/:companyId',
   /** 마이페이지 메뉴 목록 */
   MYPAGE: '/mypage',
   /** 마이페이지 > 프로필 — 이름 · 직무 수정, 이메일은 보기만 */
@@ -64,6 +68,19 @@ export function toGrowth(focus?: 'goal' | 'calendar') {
   if (focus === 'goal') return `${ROUTES.GROWTH}?${GROWTH_OPEN_PARAM}=${GROWTH_OPEN_GOAL}`
   if (focus === 'calendar') return `${ROUTES.GROWTH}#${GROWTH_CALENDAR_ID}`
   return ROUTES.GROWTH
+}
+
+/** 옵션 설정 주소에 붙여 기업을 미리 골라 둡니다. `/interviews/new?companyId=6` (기업 상세의 "이 기업으로 면접 연습하기") */
+export const SESSION_SETUP_COMPANY_PARAM = 'companyId'
+
+/** 면접 옵션 설정으로 갑니다. 기업 id 를 주면 기업 맞춤 질문을 켜고 그 기업을 골라 둡니다 */
+export function toSessionSetup(companyId?: string) {
+  if (!companyId) return ROUTES.SESSION_SETUP
+  return `${ROUTES.SESSION_SETUP}?${SESSION_SETUP_COMPANY_PARAM}=${encodeURIComponent(companyId)}`
+}
+
+export function toCompany(companyId: string) {
+  return `/companies/${encodeURIComponent(companyId)}`
 }
 
 export function toDeviceCheck(sessionId: string) {

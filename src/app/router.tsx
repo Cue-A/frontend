@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import KakaoCallbackPage from '@/domain/auth/components/KakaoCallbackPage'
 import LoginPage from '@/domain/auth/components/LoginPage'
+import CompaniesPage from '@/domain/company/components/CompaniesPage'
+import CompanyDetailPage from '@/domain/company/components/CompanyDetailPage'
 import DeviceCheckPage from '@/domain/interview/components/DeviceCheckPage'
 import InterviewPage from '@/domain/interview/components/InterviewPage'
 import InterviewSessionPreview from '@/domain/interview/components/InterviewSessionPreview'
@@ -80,6 +82,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.LIBRARY_PRACTICE, element: <PracticeRecordsPage /> },
           { path: ROUTES.LIBRARY_QUESTIONS, element: <QuestionBankPage /> },
           { path: ROUTES.GROWTH, element: <GrowthPage /> },
+          { path: ROUTES.COMPANIES, element: <CompaniesPage /> },
+          { path: ROUTES.COMPANY, element: <CompanyDetailPage /> },
           { path: ROUTES.MYPAGE, element: <MyPage /> },
           { path: ROUTES.MYPAGE_PROFILE, element: <ProfilePage /> },
           { path: ROUTES.MYPAGE_INTERESTS, element: <InterestsPage /> },

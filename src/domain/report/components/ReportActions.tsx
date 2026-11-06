@@ -1,4 +1,4 @@
-import { IconChevronDown, IconDownload, IconFileTypePdf, IconPhoto } from '@tabler/icons-react'
+import { IconArrowBackUp, IconChevronDown, IconDownload, IconFileTypePdf, IconHome, IconPhoto } from '@tabler/icons-react'
 import { useId, useRef, type KeyboardEvent } from 'react'
 
 import { ROUTES, toReplay } from '@/app/routes'
@@ -105,13 +105,6 @@ type Props = {
   checking?: boolean
 }
 
-function guideOf(sessionId: string | undefined, checking: boolean) {
-  if (checking) return '다시 연습할 수 있는지 확인하는 중이에요…'
-  return sessionId
-    ? '다시 연습하기를 누르면 이번 면접과 같은 질문으로 재연습해요. 꼬리질문은 새 답변에 맞춰 새로 나와요.'
-    : '다시 연습하기를 누르면 면접 옵션 설정 화면으로 갑니다.'
-}
-
 /**
  * 리포트를 다 본 다음에 갈 곳입니다. (C-01 "다음 단계")
  *
@@ -124,15 +117,17 @@ function guideOf(sessionId: string | undefined, checking: boolean) {
  * - "다시 연습하기" — 이 면접의 재연습 설정 화면으로 갑니다(이슈 #152). 첫 면접과 같은 질문 · 조건으로 다시
  *   봅니다. 전에는 재연습 API 가 없어 빈 옵션 설정 화면으로만 갔습니다. 리포트 분석이 실패한 화면은 상태 조회로
  *   면접을 찾아 잇고, 찾지 못하면 지금처럼 새 면접 설정으로 보냅니다.
+ *
+ * 버튼 위 안내 문구("다시 연습하기를 누르면 …")는 디자인 피드백으로 뺐습니다. 대신 홈 · 다시 연습하기에 아이콘을 붙였습니다.
+ * 실패한 리포트의 면접을 찾는 동안에는 "다시 연습하기" 가 잠기는데, 이유가 안 보이면 고장으로 읽혀서 버튼 글자로 알립니다.
  */
 export default function ReportActions({ exporter, sessionId, checking = false }: Props) {
   return (
     <Card label="다음 단계" padding="lg">
       <div className="flex flex-col gap-4">
-        <p className="text-body-sm text-neutral-500">{guideOf(sessionId, checking)}</p>
-
         <nav className="flex flex-wrap gap-3">
           <Button to={ROUTES.HOME} className="flex-1">
+            <IconHome size={16} stroke={2} aria-hidden />
             홈으로 이동
           </Button>
 
@@ -144,7 +139,8 @@ export default function ReportActions({ exporter, sessionId, checking = false }:
             disabled={checking}
             className="flex-1"
           >
-            다시 연습하기
+            <IconArrowBackUp size={16} stroke={2} aria-hidden />
+            {checking ? '확인하는 중…' : '다시 연습하기'}
           </Button>
         </nav>
 

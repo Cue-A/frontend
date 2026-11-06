@@ -15,15 +15,16 @@ import type { ReplayOptionsResponse } from './replayApi'
  * | `…4e02` (카메라 미사용 회차) | 자기소개서가 지워짐 (`DOCUMENT_DELETED`) |
  * | `…4e04` (말하기 · 시선 실패 회차) | 기업 없이 본 연습 모드 — 시작 가능 |
  * | `not-completed` | 끝나지 않은 면접 — `SESSION_NOT_COMPLETED` |
- * | 그 밖의 id | 카카오 기업 면접 — 시작 가능 |
+ * | 그 밖의 id | 카카오모빌리티 기업 면접 — 시작 가능 |
  */
 const BASE: ReplayOptionsResponse = {
   rootSessionId: '8d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e00',
   // 문서 목업(`documentMock.ts`)의 "카카오_자기소개서.pdf" 입니다
   documentId: '6f1c2a3b-4d5e-4f60-8a1b-2c3d4e5f6071',
   documentTitle: '카카오_자기소개서.pdf',
-  companyId: 5,
-  companyName: '카카오',
+  // 기업 목업(shared/api/mockCompanies.ts)의 카카오모빌리티입니다
+  companyId: 19,
+  companyName: '카카오모빌리티',
   jobRole: '프론트엔드 개발자',
   questionCount: 6,
   persona: 'FRIENDLY',
