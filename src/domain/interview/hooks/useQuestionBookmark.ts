@@ -44,12 +44,15 @@ export function useQuestionBookmark(sessionId: string, questionId: string | null
   const current = state.questionId === questionId ? state : EMPTY
 
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(
-    () => () => {
+  // 요청이 끝나기 전에 화면이 사라지면 .then 에서 새로 거는 타이머는 아래 정리가 못 지우니, 사라졌는지 따로 안다.
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
       if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
-    },
-    [],
-  )
+    }
+  }, [])
 
   const toggle = useCallback(() => {
     if (!questionId || current.pending) return
@@ -63,6 +66,7 @@ export function useQuestionBookmark(sessionId: string, questionId: string | null
         setState((previous) =>
           previous.questionId === questionId ? { ...previous, pending: false, notice: before ? 'removed' : 'saved' } : previous,
         )
+        if (!mountedRef.current) return
         noticeTimerRef.current = setTimeout(() => {
           setState((previous) => (previous.questionId === questionId ? { ...previous, notice: null } : previous))
         }, NOTICE_DURATION_MS)

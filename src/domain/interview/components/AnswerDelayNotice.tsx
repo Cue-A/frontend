@@ -12,7 +12,7 @@ export default function AnswerDelayNotice() {
       <LoadingLine label="분석이 평소보다 오래 걸리고 있어요" />
 
       <p className="pt-2 text-center text-body-sm text-neutral-500">
-        잠시 더 기다리면 다음 질문이 나와요. 새로고침하면 진행 중인 면접이 사라질 수 있어요.
+        잠시만 더 기다려 주세요. 새로고침하면 진행 중인 면접이 사라질 수 있어요.
       </p>
     </div>
   )
