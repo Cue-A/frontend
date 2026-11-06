@@ -82,6 +82,8 @@ const ERROR_MESSAGE: Record<string, string> = {
   SESSION_ENDED: '이미 끝난 면접이에요. 새 면접을 시작해 주세요.',
   SESSION_ABORTED: '중단된 면접이에요. 새 면접을 시작해 주세요.',
   QUESTION_NOT_FOUND: '질문을 찾을 수 없어요.',
+  // 질문 은행(북마크)의 메모 · 해제. 다른 탭에서 이미 뺐거나 내 북마크가 아닌 경우입니다.
+  BOOKMARK_NOT_FOUND: '질문 은행에 없는 질문이에요. 새로고침한 뒤 다시 시도해 주세요.',
   // A-05 가 3 · 6 · 9 만 고르게 해서 화면에서는 나지 않습니다. 서버가 다시 보는 값입니다.
   INVALID_QUESTION_COUNT: '질문 수는 3개 · 6개 · 9개 중에서 골라주세요.',
   INVALID_CATEGORY: '고를 수 없는 질문 분야예요.',
