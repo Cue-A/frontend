@@ -17,10 +17,12 @@ type Props = {
   /** 오늘 (YYYY-MM-DD) */
   today: string
   calendar: UseCalendarMonthResult
-  /** 일정을 등록했다는 알림. 없으면 null */
+  /** 일정을 등록 · 수정 · 삭제했다는 알림. 없으면 null */
   notice: string | null
   onMonthChange: (month: string) => void
   onAddEvent: () => void
+  /** 일정이 있는 날짜 칸이나 아래 일정 목록을 누르면 그날 일정 보기 창을 엽니다 (이슈 #190) */
+  onOpenDate: (date: string) => void
 }
 
 const NAV_BUTTON =
@@ -48,8 +50,12 @@ function Legend() {
 
 type DayMarks = { today: boolean; practiced: boolean; eventCount: number }
 
-/** 날짜 칸 하나. 오늘은 보라 원, 연습한 날은 연보라 글자, 면접 일정이 있는 날은 보라 글자 + 점입니다 (시안 week-1) */
-function DayCell({ date, marks }: { date: string; marks: DayMarks }) {
+/**
+ * 날짜 칸 하나. 오늘은 보라 원, 연습한 날은 연보라 글자, 면접 일정이 있는 날은 보라 글자 + 점입니다 (시안 week-1)
+ *
+ * 면접 일정이 있는 날은 버튼이라 누르면 그날 일정 보기 창이 열립니다(이슈 #190). 일정이 없는 날은 누를 것이 없어 글자만 둡니다.
+ */
+function DayCell({ date, marks, onOpen }: { date: string; marks: DayMarks; onOpen: () => void }) {
   const spoken = [
     spokenDate(date),
     marks.today && '오늘',
@@ -67,35 +73,60 @@ function DayCell({ date, marks }: { date: string; marks: DayMarks }) {
         ? 'text-primary-400'
         : 'text-neutral-700'
 
-  return (
-    <td className="h-11 p-0 text-center">
+  const face = (
+    <>
       <span aria-hidden className="inline-flex items-center gap-1">
         <span className={`flex h-7.5 w-7.5 items-center justify-center rounded-full text-body-md ${numberClass}`}>
           {dayOf(date)}
         </span>
         {marks.eventCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-primary-500" />}
       </span>
-      <span className="sr-only">{spoken}</span>
+      <span className="sr-only">{marks.eventCount > 0 ? `${spoken}, 일정 보기` : spoken}</span>
+    </>
+  )
+
+  return (
+    <td className="h-11 p-0 text-center">
+      {marks.eventCount > 0 ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="rounded-sm px-1 py-0.5 transition-colors hover:bg-primary-100/60 focus-visible:outline-2 focus-visible:outline-primary-500"
+        >
+          {face}
+        </button>
+      ) : (
+        face
+      )}
     </td>
   )
 }
 
-/** 이 달의 면접 일정 목록. 캘린더 칸에는 점만 찍혀서 무슨 일정인지 보이지 않아 아래에 적습니다 */
-function EventList({ events }: { events: CalendarEvent[] }) {
+/**
+ * 이 달의 면접 일정 목록. 캘린더 칸에는 점만 찍혀서 무슨 일정인지 보이지 않아 아래에 적습니다.
+ * 줄을 누르면 그날 일정 보기 창이 열려서, 메모 전체를 보고 고치거나 지울 수 있습니다 (이슈 #190).
+ */
+function EventList({ events, onOpen }: { events: CalendarEvent[]; onOpen: (date: string) => void }) {
   if (events.length === 0) {
     return <p className="text-body-sm text-neutral-400">이 달에 등록한 면접 일정이 없어요.</p>
   }
 
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="-mx-2 flex flex-col gap-1">
       {events.map((event) => (
-        <li key={event.eventId} className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-          <span className="shrink-0 whitespace-nowrap text-body-sm font-semibold text-primary-500">
-            {shortDate(event.date)}
-            {event.time && ` ${event.time}`}
-          </span>
-          <span className="min-w-0 text-body-md text-neutral-900">{event.title}</span>
-          {event.memo && <span className="min-w-0 truncate text-body-sm text-neutral-500">{event.memo}</span>}
+        <li key={event.eventId}>
+          <button
+            type="button"
+            onClick={() => onOpen(event.date)}
+            className="flex w-full min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-sm px-2 py-1 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-primary-500"
+          >
+            <span className="shrink-0 whitespace-nowrap text-body-sm font-semibold text-primary-500">
+              {shortDate(event.date)}
+              {event.time && ` ${event.time}`}
+            </span>
+            <span className="min-w-0 text-body-md text-neutral-900">{event.title}</span>
+            {event.memo && <span className="min-w-0 truncate text-body-sm text-neutral-500">{event.memo}</span>}
+          </button>
         </li>
       ))}
     </ul>
@@ -105,7 +136,8 @@ function EventList({ events }: { events: CalendarEvent[] }) {
 /**
  * 면접 캘린더 (시안 card-calendar).
  *
- * - **면접 일정**은 사용자가 "+ 일정 등록" 으로 직접 넣은 것입니다.
+ * - **면접 일정**은 사용자가 "+ 일정 등록" 으로 직접 넣은 것입니다. 일정이 있는 날짜 칸 · 아래 목록을 누르면 그날 일정을
+ *   보고 고치거나 지울 수 있습니다 (이슈 #190).
  * - **연습 완료**는 연습한 날(연속 기록)에서 자동으로 찍힙니다. 시안의 일정 등록 창에는 "연습 완료" 유형도 있었지만,
  *   손으로 넣으면 실제 연습 기록과 따로 놀아서 뺐습니다.
  *
@@ -113,7 +145,15 @@ function EventList({ events }: { events: CalendarEvent[] }) {
  * 날짜 칸은 표(`table`)로 그려서 화면 읽기 프로그램이 요일과 함께 읽습니다. 칸마다 "8월 14일 금요일, 면접 일정 1개" 처럼
  * 한 문장을 따로 붙입니다.
  */
-export default function InterviewCalendarCard({ month, today, calendar, notice, onMonthChange, onAddEvent }: Props) {
+export default function InterviewCalendarCard({
+  month,
+  today,
+  calendar,
+  notice,
+  onMonthChange,
+  onAddEvent,
+  onOpenDate,
+}: Props) {
   const captionId = useId()
   const previousMonth = shiftMonth(month, -1)
   const nextMonth = shiftMonth(month, 1)
@@ -202,7 +242,11 @@ export default function InterviewCalendarCard({ month, today, calendar, notice, 
           {weeksOf(month).map((week) => (
             <tr key={week.find(Boolean) ?? ''}>
               {week.map((date, index) =>
-                date ? <DayCell key={date} date={date} marks={marksOf(date)} /> : <td key={`empty-${index}`} />,
+                date ? (
+                  <DayCell key={date} date={date} marks={marksOf(date)} onOpen={() => onOpenDate(date)} />
+                ) : (
+                  <td key={`empty-${index}`} />
+                ),
               )}
             </tr>
           ))}
@@ -216,7 +260,7 @@ export default function InterviewCalendarCard({ month, today, calendar, notice, 
             일정을 불러오는 중이에요…
           </p>
         ) : ready ? (
-          <EventList events={events} />
+          <EventList events={events} onOpen={onOpenDate} />
         ) : null}
       </div>
     </Card>

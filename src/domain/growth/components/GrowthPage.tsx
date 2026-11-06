@@ -14,7 +14,8 @@ import { monthOf, shortDate, toDateKey, toMonthKey } from '../lib/calendarDate'
 import type { CalendarEvent } from '../types/growth'
 
 import BadgesCard from './BadgesCard'
-import EventCreateDialog from './EventCreateDialog'
+import EventDetailDialog from './EventDetailDialog'
+import EventFormDialog from './EventFormDialog'
 import GoalEditDialog from './GoalEditDialog'
 import GrowthTopBar from './GrowthTopBar'
 import InterviewCalendarCard from './InterviewCalendarCard'
@@ -22,7 +23,12 @@ import RoundChangeCard from './RoundChangeCard'
 import ScoreRoundsCard from './ScoreRoundsCard'
 import WeeklyGoalCard from './WeeklyGoalCard'
 
-type OpenDialog = 'goal' | 'event' | null
+/**
+ * 열려 있는 창. 한 번에 하나만 엽니다 — 일정 보기에서 "수정" 을 누르면 보기 창을 닫고 수정 창을 엽니다 (이슈 #190).
+ * - `detail` — 그날 일정 보기(제목 · 시간 · 메모, 수정 · 삭제)
+ * - `edit` — 그 일정 수정. 등록 창(`event`)과 같은 창입니다
+ */
+type OpenDialog = 'goal' | 'event' | { kind: 'detail'; date: string } | { kind: 'edit'; event: CalendarEvent } | null
 
 /**
  * 성장 관리 (C-04).
@@ -44,8 +50,8 @@ type OpenDialog = 'goal' | 'event' | null
  *   열립니다. 창을 닫으면 주소에서 지웁니다 — 남겨 두면 새로고침할 때마다 창이 다시 열립니다
  * - `#calendar` — 면접 캘린더로 내려갑니다(홈 "다가오는 면접일 · 전체보기")
  *
- * **백엔드에 성장 관리 API 가 없어서 목업으로만 동작합니다** (api/growthApi.ts). 일정 수정 · 삭제와 날짜를 눌러 일정 보기는
- * 이번 범위 밖입니다 (이슈 #136).
+ * **백엔드에 성장 관리 API 가 없어서 목업으로만 동작합니다** (api/growthApi.ts). 일정이 있는 날짜 칸 · 일정 목록을 누르면
+ * 그날 일정을 보고 고치거나 지울 수 있습니다 (이슈 #190 — 전에는 등록만 됐습니다).
  */
 export default function GrowthPage() {
   const overview = useGrowthOverview()
@@ -125,6 +131,37 @@ export default function GrowthPage() {
     else setMonth(monthOf(event.date))
   }
 
+  // 고친 일정도 등록과 같습니다. 다른 달로 옮겼으면 이 달에서 빼고 그 달로 넘어갑니다 — 옮긴 자리를 바로 보여주려는 것입니다
+  const handleEventUpdated = (before: CalendarEvent, event: CalendarEvent) => {
+    setEventNotice(
+      before.date === event.date
+        ? `‘${event.title}’ 일정을 고쳤어요.`
+        : `‘${event.title}’ 일정을 고쳤어요. 이제 ${shortDate(event.date)}에 있어요.`,
+    )
+    calendar.replaceEvent(event)
+    if (monthOf(event.date) !== month) setMonth(monthOf(event.date))
+  }
+
+  // 지운 일정은 이 달에서 뺍니다. 그날 일정이 더 없으면 보기 창도 닫습니다
+  const handleEventDeleted = (event: CalendarEvent) => {
+    setEventNotice(`‘${event.title}’ 일정을 지웠어요.`)
+    calendar.removeEvent(event.eventId)
+    if (!dayEvents.some((item) => item.eventId !== event.eventId)) setOpenDialog(null)
+  }
+
+  // 보기 창에 넣을 그날 일정. 캘린더가 들고 있는 값을 그대로 써서 고치거나 지우면 바로 바뀝니다
+  const detailDate = typeof openDialog === 'object' && openDialog?.kind === 'detail' ? openDialog.date : null
+  const dayEvents =
+    detailDate && calendar.status === 'ready'
+      ? calendar.calendar.events.filter((event) => event.date === detailDate)
+      : []
+
+  const openDate = (date: string) => {
+    setGoalNotice(null)
+    setEventNotice(null)
+    setOpenDialog({ kind: 'detail', date })
+  }
+
   // 지금 보는 달이 이번 달이면 오늘을, 아니면 그 달 1일을 날짜 칸에 넣어 둡니다
   const defaultEventDate = monthOf(today) === month ? today : `${month}-01`
 
@@ -173,6 +210,7 @@ export default function GrowthPage() {
             notice={eventNotice}
             onMonthChange={changeMonth}
             onAddEvent={openEvent}
+            onOpenDate={openDate}
           />
         </div>
       </div>
@@ -189,9 +227,24 @@ export default function GrowthPage() {
       )}
 
       {openDialog === 'event' && (
-        <EventCreateDialog
-          defaultDate={defaultEventDate}
-          onCreated={handleEventCreated}
+        <EventFormDialog defaultDate={defaultEventDate} onSaved={handleEventCreated} onClose={closeDialog} />
+      )}
+
+      {detailDate && dayEvents.length > 0 && (
+        <EventDetailDialog
+          date={detailDate}
+          events={dayEvents}
+          onEdit={(event) => setOpenDialog({ kind: 'edit', event })}
+          onDeleted={handleEventDeleted}
+          onClose={closeDialog}
+        />
+      )}
+
+      {typeof openDialog === 'object' && openDialog?.kind === 'edit' && (
+        <EventFormDialog
+          event={openDialog.event}
+          defaultDate={openDialog.event.date}
+          onSaved={(event) => handleEventUpdated(openDialog.event, event)}
           onClose={closeDialog}
         />
       )}
