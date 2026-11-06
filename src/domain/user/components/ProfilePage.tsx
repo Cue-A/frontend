@@ -1,22 +1,27 @@
-import { type FormEvent, useId, useState } from 'react'
+import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
 import { initialOf } from '@/shared/lib/initialOf'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
+import { useAccount } from '../hooks/useAccount'
 import { useMe, type UseMeResult } from '../hooks/useMe'
+import { useNotificationSettings } from '../hooks/useNotificationSettings'
 import { useProfile } from '../hooks/useProfile'
 import { useUpdateProfile } from '../hooks/useUpdateProfile'
 import { JOB_TITLE_MAX_LENGTH, NICKNAME_MAX_LENGTH } from '../lib/profileLimits'
 import type { Profile, ProfileUpdateInput } from '../types/user'
 
+import AccountSection from './AccountSection'
 import MyPageHeader from './MyPageHeader'
 import MyPageTitle from './MyPageTitle'
+import NotificationSection from './NotificationSection'
 
 const FIELD_CLASS =
   'w-full rounded-sm border border-neutral-300 px-4 py-2.5 text-body-md text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-500'
 
-/** 고칠 수 없는 값이라 입력창 모양을 빌리되 바탕을 깔아 "읽기 전용" 으로 보이게 합니다 (계정 설정과 같은 모양) */
+/** 고칠 수 없는 값이라 입력창 모양을 빌리되 바탕을 깔아 "읽기 전용" 으로 보이게 합니다 */
 const READONLY_FIELD_CLASS = 'rounded-sm border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-body-md'
 
 const LABEL_CLASS = 'text-body-sm font-medium text-neutral-700'
@@ -136,13 +141,17 @@ function ProfileForm({ profile, onSaved }: FormProps) {
 /**
  * 마이페이지 > 프로필 — 이름 · 직무를 고칩니다. 이메일은 보기만 합니다. (B-03 마이페이지/프로필 시안)
  *
+ * 프로필 아래에 계정(로그인 방식 · 로그아웃 · 탈퇴, `AccountSection`)과 알림 설정(`NotificationSection`)을 차례로 붙였습니다.
+ * 전에는 마이페이지 메뉴 목록에서 각각 들어가는 화면이었는데, 셋 다 짧아서 한 화면으로 합쳤습니다 (이슈 #185).
+ * 옛 주소(`/mypage/account` · `/mypage/notifications`)와 홈 톱니바퀴는 `#account` · `#notifications` 로 그 칸에 내려옵니다.
+ *
  * - 값은 프로필 조회(`GET /api/users/me/profile`)에서 읽고, 저장(`PATCH`)은 **바꾼 칸만** 보냅니다. 바뀐 게 없으면 저장 버튼이
  *   잠깁니다 — 빈 본문은 서버가 `EMPTY_UPDATE_REQUEST` 로 거절합니다. (API 명세서 "프로필 수정")
  * - 직무는 시안의 고정 목록이 아니라 옵션 설정처럼 **직접 적습니다**(50자). 고정 목록이면 목록에 없는 값이 "선택 안 함" 으로
  *   보여 실제 값과 어긋납니다. (PR #112 리뷰)
- * - 이메일 변경은 계정 설정에서 합니다(`PATCH /api/users/me/email`). 카카오 로그인은 이메일이 없을 수 있습니다.
+ * - 이메일 변경(`PATCH /api/users/me/email`)은 명세만 받았고 화면은 아직입니다. 카카오 로그인은 이메일이 없을 수 있습니다.
  * - 시안의 "사진 변경" 은 사진을 올릴 API 가 없어(프로필은 주소만 받음) 넣지 않았습니다. 원 안에는 이름 첫 글자를 씁니다.
- * - 시안에 있던 "계정 탈퇴하기" 링크는 뺐습니다. 탈퇴는 계정 설정에서만 합니다 (API 명세서 "프로필 수정" 의 화면 피드백).
+ * - 시안의 프로필 판 안 "계정 탈퇴하기" 링크는 뺐습니다. 탈퇴는 아래 계정 칸에서만 합니다 (API 명세서 "프로필 수정" 의 화면 피드백).
  * - 저장하면 화면 머리(오른쪽 위 프로필)의 이름도 바로 바꿉니다. 다른 화면은 들어갈 때 다시 불러와서 새 이름이 보입니다.
  *
  * 프로필 API 는 아직 백엔드에 없어 목업이 답합니다(명세서 "시작 전"). 프로필의 자기소개 · 경력 · 학교 칸은 시안이 없어
@@ -158,36 +167,61 @@ export default function ProfilePage() {
 
   const initialName = profileState.status === 'ready' ? (savedName ?? profileState.profile.userName) : null
 
+  // 계정 · 알림 설정 칸이 쓸 값도 여기서 불러서 넘깁니다. 아래 "칸으로 내려가기" 가 세 칸이 다 그려지기를 기다려야 해서입니다
+  const account = useAccount()
+  const notifications = useNotificationSettings()
+
+  /*
+    `#account` · `#notifications` 로 들어왔으면 그 칸으로 내려갑니다. 라우터는 주소의 # 로 스크롤해 주지 않습니다.
+    프로필 · 계정 · 알림 설정을 다 받은 뒤에 한 번만 내려갑니다 — 불러오는 동안은 판이 짧아서, 먼저 내려가면 위 칸이 채워지며
+    내려간 칸이 아래로 밀립니다. 전에는 프로필만 기다려서, 실제 API 가 느리면 `#notifications` 가 계정 칸 로딩에 밀렸습니다
+    (PR #188 리뷰).
+  */
+  const { hash } = useLocation()
+  const scrolledToSection = useRef(false)
+  const sectionsSettled =
+    profileState.status !== 'loading' && account.status !== 'loading' && notifications.status !== 'loading'
+  useEffect(() => {
+    if (!hash || !sectionsSettled || scrolledToSection.current) return
+    scrolledToSection.current = true
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [hash, sectionsSettled])
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       <MyPageHeader title={<MyPageTitle current="프로필" />} me={me} />
 
-      <Card padding="lg" label="프로필" className="w-full max-w-4xl">
-        <span
-          aria-hidden
-          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-h2 text-neutral-0 ${
-            initialName === null ? 'animate-pulse bg-neutral-200' : 'bg-[image:var(--gradient-brand)]'
-          }`}
-        >
-          {initialName === null ? null : initialOf(initialName)}
-        </span>
+      <div className="flex w-full max-w-4xl flex-col gap-6">
+        <Card padding="lg" label="프로필" className="w-full">
+          <span
+            aria-hidden
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-h2 text-neutral-0 ${
+              initialName === null ? 'animate-pulse bg-neutral-200' : 'bg-[image:var(--gradient-brand)]'
+            }`}
+          >
+            {initialName === null ? null : initialOf(initialName)}
+          </span>
 
-        <hr className="my-5 border-neutral-200" />
+          <hr className="my-5 border-neutral-200" />
 
-        {profileState.status === 'loading' && <p className="text-body-md text-neutral-500">불러오는 중…</p>}
-        {profileState.status === 'error' && (
-          <p role="alert" className="text-body-md text-neutral-500">
-            프로필을 불러오지 못했어요. {profileState.error}
-          </p>
-        )}
-        {profileState.status === 'ready' && (
-          <ProfileForm
-            key={profileState.profile.userId}
-            profile={profileState.profile}
-            onSaved={(next) => setSavedName(next.userName)}
-          />
-        )}
-      </Card>
+          {profileState.status === 'loading' && <p className="text-body-md text-neutral-500">불러오는 중…</p>}
+          {profileState.status === 'error' && (
+            <p role="alert" className="text-body-md text-neutral-500">
+              프로필을 불러오지 못했어요. {profileState.error}
+            </p>
+          )}
+          {profileState.status === 'ready' && (
+            <ProfileForm
+              key={profileState.profile.userId}
+              profile={profileState.profile}
+              onSaved={(next) => setSavedName(next.userName)}
+            />
+          )}
+        </Card>
+
+        <AccountSection me={me} account={account} />
+        <NotificationSection state={notifications} />
+      </div>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
 import { JOB_TITLE_MAX_LENGTH, NICKNAME_MAX_LENGTH } from '../lib/profileLimits'
-import type { BusinessCard, BusinessCardInput, CareerLevel, NotificationSettings, Profile } from '../types/user'
+import type { CareerLevel, NotificationSettings, Profile } from '../types/user'
 
 /**
  * 로그인한 사용자 목업입니다. 인증 목업(domain/auth/api/authMock.ts)의 사용자와 같은 값을 씁니다 —
@@ -127,47 +127,4 @@ registerMock(
     return { ...notificationSettings }
   },
   { missingInBackend: NOTIFICATION_MISSING },
-)
-
-/** 명함 목업. 아직 만들지 않았으면 null 입니다 (B-03 마이페이지/디지털 명함 시안) */
-let businessCard: BusinessCard | null = null
-
-function toBusinessCard(input: BusinessCardInput): BusinessCard {
-  return { ...input, updatedAt: new Date().toISOString() }
-}
-
-function validateBusinessCard(input: BusinessCardInput | undefined): asserts input is BusinessCardInput {
-  if (!input?.name?.trim()) throw new ApiError('INVALID_REQUEST', '이름을 입력해 주세요')
-  if (!input.companyName?.trim()) throw new ApiError('INVALID_REQUEST', '기업명을 입력해 주세요')
-}
-
-/** 명세서 경로 그대로지만 백엔드가 아직 시작 전입니다 (Q16) */
-const BUSINESS_CARD_MISSING = '명함 API 없음 (명세서 경로는 있지만 백엔드 시작 전, Q16)'
-
-registerMock('GET', '/api/users/me/business-card', () => businessCard, {
-  missingInBackend: BUSINESS_CARD_MISSING,
-})
-
-registerMock(
-  'POST',
-  '/api/users/me/business-card',
-  (_params, body) => {
-    const input = body as BusinessCardInput | undefined
-    validateBusinessCard(input)
-    businessCard = toBusinessCard(input)
-    return businessCard
-  },
-  { missingInBackend: BUSINESS_CARD_MISSING },
-)
-
-registerMock(
-  'PATCH',
-  '/api/users/me/business-card',
-  (_params, body) => {
-    const input = body as BusinessCardInput | undefined
-    validateBusinessCard(input)
-    businessCard = toBusinessCard(input)
-    return businessCard
-  },
-  { missingInBackend: BUSINESS_CARD_MISSING },
 )

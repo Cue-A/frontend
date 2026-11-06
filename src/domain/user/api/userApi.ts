@@ -2,8 +2,6 @@ import { api } from '@/shared/api/apiClient'
 
 import type {
   AccountInfo,
-  BusinessCard,
-  BusinessCardInput,
   LoginProvider,
   Me,
   NotificationSettings,
@@ -79,21 +77,6 @@ export function getNotificationSettings() {
 /** 바꾼 항목만 보냅니다. 돌려받는 값은 바뀐 뒤의 전체 설정입니다 */
 export function updateNotificationSettings(input: Partial<NotificationSettings>) {
   return api.patch<NotificationSettings>('/api/users/me/notification-settings', input)
-}
-
-/** 명함 조회. `GET /api/users/me/business-card` — 백엔드 시작 전, 목업만 있습니다. 아직 만들지 않았으면 null 입니다 */
-export function getBusinessCard() {
-  return api.get<BusinessCard | null>('/api/users/me/business-card')
-}
-
-/** 명함 생성. `POST /api/users/me/business-card` — 백엔드 시작 전. */
-export function createBusinessCard(input: BusinessCardInput) {
-  return api.post<BusinessCard>('/api/users/me/business-card', input)
-}
-
-/** 명함 수정. `PATCH /api/users/me/business-card` — 백엔드 시작 전. */
-export function updateBusinessCard(input: BusinessCardInput) {
-  return api.patch<BusinessCard>('/api/users/me/business-card', input)
 }
 
 /**
