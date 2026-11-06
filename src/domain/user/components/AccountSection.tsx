@@ -37,7 +37,8 @@ type Props = {
  * - 로그인 방식 · 가입일은 계정 정보(`GET /api/users/me/account`)에서 읽습니다. 백엔드에 아직 없어 목업이 답하고(Q16),
  *   못 불러오면 화면 머리와 같은 사용자 정보(`GET /api/users/me`)의 로그인 방식만 보여줍니다
  * - 로그아웃은 한 번 묻고(LogoutConfirmDialog) 합니다. 탈퇴 바로 옆이라 잘못 누르기 쉽습니다
- * - "계정 탈퇴하기" 는 판 아래 가운데 빨간 글자이고, 누르면 탈퇴 화면(`WithdrawPage` — 이유 고르기 · 최종 확인)으로 갑니다
+ * - "계정 탈퇴하기" 는 판 맨 아래 가운데 빨간 글자이고, 누르면 탈퇴 화면(`WithdrawPage` — 이유 고르기 · 최종 확인)으로 갑니다.
+ *   아래에 알림 설정 칸이 이어져서, 판 밖에 두면 두 칸 사이에 떠 보여 판 안에 넣었습니다
  */
 export default function AccountSection({ me }: Props) {
   const account = useAccount()
@@ -45,7 +46,7 @@ export default function AccountSection({ me }: Props) {
   const info = account.status === 'ready' ? account.account : null
 
   return (
-    <div id={MYPAGE_ACCOUNT_ID} className="flex scroll-mt-6 flex-col items-center gap-4">
+    <div id={MYPAGE_ACCOUNT_ID} className="scroll-mt-6">
       <Card padding="lg" label="계정" className="w-full">
         <h2 className="text-h2 text-neutral-900">계정</h2>
 
@@ -92,14 +93,18 @@ export default function AccountSection({ me }: Props) {
             로그아웃
           </Button>
         </div>
-      </Card>
 
-      <Link
-        to={ROUTES.MYPAGE_WITHDRAW}
-        className="text-body-sm text-semantic-danger underline-offset-2 hover:underline"
-      >
-        계정 탈퇴하기
-      </Link>
+        <hr className="my-5 border-neutral-200" />
+
+        <div className="flex justify-center">
+          <Link
+            to={ROUTES.MYPAGE_WITHDRAW}
+            className="text-body-sm text-semantic-danger underline-offset-2 hover:underline"
+          >
+            계정 탈퇴하기
+          </Link>
+        </div>
+      </Card>
 
       {logoutOpen && <LogoutConfirmDialog onClose={() => setLogoutOpen(false)} />}
     </div>

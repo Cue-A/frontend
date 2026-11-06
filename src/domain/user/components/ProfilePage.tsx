@@ -139,7 +139,7 @@ function ProfileForm({ profile, onSaved }: FormProps) {
 /**
  * 마이페이지 > 프로필 — 이름 · 직무를 고칩니다. 이메일은 보기만 합니다. (B-03 마이페이지/프로필 시안)
  *
- * 프로필 아래에 알림 설정(`NotificationSection`)과 계정(로그인 방식 · 로그아웃 · 탈퇴, `AccountSection`)을 붙였습니다.
+ * 프로필 아래에 계정(로그인 방식 · 로그아웃 · 탈퇴, `AccountSection`)과 알림 설정(`NotificationSection`)을 차례로 붙였습니다.
  * 전에는 마이페이지 메뉴 목록에서 각각 들어가는 화면이었는데, 셋 다 짧아서 한 화면으로 합쳤습니다 (이슈 #185).
  * 옛 주소(`/mypage/account` · `/mypage/notifications`)와 홈 톱니바퀴는 `#account` · `#notifications` 로 그 칸에 내려옵니다.
  *
@@ -209,9 +209,8 @@ export default function ProfilePage() {
           )}
         </Card>
 
-        {/* 탈퇴가 맨 아래에 오도록 알림 설정을 계정보다 위에 둡니다 */}
-        <NotificationSection />
         <AccountSection me={me} />
+        <NotificationSection />
       </div>
     </div>
   )
