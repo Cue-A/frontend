@@ -50,8 +50,8 @@ type OpenDialog = 'goal' | 'event' | { kind: 'detail'; date: string } | { kind: 
  *   열립니다. 창을 닫으면 주소에서 지웁니다 — 남겨 두면 새로고침할 때마다 창이 다시 열립니다
  * - `#calendar` — 면접 캘린더로 내려갑니다(홈 "다가오는 면접일 · 전체보기")
  *
- * **백엔드에 성장 관리 API 가 없어서 목업으로만 동작합니다** (api/growthApi.ts). 일정이 있는 날짜 칸 · 일정 목록을 누르면
- * 그날 일정을 보고 고치거나 지울 수 있습니다 (이슈 #190 — 전에는 등록만 됐습니다).
+ * **성장 관리 API 가 백엔드에 아직 배포되지 않아 목업으로만 동작합니다** (api/growthApi.ts · Cue-A/backend#132 · #133).
+ * 일정이 있는 날짜 칸 · 일정 목록을 누르면 그날 일정을 보고 고치거나 지울 수 있습니다 (이슈 #190 — 전에는 등록만 됐습니다).
  */
 export default function GrowthPage() {
   const overview = useGrowthOverview()
@@ -147,6 +147,12 @@ export default function GrowthPage() {
     setEventNotice(`‘${event.title}’ 일정을 지웠어요.`)
     calendar.removeEvent(event.eventId)
     if (!dayEvents.some((item) => item.eventId !== event.eventId)) setOpenDialog(null)
+  }
+
+  // 고치려던 일정이 이미 없었습니다(다른 탭에서 지움). 저장할 수 없으니 이 달에서 빼고 알립니다
+  const handleEventGone = (event: CalendarEvent) => {
+    setEventNotice(`‘${event.title}’ 일정은 이미 지워져 있어요.`)
+    calendar.removeEvent(event.eventId)
   }
 
   // 보기 창에 넣을 그날 일정. 캘린더가 들고 있는 값을 그대로 써서 고치거나 지우면 바로 바뀝니다
@@ -245,6 +251,7 @@ export default function GrowthPage() {
           event={openDialog.event}
           defaultDate={openDialog.event.date}
           onSaved={(event) => handleEventUpdated(openDialog.event, event)}
+          onGone={handleEventGone}
           onClose={closeDialog}
         />
       )}

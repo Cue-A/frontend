@@ -14,6 +14,8 @@ type Props = {
   defaultDate: string
   /** 등록하거나 고친 일정 */
   onSaved: (event: CalendarEvent) => void
+  /** 고치려던 일정이 이미 없었을 때(다른 탭에서 지움). 캘린더에서 빼고 알리는 건 화면이 합니다 */
+  onGone?: (event: CalendarEvent) => void
   /** 창이 닫힌 뒤. 어떤 경로로 닫혀도 여기로 한 번 옵니다 */
   onClose: () => void
 }
@@ -51,7 +53,7 @@ function blockComposingEnter(event: KeyboardEvent<HTMLInputElement>) {
  * 제목 · 날짜는 꼭 적고, 시간 · 메모는 비워도 됩니다. 동작은 보관함의 창들(문서 제목 수정 · 새 폴더)과 같습니다 —
  * Enter 로 등록, 한글 조합 중 Enter 무시, 등록하는 동안 닫기 · 입력 잠금, 실패하면 창을 두고 이유를 보여주기.
  */
-export default function EventFormDialog({ event: target = null, defaultDate, onSaved, onClose }: Props) {
+export default function EventFormDialog({ event: target = null, defaultDate, onSaved, onGone, onClose }: Props) {
   // 아래 이벤트 처리 함수의 `event` 와 헷갈리지 않게 고칠 일정은 `target` 으로 부릅니다
   const editing = target !== null
   const dialogRef = useRef<HTMLDialogElement | null>(null)
@@ -121,7 +123,11 @@ export default function EventFormDialog({ event: target = null, defaultDate, onS
       return
     }
 
-    onSaved(saved)
+    if (saved === 'gone') {
+      if (target) onGone?.(target)
+    } else {
+      onSaved(saved)
+    }
     dialogRef.current?.close()
   }
 
