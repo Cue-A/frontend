@@ -209,15 +209,20 @@ function growthScenario(): string | undefined {
  * GET /api/home — 배지 · 목표 · 일정 · 인재상 · 질문은행 (백엔드에 없음)
  * ------------------------------------------------------------------------- */
 
-const FEATURED_BADGES = [
-  { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', description: '첫 면접 완료', tone: 'brand' },
-  { badgeCode: 'STREAK_3', badgeName: '3일 연속', description: '스트릭 3일', tone: 'warning' },
-  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', description: '매운맛 완주', tone: 'danger' },
-  { badgeCode: 'RISING', badgeName: '우상향', description: '3회 연속 상승', tone: 'info' },
-  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', description: '누적 10회', tone: 'success' },
+/**
+ * 배지 목록과 sample 시나리오에서 받았는지. **성장 관리 목업(`growth/api/growthMock.ts` 의 `BADGES`)과 같은 다섯 개 ·
+ * 같은 획득 상태입니다** — 도메인끼리 api 를 가져다 쓰지 않는 규칙이라 여기 다시 적습니다. 바꾸면 같이 바꿔 주세요.
+ *
+ * 카드의 "받은 수 / 전체" 는 이 목록에서 셉니다. 전에는 전체를 12 로 고정해서 다섯 개를 다 받아도 5 / 12 로 보였고,
+ * 성장 관리(네 개)와도 수가 달랐습니다 (PR #184 리뷰).
+ */
+const BADGES = [
+  { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', description: '첫 면접 완료', tone: 'brand', earned: true },
+  { badgeCode: 'STREAK_3', badgeName: '3일 연속', description: '스트릭 3일', tone: 'warning', earned: true },
+  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', description: '매운맛 완주', tone: 'danger', earned: false },
+  { badgeCode: 'RISING', badgeName: '우상향', description: '3회 연속 상승', tone: 'info', earned: true },
+  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', description: '누적 10회', tone: 'success', earned: true },
 ] as const
-
-const TOTAL_BADGE_COUNT = 12
 
 /** 사용자와 상관없는 공용 목록이라 빈 상태에서도 그대로 보여줍니다 */
 const TALENT_KEYWORDS = ['도전과 신뢰', '리더십 & 탐구', '실용주의', '데이터 중심']
@@ -328,13 +333,13 @@ function buildExtras(scenario: Scenario): HomeExtrasResponse {
 
   return {
     badges: {
-      earnedCount: isEmpty ? 0 : FEATURED_BADGES.length,
-      totalCount: TOTAL_BADGE_COUNT,
-      featured: FEATURED_BADGES.map((badge, index) => ({
+      earnedCount: isEmpty ? 0 : BADGES.filter((badge) => badge.earned).length,
+      totalCount: BADGES.length,
+      featured: BADGES.map(({ earned, ...badge }, index) => ({
         ...badge,
-        earnedAt: isEmpty ? null : toIsoDate(addDays(today, -(HISTORY_DAYS - 1) + index * 30)),
+        earnedAt: isEmpty || !earned ? null : toIsoDate(addDays(today, -(HISTORY_DAYS - 1) + index * 15)),
       })),
-      nextHint: isEmpty ? '첫 면접을 마치면 첫 뱃지를 받아요' : '다음 뱃지까지 연습 2회 남았어요',
+      nextHint: isEmpty ? '첫 면접을 마치면 첫 뱃지를 받아요' : '압박 면접을 끝까지 마치면 압박 극복 뱃지를 받아요',
     },
     weeklyGoal: isEmpty ? null : { title: '이번 주 안에 까다로운 실전 면접 3번 보기', targetValue: 3, currentValue: 2 },
     upcomingEvents: isEmpty

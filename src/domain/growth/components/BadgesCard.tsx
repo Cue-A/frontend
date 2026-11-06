@@ -46,14 +46,15 @@ export default function BadgesCard({ badges }: Props) {
       ) : badges.length === 0 ? (
         <p className="mt-5 text-body-md text-neutral-500">아직 받을 수 있는 배지가 없어요.</p>
       ) : (
-        <ul className="mt-5 flex flex-wrap gap-5">
+        // 한 줄에 다섯 개씩 칸을 나눠 놓습니다. 홈과 같은 다섯 개로 맞춘 뒤(PR #184 리뷰) 하나만 아래 줄로 떨어져서, 원도 한 단계 줄였습니다
+        <ul className="mt-5 grid grid-cols-5 justify-items-center gap-y-5">
           {badges.map((badge) => {
             const Icon = BADGE_ICON[badge.code] ?? IconAward
             return (
-              <li key={badge.code} className="flex w-13 flex-col items-center gap-3 text-center">
+              <li key={badge.code} className="flex w-12 flex-col items-center gap-3 text-center">
                 <span
                   aria-hidden
-                  className={`flex h-13 w-13 items-center justify-center rounded-full ${
+                  className={`flex h-12 w-12 items-center justify-center rounded-full ${
                     badge.earned ? `${EARNED_CLASS[badge.tone]} text-neutral-0` : 'bg-neutral-200 text-neutral-400'
                   }`}
                 >

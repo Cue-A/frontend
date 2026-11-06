@@ -3,6 +3,7 @@ import type {
   CalendarEvent,
   CalendarMonth,
   GrowthOverview,
+  LatestInterview,
   WeeklyGoal,
 } from '../types/growth'
 
@@ -85,15 +86,14 @@ export function toWeeklyGoal(response: WeeklyGoalResponse): WeeklyGoal {
   return { target: response.targetValue, done: response.doneCount }
 }
 
-export function toGrowthOverview(
-  response: GrowthOverviewResponse,
-  latestReports: LatestReportListResponse,
-): GrowthOverview {
+/** 가장 최근 리포트. 분석이 끝난(완료 · 부분) 리포트가 하나도 없으면 null 입니다 */
+export function toLatestInterview(latestReports: LatestReportListResponse): LatestInterview | null {
   const latest = latestReports.reports[0]
+  return latest ? { reportId: latest.reportId, title: interviewTitle(latest.companyName, latest.jobRole) } : null
+}
+
+export function toGrowthOverview(response: GrowthOverviewResponse): GrowthOverview {
   return {
-    latestInterview: latest
-      ? { reportId: latest.reportId, title: interviewTitle(latest.companyName, latest.jobRole) }
-      : null,
     weeklyGoal: response.weeklyGoal ? toWeeklyGoal(response.weeklyGoal) : null,
     badges: response.badges.map((badge) => ({
       code: badge.badgeCode,

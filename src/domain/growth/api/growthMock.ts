@@ -63,11 +63,16 @@ function currentScenario(): Scenario {
 
 const MISSING = '성장 관리 API 없음 — growth · calendar 컨트롤러가 백엔드에 없음 (경로 · 응답 모양 프론트 임시안)'
 
+/**
+ * 배지 목록. **홈 목업(`home/api/homeMock.ts` 의 `BADGES`)과 같은 다섯 개 · 같은 획득 상태입니다** — 도메인끼리 api 를
+ * 가져다 쓰지 않는 규칙이라 여기 다시 적습니다. 바꾸면 같이 바꿔 주세요. 전에는 네 개라 홈(다섯 개)과 수가 달랐습니다 (PR #184 리뷰).
+ */
 const BADGES: GrowthOverviewResponse['badges'] = [
   { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', tone: 'brand', earnedAt: '2026-07-01T10:00:00+09:00' },
   { badgeCode: 'STREAK_3', badgeName: '3일 연속', tone: 'warning', earnedAt: '2026-07-03T10:00:00+09:00' },
-  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', tone: 'danger', earnedAt: '2026-07-10T10:00:00+09:00' },
-  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', tone: 'success', earnedAt: null },
+  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', tone: 'danger', earnedAt: null },
+  { badgeCode: 'RISING', badgeName: '우상향', tone: 'info', earnedAt: '2026-07-20T10:00:00+09:00' },
+  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', tone: 'success', earnedAt: '2026-08-01T10:00:00+09:00' },
 ]
 
 /** 목표 수정은 시나리오마다 따로 기억합니다. 시나리오를 바꿔도 앞서 고친 값이 섞이지 않게 */

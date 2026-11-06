@@ -6,6 +6,7 @@ import {
   toCalendarEvent,
   toCalendarMonth,
   toGrowthOverview,
+  toLatestInterview,
   toWeeklyGoal,
   type CalendarEventCreateRequest,
   type CalendarEventResponse,
@@ -23,18 +24,24 @@ import './growthMock'
  * growth(Goal · Badge · UserBadge · Streak) · calendar(CalendarEvent).
  */
 
-/**
- * 이번 주 목표 · 배지(`GET /api/growth`)와 가장 최근 리포트(`GET /api/home/recent-reports?limit=1`).
- *
- * 점수 추이 · 이전 회차 대비 변화는 가장 최근 리포트로 회차 비교(`GET /api/reports/{reportId}/comparison`)를 따로 부릅니다.
- * 리포트 id 를 실서버에서 받아야 실서버 회차 비교가 그 리포트를 찾습니다.
- */
+/** 이번 주 목표 · 배지. `GET /api/growth` (백엔드에 없어 목업이 답합니다) */
 export async function getGrowthOverview() {
-  const [response, latestReports] = await Promise.all([
-    api.get<GrowthOverviewResponse>('/api/growth'),
-    api.get<LatestReportListResponse>('/api/home/recent-reports?limit=1'),
-  ])
-  return toGrowthOverview(response, latestReports)
+  const response = await api.get<GrowthOverviewResponse>('/api/growth')
+  return toGrowthOverview(response)
+}
+
+/**
+ * 가장 최근 리포트. `GET /api/home/recent-reports?limit=1` (백엔드에 있습니다)
+ *
+ * 점수 추이 · 이전 회차 대비 변화는 이 리포트로 회차 비교(`GET /api/reports/{reportId}/comparison`)를 따로 부릅니다.
+ * 리포트 id 를 실서버에서 받아야 실서버 회차 비교가 그 리포트를 찾습니다.
+ *
+ * 목표 · 배지와 따로 부릅니다. 실서버(이것)와 목업(`/api/growth`)이 섞여 있어 한쪽만 실패할 수 있는데, 같이 받으면 최근
+ * 리포트만 실패해도 목표 · 배지 칸까지 오류가 됩니다 (PR #184 리뷰).
+ */
+export async function getLatestInterview() {
+  const response = await api.get<LatestReportListResponse>('/api/home/recent-reports?limit=1')
+  return toLatestInterview(response)
 }
 
 /**
