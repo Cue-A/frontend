@@ -20,7 +20,7 @@ export default function CompanyTopBar({ items }: Props) {
   return (
     <div className="flex items-center justify-between gap-4">
       <Breadcrumb items={items} />
-      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE} onLogout={logout} />
+      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
     </div>
   )
 }

@@ -16,7 +16,7 @@ export default function QuestionTopBar() {
   return (
     <div className="flex items-center justify-between gap-4">
       <Breadcrumb items={['내 보관함', '질문 은행']} />
-      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE} onLogout={logout} />
+      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
     </div>
   )
 }

@@ -13,7 +13,7 @@ export default function GrowthTopBar() {
 
   return (
     <div className="flex items-center justify-end gap-4">
-      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE} onLogout={logout} />
+      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
     </div>
   )
 }

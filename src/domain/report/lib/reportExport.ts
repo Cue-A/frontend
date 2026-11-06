@@ -23,7 +23,7 @@ import type { Report } from '../types/report'
  * `큐앤에이_결과리포트_네이버_기획직무_2026.07.18_3회차`
  *
  * 회사 · 직무는 응답에 없을 수 있어서 있는 것만 씁니다. 같은 날 여러 번 저장해도 회차로 구분됩니다.
- * 내려받기(`downloadBlob`)와 이름 다듬기(`toFileBaseName`)는 명함 저장과 같이 써서 `shared/lib/downloadFile.ts` 에 있습니다.
+ * 내려받기(`downloadBlob`)와 이름 다듬기(`toFileBaseName`)는 `shared/lib/downloadFile.ts` 에 있습니다.
  */
 export function reportFileBaseName(report: Report): string {
   return toFileBaseName(['큐앤에이', '결과 리포트', report.companyName, report.jobRole, report.interviewDate, `${report.attempt}회차`])

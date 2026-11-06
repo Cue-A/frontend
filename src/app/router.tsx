@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import KakaoCallbackPage from '@/domain/auth/components/KakaoCallbackPage'
 import LoginPage from '@/domain/auth/components/LoginPage'
@@ -17,11 +17,7 @@ import PracticeRecordsPage from '@/domain/practice/components/PracticeRecordsPag
 import QuestionBankPage from '@/domain/question/components/QuestionBankPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
 import ReportPage from '@/domain/report/components/ReportPage'
-import AccountSettingsPage from '@/domain/user/components/AccountSettingsPage'
-import BusinessCardPage from '@/domain/user/components/BusinessCardPage'
 import InterestsPage from '@/domain/user/components/InterestsPage'
-import MyPage from '@/domain/user/components/MyPage'
-import NotificationSettingsPage from '@/domain/user/components/NotificationSettingsPage'
 import ProfilePage from '@/domain/user/components/ProfilePage'
 import WithdrawPage from '@/domain/user/components/WithdrawPage'
 
@@ -29,7 +25,7 @@ import AppLayout, { type AppLayoutHandle } from './layout/AppLayout'
 import NotFoundPage from './NotFoundPage'
 import RedirectIfSignedIn from './RedirectIfSignedIn'
 import RequireAuth from './RequireAuth'
-import { ROUTES } from './routes'
+import { MYPAGE_ACCOUNT_ID, MYPAGE_NOTIFICATIONS_ID, ROUTES, toMyPageProfile } from './routes'
 
 /**
  * 껍데기(사이드바·헤더) 밖에서 그리는 화면입니다.
@@ -84,12 +80,15 @@ export const router = createBrowserRouter([
           { path: ROUTES.GROWTH, element: <GrowthPage /> },
           { path: ROUTES.COMPANIES, element: <CompaniesPage /> },
           { path: ROUTES.COMPANY, element: <CompanyDetailPage /> },
-          { path: ROUTES.MYPAGE, element: <MyPage /> },
+          // 마이페이지 메뉴 목록 · 계정 설정 · 알림 설정은 프로필 한 화면으로 합쳤습니다(이슈 #185). 옛 주소는 프로필의 그 칸으로 보냅니다
+          { path: ROUTES.MYPAGE, element: <Navigate to={ROUTES.MYPAGE_PROFILE} replace /> },
           { path: ROUTES.MYPAGE_PROFILE, element: <ProfilePage /> },
           { path: ROUTES.MYPAGE_INTERESTS, element: <InterestsPage /> },
-          { path: ROUTES.MYPAGE_NOTIFICATIONS, element: <NotificationSettingsPage /> },
-          { path: ROUTES.MYPAGE_BUSINESS_CARD, element: <BusinessCardPage /> },
-          { path: ROUTES.MYPAGE_ACCOUNT, element: <AccountSettingsPage /> },
+          {
+            path: ROUTES.MYPAGE_NOTIFICATIONS,
+            element: <Navigate to={toMyPageProfile(MYPAGE_NOTIFICATIONS_ID)} replace />,
+          },
+          { path: ROUTES.MYPAGE_ACCOUNT, element: <Navigate to={toMyPageProfile(MYPAGE_ACCOUNT_ID)} replace /> },
           { path: ROUTES.MYPAGE_WITHDRAW, element: <WithdrawPage /> },
         ],
       },
