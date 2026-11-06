@@ -30,40 +30,40 @@ type Props = {
 }
 
 /**
- * 획득한 뱃지 (시안 card-badges). 아직 못 딴 배지도 회색으로 두고 이름은 보여줍니다 — 무엇을 하면 받는지 알 수 있게.
+ * 획득한 뱃지 (시안 card-badges). **받은 배지만** 보여줍니다 — 전에는 못 받은 배지도 회색으로 같이 두었는데, 카드 제목이
+ * "획득한 뱃지" 라 받은 것처럼 읽혀서 뺐습니다 (이슈 #190 작업 중 결정). 홈의 배지 카드도 같습니다.
  *
  * 시안의 원은 비어 있는 자리표시라, 홈의 배지 카드와 같은 아이콘 · 색을 씁니다. 같은 배지가 화면마다 다르게 생기면 안 됩니다.
  */
 export default function BadgesCard({ badges }: Props) {
+  const earned = badges?.filter((badge) => badge.earned)
+
   return (
     <Card label="획득한 뱃지" padding="lg" className="min-w-0">
       <GrowthCardHeader title="획득한 뱃지" />
 
-      {badges === undefined ? (
+      {earned === undefined ? (
         <p aria-busy className="mt-5 text-body-sm text-neutral-400">
           배지를 불러오는 중이에요…
         </p>
-      ) : badges.length === 0 ? (
-        <p className="mt-5 text-body-md text-neutral-500">아직 받을 수 있는 배지가 없어요.</p>
+      ) : earned.length === 0 ? (
+        <p className="mt-5 text-body-md text-neutral-500">
+          아직 받은 배지가 없어요. 면접 연습을 마치면 받을 수 있어요.
+        </p>
       ) : (
-        // 한 줄에 다섯 개씩 칸을 나눠 놓습니다. 홈과 같은 다섯 개로 맞춘 뒤(PR #184 리뷰) 하나만 아래 줄로 떨어져서, 원도 한 단계 줄였습니다
+        // 한 줄에 다섯 칸을 나눠 놓고 받은 순서대로 왼쪽부터 채웁니다. 배지는 다섯 개라 한 줄을 넘지 않습니다 (PR #184 리뷰)
         <ul className="mt-5 grid grid-cols-5 justify-items-center gap-y-5">
-          {badges.map((badge) => {
+          {earned.map((badge) => {
             const Icon = BADGE_ICON[badge.code] ?? IconAward
             return (
               <li key={badge.code} className="flex w-12 flex-col items-center gap-3 text-center">
                 <span
                   aria-hidden
-                  className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                    badge.earned ? `${EARNED_CLASS[badge.tone]} text-neutral-0` : 'bg-neutral-200 text-neutral-400'
-                  }`}
+                  className={`flex h-12 w-12 items-center justify-center rounded-full text-neutral-0 ${EARNED_CLASS[badge.tone]}`}
                 >
                   <Icon size={22} stroke={2} />
                 </span>
-                <span className={`whitespace-nowrap text-micro ${badge.earned ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                  {badge.name}
-                  {!badge.earned && <span className="sr-only"> (아직 받지 않음)</span>}
-                </span>
+                <span className="whitespace-nowrap text-micro text-neutral-500">{badge.name}</span>
               </li>
             )
           })}

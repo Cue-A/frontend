@@ -30,8 +30,14 @@ type Props = {
   badges: BadgeSummary | null
 }
 
-/** 획득한 뱃지. 아직 못 딴 배지는 회색으로 두고 이름은 보여줍니다 — 무엇을 하면 받는지 알 수 있게 */
+/**
+ * 획득한 뱃지. **받은 배지만** 보여주고 오른쪽 위에 받은 개수를 적습니다. 전에는 못 받은 배지도 회색으로 두고 "3 / 5" 로
+ * 적었는데, 카드 제목이 "획득한 뱃지" 라 받은 것처럼 읽혀서 뺐습니다 (이슈 #190 작업 중 결정). 성장 관리의 배지 카드도 같습니다.
+ * 다음에 무엇을 하면 받는지는 아래 안내(`nextHint`)가 알려 줍니다.
+ */
 export default function BadgeCard({ badges }: Props) {
+  const earned = badges ? badges.featured.filter((badge) => badge.earned) : []
+
   return (
     <Card label="획득한 뱃지" padding="lg" surface="glass-soft">
       <CardHeader
@@ -39,8 +45,7 @@ export default function BadgeCard({ badges }: Props) {
         aside={
           badges && (
             <span className="text-body-md font-semibold text-primary-500">
-              {badges.earnedCount} / {badges.totalCount}
-              <span className="sr-only">개 획득</span>
+              {badges.earnedCount}개<span className="sr-only"> 획득</span>
             </span>
           )
         }
@@ -57,32 +62,34 @@ export default function BadgeCard({ badges }: Props) {
         </div>
       ) : (
         <>
-          {/* 칸을 똑같이 나누면 "3회 연속 상승" 처럼 긴 설명만 두 줄로 꺾여서 줄이 들쭉날쭉해집니다. 글 길이만큼 차지하게 둡니다 */}
-          <ul className="mt-5 flex justify-between gap-2">
-            {badges.featured.map((badge) => {
-              const Icon = BADGE_ICON[badge.code]
-              return (
-                <li key={badge.code} className="flex flex-col items-center text-center">
-                  <span
-                    aria-hidden
-                    className={`flex h-11 w-11 items-center justify-center rounded-full ring-4 ${
-                      badge.earned ? `${EARNED_CLASS[badge.tone]} text-neutral-0` : 'bg-neutral-200 text-neutral-400 ring-neutral-50'
-                    }`}
-                  >
-                    <Icon size={20} stroke={2} />
-                  </span>
-                  <span className={`mt-3 text-body-sm font-semibold ${badge.earned ? 'text-neutral-900' : 'text-neutral-500'}`}>
-                    {badge.name}
-                  </span>
-                  <span className="whitespace-nowrap text-micro text-neutral-500">{badge.description}</span>
-                  {!badge.earned && <span className="sr-only">(아직 받지 않음)</span>}
-                </li>
-              )
-            })}
-          </ul>
+          {earned.length === 0 ? (
+            <p className="mt-5 text-body-md text-neutral-500">아직 받은 배지가 없어요.</p>
+          ) : (
+            // 칸을 똑같이 나누면 "3회 연속 상승" 처럼 긴 설명만 두 줄로 꺾여서 줄이 들쭉날쭉해집니다. 글 길이만큼 차지하게 두고,
+            // 받은 배지가 적어도 양 끝으로 벌어지지 않게 왼쪽부터 붙입니다
+            <ul className="mt-5 flex flex-wrap gap-x-7 gap-y-4">
+              {earned.map((badge) => {
+                const Icon = BADGE_ICON[badge.code]
+                return (
+                  <li key={badge.code} className="flex flex-col items-center text-center">
+                    <span
+                      aria-hidden
+                      className={`flex h-11 w-11 items-center justify-center rounded-full text-neutral-0 ring-4 ${EARNED_CLASS[badge.tone]}`}
+                    >
+                      <Icon size={20} stroke={2} />
+                    </span>
+                    <span className="mt-3 text-body-sm font-semibold text-neutral-900">{badge.name}</span>
+                    <span className="whitespace-nowrap text-micro text-neutral-500">{badge.description}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
 
           {badges.nextHint && (
-            <p className="mt-5 rounded-sm bg-surface-muted px-4 py-3 text-body-sm text-primary-700">{badges.nextHint}</p>
+            <p className="mt-5 rounded-sm bg-surface-muted px-4 py-3 text-body-sm text-primary-700">
+              {badges.nextHint}
+            </p>
           )}
         </>
       )}
