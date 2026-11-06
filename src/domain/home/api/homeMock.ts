@@ -2,12 +2,21 @@ import { registerMock } from '@/shared/api/mock'
 
 import { addDays, daysBetween, formatMonthDay, parseIsoDate, startOfToday, toIsoDate } from '../lib/homeDate'
 import { isPracticePeriod, practicePeriodOf } from '../lib/practicePeriod'
-import type { InterviewKind, PracticePeriod } from '../types/home'
+import type { PracticePeriod } from '../types/home'
 
-import type { HomeOverviewResponse, PracticeRecordResponse } from './homeResponse'
+import type {
+  HomeExtrasResponse,
+  HomeStatsResponse,
+  PracticeRecordResponse,
+  RecentReportListResponse,
+} from './homeResponse'
 
 /**
- * 홈 대시보드 목업입니다. **백엔드에 홈 API 가 없어서** `home` 을 `VITE_REAL_APIS` 에 넣어도 목업이 답합니다.
+ * 홈 대시보드 목업입니다. `VITE_REAL_APIS` 에 `home` 이 없을 때 답합니다.
+ *
+ * - `/api/home/stats` · `/api/home/recent-reports` · `/api/home/practice` 는 백엔드에 있습니다(Cue-A/backend#108 · #116).
+ *   `home` 을 켜면 실제 서버로 갑니다. 목업도 그 응답 모양 그대로 돌려줍니다
+ * - `/api/home`(배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행)은 백엔드에 없어서 `home` 을 켜도 목업이 답합니다
  *
  * ## 두 가지 상태
  *
@@ -141,28 +150,79 @@ function average(scores: number[]) {
 }
 
 /* ---------------------------------------------------------------------------
- * GET /api/home
+ * GET /api/home/recent-reports
  * ------------------------------------------------------------------------- */
 
-/** 최근 리포트 행에 붙일 면접 이름. 최근 것부터 이 순서로 붙입니다 (시안의 세 줄) */
-const REPORT_TEMPLATES: Array<{ title: string; kind: InterviewKind; questionCount: number; durationSec: number }> = [
-  { title: '프론트엔드 개발자 면접', kind: 'FRONTEND', questionCount: 5, durationSec: 12 * 60 },
-  { title: '백엔드 개발자 면접', kind: 'BACKEND', questionCount: 8, durationSec: 18 * 60 },
-  { title: '인성 면접 시뮬레이션', kind: 'PERSONALITY', questionCount: 6, durationSec: 15 * 60 },
+/**
+ * 최근 리포트 행. 최근 것부터 이 순서로 붙입니다 (시안의 세 줄). 기업은 기업 목업(`shared/api/mockCompanies.ts`)에
+ * 있는 이름을 씁니다. 두 번째 줄은 일부 항목이 빠진 리포트(PARTIAL)입니다.
+ */
+const REPORT_TEMPLATES: Array<{
+  companyName: string | null
+  jobRole: string
+  questionCount: number
+  status: 'COMPLETED' | 'PARTIAL'
+}> = [
+  { companyName: '네이버', jobRole: '데이터 분석가', questionCount: 6, status: 'COMPLETED' },
+  { companyName: '카카오모빌리티', jobRole: '백엔드 개발자', questionCount: 9, status: 'PARTIAL' },
+  { companyName: null, jobRole: '프론트엔드 개발자', questionCount: 3, status: 'COMPLETED' },
 ]
 
-/** 리포트 목업(`/api/reports/:reportId`)은 목록에 없는 id 도 받아줍니다. 눌러서 리포트 화면까지 이어집니다 */
+/**
+ * 첫 줄은 성장 관리 · 회차 비교 목업이 아는 리포트(5회차까지 본 면접)입니다. 성장 관리도 이 API 로 "가장 최근 리포트" 를
+ * 받아서, 눌러 들어가도 회차 비교가 이어집니다. 나머지는 리포트 목업(`/api/reports/:reportId`)이 목록에 없는 id 도
+ * 받아줘서 리포트 화면까지 이어집니다.
+ */
+const LATEST_REPORT_ID = 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa005'
 const REPORT_ID_PREFIX = 'c2a7e5d0-3f41-4b8e-9d62-1a0b7c4e5f0'
 
-const FEATURED_BADGES = [
-  { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', description: '첫 면접 완료', tone: 'brand' },
-  { badgeCode: 'STREAK_3', badgeName: '3일 연속', description: '스트릭 3일', tone: 'warning' },
-  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', description: '매운맛 완주', tone: 'danger' },
-  { badgeCode: 'RISING', badgeName: '우상향', description: '3회 연속 상승', tone: 'info' },
-  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', description: '누적 10회', tone: 'success' },
-] as const
+/**
+ * 성장 관리 목업의 시나리오(`?mock=first` 등, `growth/api/growthMock.ts`)별 가장 최근 리포트입니다. 성장 관리는 이
+ * API 를 `limit=1` 로 불러 그 리포트로 회차 비교를 부르는데, 회차 비교 목업(`report/api/reportComparisonMock.ts`)이
+ * 리포트 id 로 경우를 가릅니다. 그래서 `limit=1` 요청에만 성장 관리 시나리오를 따릅니다 — 홈의 세 줄은 그대로입니다.
+ * 도메인끼리 api 를 가져다 쓰지 않는 규칙이라 시나리오 이름 · 저장 키를 여기 다시 적습니다.
+ */
+const GROWTH_SCENARIO_KEY = 'cue-a:mock:growth'
+const GROWTH_LATEST_REPORT_ID: Record<string, string | null> = {
+  sample: LATEST_REPORT_ID,
+  first: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa001',
+  partial: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa104',
+  'compare-error': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa503',
+  'compare-loose': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa777',
+  'compare-empty': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa000',
+  empty: null,
+}
 
-const TOTAL_BADGE_COUNT = 12
+/** 성장 관리 시나리오. 고르지 않았으면 undefined */
+function growthScenario(): string | undefined {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('mock')
+    if (fromUrl && fromUrl in GROWTH_LATEST_REPORT_ID) return fromUrl
+    const stored = sessionStorage.getItem(GROWTH_SCENARIO_KEY)
+    return stored && stored in GROWTH_LATEST_REPORT_ID ? stored : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * GET /api/home — 배지 · 목표 · 일정 · 인재상 · 질문은행 (백엔드에 없음)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * 배지 목록과 sample 시나리오에서 받았는지. **성장 관리 목업(`growth/api/growthMock.ts` 의 `BADGES`)과 같은 다섯 개 ·
+ * 같은 획득 상태입니다** — 도메인끼리 api 를 가져다 쓰지 않는 규칙이라 여기 다시 적습니다. 바꾸면 같이 바꿔 주세요.
+ *
+ * 카드의 "받은 수 / 전체" 는 이 목록에서 셉니다. 전에는 전체를 12 로 고정해서 다섯 개를 다 받아도 5 / 12 로 보였고,
+ * 성장 관리(네 개)와도 수가 달랐습니다 (PR #184 리뷰).
+ */
+const BADGES = [
+  { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', description: '첫 면접 완료', tone: 'brand', earned: true },
+  { badgeCode: 'STREAK_3', badgeName: '3일 연속', description: '스트릭 3일', tone: 'warning', earned: true },
+  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', description: '매운맛 완주', tone: 'danger', earned: false },
+  { badgeCode: 'RISING', badgeName: '우상향', description: '3회 연속 상승', tone: 'info', earned: true },
+  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', description: '누적 10회', tone: 'success', earned: true },
+] as const
 
 /** 사용자와 상관없는 공용 목록이라 빈 상태에서도 그대로 보여줍니다 */
 const TALENT_KEYWORDS = ['도전과 신뢰', '리더십 & 탐구', '실용주의', '데이터 중심']
@@ -215,37 +275,71 @@ function streakOf(counts: Map<string, number>, today: Date) {
   return { currentDays, bestDays }
 }
 
-function buildOverview(scenario: Scenario): HomeOverviewResponse {
+function buildStats(scenario: Scenario): HomeStatsResponse {
   const today = startOfToday()
-  const sessions = sessionsFor(scenario, today)
-  const counts = countByDate(sessions)
-  const isEmpty = sessions.length === 0
+  const counts = countByDate(sessionsFor(scenario, today))
+  return { thisMonth: monthlyActivity(counts, today), streak: streakOf(counts, today) }
+}
 
-  const recentReports = sessions
-    .slice(-REPORT_TEMPLATES.length)
-    .reverse()
-    .map((session, index) => ({
-      reportId: `${REPORT_ID_PREFIX}${index + 1}`,
-      title: REPORT_TEMPLATES[index].title,
-      interviewKind: REPORT_TEMPLATES[index].kind,
-      practicedOn: session.date,
-      questionCount: REPORT_TEMPLATES[index].questionCount,
-      durationSec: REPORT_TEMPLATES[index].durationSec,
-      totalScore: session.score,
-    }))
+/** `practicedOn` 은 서버처럼 시각(시간대 포함)으로 줍니다. 오후 2시에 본 것으로 둡니다 */
+function practicedAt(isoDate: string) {
+  return `${isoDate}T14:00:00+09:00`
+}
+
+function buildRecentReports(scenario: Scenario, limit: number): RecentReportListResponse {
+  const sessions = sessionsFor(scenario, startOfToday())
+
+  if (limit === 1) {
+    const growth = growthScenario()
+    if (growth !== undefined) {
+      const reportId = GROWTH_LATEST_REPORT_ID[growth]
+      const latest = sessions.at(-1)
+      return {
+        reports:
+          reportId === null || !latest
+            ? []
+            : [
+                {
+                  reportId,
+                  companyName: '네이버',
+                  jobRole: '기획 직무',
+                  questionCount: 6,
+                  status: 'COMPLETED',
+                  scoreTotal: latest.score,
+                  practicedOn: practicedAt(latest.date),
+                },
+              ],
+      }
+    }
+  }
 
   return {
-    thisMonth: monthlyActivity(counts, today),
-    streak: streakOf(counts, today),
-    recentReports,
-    badges: {
-      earnedCount: isEmpty ? 0 : FEATURED_BADGES.length,
-      totalCount: TOTAL_BADGE_COUNT,
-      featured: FEATURED_BADGES.map((badge, index) => ({
-        ...badge,
-        earnedAt: isEmpty ? null : toIsoDate(addDays(today, -(HISTORY_DAYS - 1) + index * 30)),
+    reports: sessions
+      .slice(-REPORT_TEMPLATES.length)
+      .reverse()
+      .slice(0, limit)
+      .map((session, index) => ({
+        reportId: index === 0 ? LATEST_REPORT_ID : `${REPORT_ID_PREFIX}${index + 1}`,
+        ...REPORT_TEMPLATES[index],
+        scoreTotal: session.score,
+        practicedOn: practicedAt(session.date),
       })),
-      nextHint: isEmpty ? '첫 면접을 마치면 첫 뱃지를 받아요' : '다음 뱃지까지 연습 2회 남았어요',
+  }
+}
+
+function buildExtras(scenario: Scenario): HomeExtrasResponse {
+  const today = startOfToday()
+  const isEmpty = sessionsFor(scenario, today).length === 0
+
+  return {
+    badges: {
+      earnedCount: isEmpty ? 0 : BADGES.filter((badge) => badge.earned).length,
+      totalCount: BADGES.length,
+      featured: BADGES.map(({ earned, ...badge }, index) => ({
+        ...badge,
+        earnedAt: isEmpty || !earned ? null : toIsoDate(addDays(today, -(HISTORY_DAYS - 1) + index * 15)),
+      })),
+      nextHint: isEmpty ? '첫 면접을 마치면 첫 뱃지를 받아요' : '압박 면접을 끝까지 마치면 압박 극복 뱃지를 받아요',
     },
     weeklyGoal: isEmpty ? null : { title: '이번 주 안에 까다로운 실전 면접 3번 보기', targetValue: 3, currentValue: 2 },
     upcomingEvents: isEmpty
@@ -278,7 +372,7 @@ function monthlyTrend(sessions: PracticeSession[]) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, scores]) => {
       const [year, month] = key.split('-').map(Number)
-      return { label: `${year}년 ${month}월`, score: average(scores) ?? 0 }
+      return { date: key, label: `${year}년 ${month}월`, score: average(scores) ?? 0 }
     })
 }
 
@@ -315,22 +409,26 @@ function buildPracticeRecord(scenario: Scenario, period: PracticePeriod): Practi
           unit: 'session',
           points: sessions
             .slice(-TREND_SESSION_COUNT)
-            .map(({ date, score }) => ({ label: formatMonthDay(date), score })),
+            .map(({ date, score }) => ({ date, label: formatMonthDay(date), score })),
         },
   }
 }
 
-const MISSING = '홈 대시보드 API 없음 — 경로 · 응답 모양 모두 프론트 임시안 (growth 컨트롤러 없음)'
+const MISSING = '홈 배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행 API 없음 — 경로 · 응답 모양 프론트 임시안'
 
-registerMock('GET', '/api/home', () => buildOverview(currentScenario()), { missingInBackend: MISSING })
+registerMock('GET', '/api/home', () => buildExtras(currentScenario()), { missingInBackend: MISSING })
 
-registerMock(
-  'GET',
-  '/api/home/practice',
-  (_params, _body, query) => {
-    const requested = query.get('period')
-    const period = isPracticePeriod(requested) ? requested : '10w'
-    return buildPracticeRecord(currentScenario(), period)
-  },
-  { missingInBackend: MISSING },
-)
+registerMock('GET', '/api/home/stats', () => buildStats(currentScenario()))
+
+registerMock('GET', '/api/home/recent-reports', (_params, _body, query) => {
+  const requested = Number(query.get('limit') ?? 3)
+  const limit = Number.isInteger(requested) && requested >= 1 && requested <= 10 ? requested : 3
+  return buildRecentReports(currentScenario(), limit)
+})
+
+registerMock('GET', '/api/home/practice', (_params, _body, query) => {
+  const requested = query.get('period')
+  // 서버 기본값은 4w 입니다. 화면은 늘 기간을 보내서 이 값을 쓰지 않습니다
+  const period = isPracticePeriod(requested) ? requested : '4w'
+  return buildPracticeRecord(currentScenario(), period)
+})

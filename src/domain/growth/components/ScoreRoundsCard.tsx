@@ -16,6 +16,8 @@ type Props = {
   interview: LatestInterview | null | undefined
   /** 그 면접의 회차 비교 (`useReportComparison`) */
   comparison: UseReportComparisonResult
+  /** 가장 최근 리포트를 못 받았을 때. 있으면 이 카드에 이유와 "다시 시도" 를 둡니다 (목표 · 배지 칸은 그대로) */
+  interviewError?: { message: string; onRetry: () => void } | null
 }
 
 /** 회차 아래 글자. 최신 회차 · 부분 리포트 회차에 덧붙입니다 */
@@ -153,12 +155,22 @@ function RoundBars({ rounds }: { rounds: ComparisonRound[] }) {
  *
  * 세로축은 0점부터가 아니라 가장 낮은 점수 근처부터 그립니다(`scoreAxis`). 회차가 많으면 최근 8회차만 그립니다.
  */
-export default function ScoreRoundsCard({ interview, comparison }: Props) {
+export default function ScoreRoundsCard({ interview, comparison, interviewError = null }: Props) {
   return (
     <Card label="회차별 종합 점수 추이" padding="lg" className="min-w-0 lg:row-span-2">
       <GrowthCardHeader title="회차별 종합 점수 추이" />
 
-      {interview === undefined ? (
+      {interviewError ? (
+        <div
+          role="alert"
+          className="mt-6 flex min-h-60 flex-col items-center justify-center gap-2 rounded-md bg-surface-muted p-6 text-center"
+        >
+          <p className="break-keep text-body-md text-neutral-700">{interviewError.message}</p>
+          <Button size="sm" onClick={interviewError.onRetry}>
+            다시 시도
+          </Button>
+        </div>
+      ) : interview === undefined ? (
         <p aria-busy className="mt-2 text-body-sm text-neutral-400">
           점수 추이를 불러오는 중이에요…
         </p>

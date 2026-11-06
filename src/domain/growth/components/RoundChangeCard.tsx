@@ -12,6 +12,8 @@ type Props = {
   interview: LatestInterview | null | undefined
   /** 그 면접의 회차 비교 (`useReportComparison`) */
   comparison: UseReportComparisonResult
+  /** 가장 최근 리포트를 못 받았을 때의 이유. "다시 시도" 는 점수 추이 카드에 둡니다 */
+  interviewError?: string | null
 }
 
 const AXES: ComparisonAxis[] = ['content', 'speech', 'gaze']
@@ -64,7 +66,7 @@ const NO_PREVIOUS = '재면접을 보면 지난 회차와 비교해 드려요.'
  * 시안은 본문 문단만 있습니다. 변화량 줄과 회차 표시는 명세의 화면 예시를 따라 더했습니다.
  * 불러오지 못하면 이 카드는 이유만 적고, "다시 시도" 는 같은 응답을 쓰는 점수 추이 카드에 둡니다.
  */
-export default function RoundChangeCard({ interview, comparison }: Props) {
+export default function RoundChangeCard({ interview, comparison, interviewError = null }: Props) {
   const ready = comparison.status === 'ready' ? comparison.comparison : null
   const previous = ready?.previous ?? null
   const paragraphs = [previous?.comment, ready?.trendComment].filter((text): text is string => Boolean(text))
@@ -83,7 +85,9 @@ export default function RoundChangeCard({ interview, comparison }: Props) {
         }
       />
 
-      {interview === null ? (
+      {interviewError ? (
+        <p className="mt-5 break-keep text-body-md text-neutral-500">{interviewError}</p>
+      ) : interview === null ? (
         <p className="mt-5 break-keep text-body-md text-neutral-500">{NO_PREVIOUS}</p>
       ) : interview === undefined || comparison.status === 'loading' || comparison.status === 'idle' ? (
         <div aria-busy className="mt-5 flex flex-col gap-2">

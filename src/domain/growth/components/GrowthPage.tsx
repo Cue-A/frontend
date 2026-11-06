@@ -9,6 +9,7 @@ import Card from '@/shared/ui/Card'
 
 import { useCalendarMonth } from '../hooks/useCalendarMonth'
 import { useGrowthOverview } from '../hooks/useGrowthOverview'
+import { useLatestInterview } from '../hooks/useLatestInterview'
 import { monthOf, shortDate, toDateKey, toMonthKey } from '../lib/calendarDate'
 import type { CalendarEvent } from '../types/growth'
 
@@ -28,8 +29,10 @@ type OpenDialog = 'goal' | 'event' | null
  *
  * 회차를 거치며 무엇이 달라졌는지(점수 추이 · 이전 회차 대비 변화)와 이번 주 목표 · 배지를 보고, 면접 일정을 관리합니다.
  *
- * 세 가지를 따로 받습니다.
- * - `useGrowthOverview` — 이번 주 목표 · 배지 · 가장 최근 리포트
+ * 네 가지를 따로 받습니다.
+ * - `useGrowthOverview` — 이번 주 목표 · 배지 (`/api/growth`, 목업)
+ * - `useLatestInterview` — 가장 최근 리포트 (`/api/home/recent-reports?limit=1`, 실서버). 목표 · 배지와 따로 받아서, 이게
+ *   실패하면 점수 추이 · 이전 회차 대비 변화 칸에만 오류와 "다시 시도" 를 두고 목표 · 배지는 그대로 보입니다 (PR #184 리뷰)
  * - `useReportComparison` — 그 리포트의 회차 비교(점수 추이 · 이전 회차 대비 변화). AI 가 계산해서 몇 초 걸리고 60초에
  *   10회 제한이 있어서, 목표를 고쳐 요약을 새로 받아도 리포트가 같으면 다시 부르지 않습니다
  * - `useCalendarMonth` — 캘린더 한 달치. 달을 넘길 때마다 받습니다
@@ -60,8 +63,11 @@ export default function GrowthPage() {
   const [eventNotice, setEventNotice] = useState<string | null>(null)
 
   const ready = overview.status === 'ready' ? overview.overview : undefined
-  const interview = ready?.latestInterview
+  const latest = useLatestInterview()
+  const interview = latest.status === 'ready' ? latest.interview : undefined
   const comparison = useReportComparison(interview?.reportId ?? null)
+  const interviewError =
+    latest.status === 'error' ? `최근 리포트를 불러오지 못했어요. ${toUserMessage(latest.error.code)}` : null
 
   // 창을 열면 앞서 남은 알림은 지웁니다
   const openGoal = () => {
@@ -95,7 +101,10 @@ export default function GrowthPage() {
     작아서, 그때 내려가면 페이지 끝에 걸려 덜 내려가고 카드가 채워지면서 캘린더가 다시 아래로 밀립니다.
   */
   const pageSettled =
-    overview.status !== 'loading' && comparison.status !== 'loading' && calendar.status !== 'loading'
+    overview.status !== 'loading' &&
+    latest.status !== 'loading' &&
+    comparison.status !== 'loading' &&
+    calendar.status !== 'loading'
   const scrolledToCalendar = useRef(false)
   useEffect(() => {
     if (hash !== `#${GROWTH_CALENDAR_ID}` || !pageSettled || scrolledToCalendar.current) return
@@ -144,11 +153,15 @@ export default function GrowthPage() {
         ) : (
           <>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-              <ScoreRoundsCard interview={interview} comparison={comparison} />
+              <ScoreRoundsCard
+                interview={interview}
+                comparison={comparison}
+                interviewError={interviewError === null ? null : { message: interviewError, onRetry: latest.reload }}
+              />
               <WeeklyGoalCard goal={ready?.weeklyGoal} notice={goalNotice} onEdit={openGoal} />
               <BadgesCard badges={ready?.badges} />
             </div>
-            <RoundChangeCard interview={interview} comparison={comparison} />
+            <RoundChangeCard interview={interview} comparison={comparison} interviewError={interviewError} />
           </>
         )}
 

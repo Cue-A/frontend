@@ -55,7 +55,7 @@ type Settled =
   | { cacheKey: string; visit: number; status: 'ready'; comparison: RoundComparison }
 
 /**
- * 회차 비교 · 성장 추이입니다. (`GET /api/reports/{reportId}/comparison` — 백엔드에 없어 목업이 답합니다)
+ * 회차 비교 · 성장 추이입니다. (`GET /api/reports/{reportId}/comparison` — 백엔드에 있습니다. `VITE_REAL_APIS` 이름은 `reports`)
  *
  * `reportId` 가 null 이면 부르지 않습니다(`idle`) — 아직 리포트가 하나도 없는 사용자입니다.
  *

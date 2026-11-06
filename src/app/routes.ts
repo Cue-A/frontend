@@ -99,6 +99,15 @@ export function toAnalyzing(sessionId: string) {
   return `/interviews/${sessionId}/analyzing`
 }
 
-export function toReport(reportId: string) {
-  return `/reports/${reportId}`
+/**
+ * 리포트 화면의 탭. `/reports/{id}?view=growth` 면 "성장 추이 보기" 탭으로 엽니다. 없으면 "이번 회차 리포트" 입니다.
+ * 주소에 두어서 새로고침 · 뒤로 가기에도 고른 탭이 남습니다 (이슈 #183).
+ */
+export const REPORT_VIEW_PARAM = 'view'
+export const REPORT_VIEW_GROWTH = 'growth'
+
+/** 리포트로 갑니다. `view` 를 주면 그 탭으로 엽니다 — 성장 추이 탭에서 회차를 바꿀 때 탭을 그대로 둡니다 */
+export function toReport(reportId: string, view?: typeof REPORT_VIEW_GROWTH) {
+  const path = `/reports/${reportId}`
+  return view ? `${path}?${REPORT_VIEW_PARAM}=${view}` : path
 }

@@ -3,15 +3,19 @@
  *
  * ⚠️ **백엔드에 성장 관리용 API 가 없습니다.** `growth`(Goal · Badge · UserBadge · Streak)와 `calendar`(CalendarEvent)
  * 엔티티만 있고 컨트롤러가 없어서(Cue-A/backend main, 2026-10-30 확인) 시안을 보고 프론트가 먼저 정한 모양입니다.
+ * 가장 최근 리포트만 백엔드 홈 API(`GET /api/home/recent-reports?limit=1`)로 받습니다.
  * 서버 응답 모양은 `api/growthResponse.ts` 에 따로 두고 api 파일에서 옮겨 담습니다 (docs/01-conventions.md "타입").
  */
 
 /* ---------------------------------------------------------------------------
- * 성장 요약 — `GET /api/growth`
+ * 가장 최근 리포트 — `GET /api/home/recent-reports?limit=1` (백엔드에 있음)
  *
- * 회차별 점수 추이 · 이전 회차 대비 변화는 여기 없습니다. 리포트 도메인의 회차 비교 API
- * (`GET /api/reports/{reportId}/comparison`)를 `latestInterview.reportId` 로 따로 부릅니다 — AI 가 계산해서 몇 초 걸리고
- * 60초에 10회 제한이 있어서, 목표 · 배지와 한 번에 받으면 목표를 고칠 때마다 AI 를 다시 부르게 됩니다.
+ * 회차별 점수 추이 · 이전 회차 대비 변화의 기준입니다. 이 리포트로 리포트 도메인의 회차 비교 API
+ * (`GET /api/reports/{reportId}/comparison`)를 따로 부릅니다 — AI 가 계산해서 몇 초 걸리고 60초에 10회 제한이 있어서,
+ * 목표 · 배지와 한 번에 받으면 목표를 고칠 때마다 AI 를 다시 부르게 됩니다.
+ *
+ * 목표 · 배지(`/api/growth`, 목업)와도 따로 받습니다. 실서버와 목업이 섞여 있어 한쪽만 실패할 수 있는데, 같이 받으면
+ * 최근 리포트만 실패해도 목표 · 배지 칸까지 오류가 됩니다 (PR #184 리뷰).
  * ------------------------------------------------------------------------- */
 
 /**
@@ -24,6 +28,10 @@ export type LatestInterview = {
   /** `네이버 · 기획 직무 면접` — 회차 비교 응답에는 회사 · 직무 이름이 없어서 여기서 받습니다 */
   title: string
 }
+
+/* ---------------------------------------------------------------------------
+ * 성장 요약 — `GET /api/growth` (이번 주 목표 · 배지, 백엔드에 없어 목업)
+ * ------------------------------------------------------------------------- */
 
 export type WeeklyGoal = {
   /** 이번 주에 하기로 한 연습 횟수 */
@@ -45,8 +53,6 @@ export type GrowthBadge = {
 }
 
 export type GrowthOverview = {
-  /** 분석이 끝난 리포트가 하나도 없으면 null */
-  latestInterview: LatestInterview | null
   /** 이번 주 목표를 안 정했으면 null */
   weeklyGoal: WeeklyGoal | null
   badges: GrowthBadge[]
