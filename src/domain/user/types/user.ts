@@ -88,4 +88,3 @@ export type NotificationSettings = {
   emailAlerts: boolean
   pushAlerts: boolean
 }
-

@@ -5,7 +5,9 @@ import { initialOf } from '@/shared/lib/initialOf'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
+import { useAccount } from '../hooks/useAccount'
 import { useMe, type UseMeResult } from '../hooks/useMe'
+import { useNotificationSettings } from '../hooks/useNotificationSettings'
 import { useProfile } from '../hooks/useProfile'
 import { useUpdateProfile } from '../hooks/useUpdateProfile'
 import { JOB_TITLE_MAX_LENGTH, NICKNAME_MAX_LENGTH } from '../lib/profileLimits'
@@ -165,17 +167,25 @@ export default function ProfilePage() {
 
   const initialName = profileState.status === 'ready' ? (savedName ?? profileState.profile.userName) : null
 
+  // 계정 · 알림 설정 칸이 쓸 값도 여기서 불러서 넘깁니다. 아래 "칸으로 내려가기" 가 세 칸이 다 그려지기를 기다려야 해서입니다
+  const account = useAccount()
+  const notifications = useNotificationSettings()
+
   /*
     `#account` · `#notifications` 로 들어왔으면 그 칸으로 내려갑니다. 라우터는 주소의 # 로 스크롤해 주지 않습니다.
-    프로필을 다 받은 뒤에 한 번만 내려갑니다 — 불러오는 동안은 프로필 판이 짧아서, 먼저 내려가면 판이 채워지며 칸이 아래로 밀립니다.
+    프로필 · 계정 · 알림 설정을 다 받은 뒤에 한 번만 내려갑니다 — 불러오는 동안은 판이 짧아서, 먼저 내려가면 위 칸이 채워지며
+    내려간 칸이 아래로 밀립니다. 전에는 프로필만 기다려서, 실제 API 가 느리면 `#notifications` 가 계정 칸 로딩에 밀렸습니다
+    (PR #188 리뷰).
   */
   const { hash } = useLocation()
   const scrolledToSection = useRef(false)
+  const sectionsSettled =
+    profileState.status !== 'loading' && account.status !== 'loading' && notifications.status !== 'loading'
   useEffect(() => {
-    if (!hash || profileState.status === 'loading' || scrolledToSection.current) return
+    if (!hash || !sectionsSettled || scrolledToSection.current) return
     scrolledToSection.current = true
     document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
-  }, [hash, profileState.status])
+  }, [hash, sectionsSettled])
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
@@ -209,8 +219,8 @@ export default function ProfilePage() {
           )}
         </Card>
 
-        <AccountSection me={me} />
-        <NotificationSection />
+        <AccountSection me={me} account={account} />
+        <NotificationSection state={notifications} />
       </div>
     </div>
   )

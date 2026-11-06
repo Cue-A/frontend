@@ -2,9 +2,14 @@ import { MYPAGE_NOTIFICATIONS_ID } from '@/app/routes'
 import Card from '@/shared/ui/Card'
 import Switch from '@/shared/ui/Switch'
 
-import { useNotificationSettings } from '../hooks/useNotificationSettings'
+import type { UseNotificationSettingsResult } from '../hooks/useNotificationSettings'
 
 const ROW_CLASS = 'justify-between px-6 py-5 text-body-md font-semibold text-neutral-900'
+
+type Props = {
+  /** 알림 설정(`useNotificationSettings()`). 화면이 불러서 넘깁니다 — 칸으로 내려갈 때를 맞추려는 것입니다 (`AccountSection` 과 같음) */
+  state: UseNotificationSettingsResult
+}
 
 /**
  * 프로필 화면의 알림 설정 칸 — 이메일 · 푸시 알림을 켜고 끕니다. (B-03 마이페이지/알림설정 시안)
@@ -14,9 +19,7 @@ const ROW_CLASS = 'justify-between px-6 py-5 text-body-md font-semibold text-neu
  *
  * 알림 도메인이 API 명세서에 없어 경로를 임시로 정했고 목업이 답합니다. 실제로 알림을 보내는 곳도 아직 없습니다. (Q16)
  */
-export default function NotificationSection() {
-  const state = useNotificationSettings()
-
+export default function NotificationSection({ state }: Props) {
   return (
     <div id={MYPAGE_NOTIFICATIONS_ID} className="flex scroll-mt-6 flex-col gap-2">
       <Card padding="none" label="알림 설정" className="w-full divide-y divide-neutral-200">

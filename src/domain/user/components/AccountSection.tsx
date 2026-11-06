@@ -6,7 +6,7 @@ import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
-import { useAccount } from '../hooks/useAccount'
+import type { UseAccountResult } from '../hooks/useAccount'
 import type { UseMeResult } from '../hooks/useMe'
 import type { LoginProvider } from '../types/user'
 
@@ -25,6 +25,11 @@ function toDateLabel(iso: string) {
 type Props = {
   /** 화면이 이미 부른 `useMe()` 결과. 계정 정보를 못 불러오면 여기의 로그인 방식으로 대신합니다 */
   me: UseMeResult
+  /**
+   * 계정 정보(`useAccount()`). 화면이 불러서 넘깁니다 — `#account` · `#notifications` 로 내려갈 때 이 칸까지 다 그려진
+   * 뒤에 내려가야 위치가 밀리지 않습니다 (PR #188 리뷰)
+   */
+  account: UseAccountResult
 }
 
 /**
@@ -40,8 +45,7 @@ type Props = {
  * - "계정 탈퇴하기" 는 판 맨 아래 가운데 빨간 글자이고, 누르면 탈퇴 화면(`WithdrawPage` — 이유 고르기 · 최종 확인)으로 갑니다.
  *   아래에 알림 설정 칸이 이어져서, 판 밖에 두면 두 칸 사이에 떠 보여 판 안에 넣었습니다
  */
-export default function AccountSection({ me }: Props) {
-  const account = useAccount()
+export default function AccountSection({ me, account }: Props) {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const info = account.status === 'ready' ? account.account : null
 
