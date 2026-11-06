@@ -1,52 +1,78 @@
 import { api } from '@/shared/api/apiClient'
 
-import type { QuestionListQuery } from '../types/question'
+import type { BookmarkedQuestion, CommonQuestion } from '../types/question'
 
-import { toQuestionPage, type QuestionListResponse } from './questionResponse'
+import {
+  toBookmarkedQuestion,
+  toCommonQuestion,
+  type BookmarkListResponse,
+  type BookmarkMemoResponse,
+  type CommonQuestionListResponse,
+} from './questionResponse'
 
 import './questionMock'
 
-/**
- * 질문 목록. `GET /api/questions?tab=&keyword=&page=&size=` — 최신순.
- *
- * **백엔드에 없는 API 입니다.** 경로 · 쿼리 · 응답 모양 모두 프론트 임시안이고 목업(`missingInBackend`)이 답합니다
- * (이슈 #138). 질문은 면접마다 쌓이기만 해서 문서(20개 상한)처럼 한 번에 다 받을 수 없습니다. 그래서 탭 · 검색 ·
- * 쪽 나누기를 서버에 맡기는 모양으로 정했습니다.
- *
- * - `tab` `ALL` 전체 · `COMMON` 공통 질문만 · `BOOKMARKED` 내가 북마크한 질문만
- * - `keyword` 질문 문장에서 찾습니다
- *
- * TODO(백엔드): 백엔드가 만들면 `questionMock.ts` 의 `missingInBackend` 를 지우고, 응답이 다르면 `questionResponse.ts`
- * 의 변환 함수를 고칩니다. 경로의 도메인 조각(`questions`)이 바뀌면 `VITE_REAL_APIS` 에 넣는 이름도 같이 바뀝니다
- * (shared/api/mock.ts `isRealApi`).
- */
-export async function getQuestions(query: QuestionListQuery) {
-  const params = new URLSearchParams()
-  params.set('tab', query.tab)
-  const keyword = query.keyword.trim()
-  if (keyword) params.set('keyword', keyword)
-  params.set('page', String(query.page))
-  params.set('size', String(query.size))
+/** 서버가 허용하는 한 쪽 최대 크기입니다. 이보다 크게 보내면 100 으로 맞춰집니다 */
+const BOOKMARK_PAGE_SIZE = 100
+/** 안전장치. 북마크가 이보다 많아도 최신 500개까지만 받습니다 (한 쪽 100 × 5쪽) */
+const MAX_BOOKMARK_PAGES = 5
+/** 화면 안내 문구에 쓰는 받을 수 있는 최대 개수 */
+export const MAX_BOOKMARK_COUNT = BOOKMARK_PAGE_SIZE * MAX_BOOKMARK_PAGES
 
-  const response = await api.get<QuestionListResponse>(`/api/questions?${params.toString()}`)
-  return toQuestionPage(response)
+async function getBookmarkPage(page: number) {
+  const response = await api.get<BookmarkListResponse>(`/api/bookmarks?page=${page}&size=${BOOKMARK_PAGE_SIZE}`)
+  return { bookmarks: response.bookmarks.map(toBookmarkedQuestion), totalPages: response.totalPages }
 }
 
 /**
- * 북마크 등록. `PUT /api/questions/{questionId}/bookmark`
+ * 질문 은행 목록. `GET /api/bookmarks?page=&size=` — 내가 담은 질문을 **담은 순서의 최신순**으로 줍니다.
  *
- * **백엔드에 없는 API 입니다.** 이미 북마크한 질문에 다시 보내도 성공합니다(같은 요청을 몇 번 보내도 결과가 같음).
- * TODO(백엔드): ERD 의 `bookmarked_question` 은 `(question_id, session_id)` 로 질문을 가리킵니다 (questionResponse.ts)
+ * 서버에는 필터도 검색도 없어서, 검색은 화면이 받아 둔 목록에서 합니다. 쪽 단위로만 받을 수 있으니 **전부 모아서**
+ * 돌려줍니다 (한 쪽 100개). 첫 쪽의 `totalPages` 를 보고 나머지 쪽을 한꺼번에 받습니다.
+ *
+ * 백엔드에 있습니다(Cue-A/backend#118). `VITE_REAL_APIS` 에 `bookmarks` 를 넣어야 실제 서버로 가고, 아니면 목업이 답합니다.
  */
-export function addQuestionBookmark(questionId: string) {
-  return api.put<void>(`/api/questions/${encodeURIComponent(questionId)}/bookmark`)
+export async function getAllBookmarks(): Promise<{ bookmarks: BookmarkedQuestion[]; truncated: boolean }> {
+  const first = await getBookmarkPage(0)
+  const lastPage = Math.min(first.totalPages, MAX_BOOKMARK_PAGES)
+
+  const rest = await Promise.all(Array.from({ length: Math.max(lastPage - 1, 0) }, (_, index) => getBookmarkPage(index + 1)))
+  return {
+    bookmarks: [first, ...rest].flatMap((page) => page.bookmarks),
+    // 안전장치 때문에 더 못 받은 쪽이 있으면 화면이 "최근 N개까지" 안내를 띄웁니다
+    truncated: first.totalPages > MAX_BOOKMARK_PAGES,
+  }
 }
 
 /**
- * 북마크 해제. `DELETE /api/questions/{questionId}/bookmark`
- *
- * **백엔드에 없는 API 입니다.** 북마크하지 않은 질문에 보내도 성공합니다.
+ * 메모 쓰기 · 고치기. `PATCH /api/bookmarks/{sessionId}/{questionId}` — **처음 쓰기와 수정이 같은 API** 입니다.
+ * 빈 값(null · 빈 문자열 · 공백뿐)을 보내면 메모가 지워지고 북마크는 남습니다. 최대 500자입니다.
+ * 돌려주는 값이 저장된 메모입니다(지웠으면 null) — 화면은 이 값으로 줄을 갱신합니다.
  */
-export function removeQuestionBookmark(questionId: string) {
-  return api.delete<void>(`/api/questions/${encodeURIComponent(questionId)}/bookmark`)
+export async function updateBookmarkMemo(sessionId: string, questionId: string, memo: string) {
+  const response = await api.patch<BookmarkMemoResponse>(bookmarkPath(sessionId, questionId), { memo })
+  return response.memo
+}
+
+/**
+ * 질문 은행에서 빼기. `DELETE /api/bookmarks/{sessionId}/{questionId}` — **메모도 함께 지워집니다.**
+ * 끝난 면접의 질문은 빼면 다시 담을 수 없어서, 화면이 먼저 확인을 받습니다 (BookmarkRemoveDialog).
+ * 이미 없으면 404 `BOOKMARK_NOT_FOUND` 입니다.
+ */
+export function deleteBookmark(sessionId: string, questionId: string) {
+  return api.delete<void>(bookmarkPath(sessionId, questionId))
+}
+
+function bookmarkPath(sessionId: string, questionId: string) {
+  return `/api/bookmarks/${encodeURIComponent(sessionId)}/${encodeURIComponent(questionId)}`
+}
+
+/**
+ * 공통 질문 목록. `GET /api/common-questions`
+ *
+ * **백엔드에 없는 API 입니다.** 경로 · 응답 모양 모두 프론트 임시안이고 목업이 답합니다 (questionResponse.ts).
+ */
+export async function getCommonQuestions(): Promise<CommonQuestion[]> {
+  const response = await api.get<CommonQuestionListResponse>('/api/common-questions')
+  return response.questions.map(toCommonQuestion)
 }
