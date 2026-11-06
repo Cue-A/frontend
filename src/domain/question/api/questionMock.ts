@@ -206,18 +206,10 @@ function findCommon(questionId: string) {
   return found
 }
 
-/** 즐겨찾기한 질문이 위(가장 최근에 한 것부터), 나머지는 원래 순서 — 백엔드에 요청한 정렬입니다 */
-function orderedCommon(): CommonQuestionResponse[] {
-  const favorites = commonQuestions
-    .filter((question) => question.favorite)
-    .sort((a, b) => (b.favoritedAt ?? '').localeCompare(a.favoritedAt ?? ''))
-  return [...favorites, ...commonQuestions.filter((question) => !question.favorite)]
-}
-
 registerMock(
   'GET',
   '/api/common-questions',
-  (): CommonQuestionListResponse => ({ questions: orderedCommon().map((question) => ({ ...question })) }),
+  (): CommonQuestionListResponse => ({ questions: commonQuestions.map((question) => ({ ...question })) }),
   { missingInBackend: MISSING_COMMON },
 )
 
@@ -241,7 +233,7 @@ registerMock(
 
 registerMock(
   'PATCH',
-  '/api/common-questions/:questionId',
+  '/api/common-questions/:questionId/memo',
   ({ questionId }, body) => {
     const found = findCommon(questionId)
     const memo = (body as { memo?: unknown } | undefined)?.memo ?? null

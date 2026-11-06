@@ -8,7 +8,7 @@ type Props = {
   onSaved: (question: CommonQuestion, memo: string | null) => void
 }
 
-/** 공통 질문 카드 아래의 메모입니다. 저장은 `PATCH /api/common-questions/{questionId}` 입니다 (임시 계약) */
+/** 공통 질문 카드 아래의 메모입니다. 저장은 `PATCH /api/common-questions/{questionId}/memo` 입니다 (임시 계약) */
 export default function CommonMemo({ question, onSaved }: Props) {
   const saver = useSaveCommonMemo(question)
 

@@ -69,7 +69,7 @@ function bookmarkPath(sessionId: string, questionId: string) {
 }
 
 /**
- * 공통 질문 목록. `GET /api/common-questions` — 즐겨찾기한 질문이 위입니다.
+ * 공통 질문 목록. `GET /api/common-questions` — 정렬하지 않은 기본 순서입니다(즐겨찾기 정렬은 `orderCommon`).
  *
  * **백엔드에 없는 API 입니다.** 경로 · 응답 모양 모두 프론트 임시안이고 목업이 답합니다 (questionResponse.ts).
  */
@@ -89,12 +89,12 @@ export function setCommonFavorite(questionId: string, favorite: boolean) {
 }
 
 /**
- * 공통 질문 메모 쓰기 · 수정 · 삭제. `PATCH /api/common-questions/{questionId}` — 북마크 메모와 같은 규칙입니다
+ * 공통 질문 메모 쓰기 · 수정 · 삭제. `PATCH /api/common-questions/{questionId}/memo` — 북마크 메모와 같은 규칙입니다
  * (비우면 삭제, 최대 500자). 돌려주는 값이 저장된 메모입니다(지웠으면 null).
  * **백엔드에 없는 API 입니다.** 임시안이고 목업이 답합니다.
  */
 export async function updateCommonMemo(questionId: string, memo: string) {
-  const response = await api.patch<BookmarkMemoResponse>(commonPath(questionId), { memo })
+  const response = await api.patch<BookmarkMemoResponse>(commonPath(questionId, '/memo'), { memo })
   return response.memo
 }
 

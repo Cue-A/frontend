@@ -82,7 +82,8 @@ export function filterCommon(questions: readonly CommonQuestion[], keyword: stri
 
 /**
  * 공통 질문 순서. 즐겨찾기한 질문이 위에, 가장 최근에 한 것부터 옵니다. 나머지는 받아 온 순서 그대로입니다.
- * 즐겨찾기를 누르면 서버 응답을 기다리지 않고 바로 이 순서로 다시 그립니다 (서버에 요청한 정렬과 같은 규칙).
+ * 서버는 기본 순서 그대로 내려 주고 정렬은 여기서만 합니다. 즐겨찾기를 풀면 별도 정렬 키 없이 원래 자리로 돌아가고,
+ * 누르면 서버 응답을 기다리지 않고 바로 이 순서로 다시 그립니다.
  */
 export function orderCommon(questions: readonly CommonQuestion[]): CommonQuestion[] {
   const favorites = questions
