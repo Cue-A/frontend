@@ -16,6 +16,8 @@ import './questionMock'
 const BOOKMARK_PAGE_SIZE = 100
 /** 안전장치. 북마크가 이보다 많아도 최신 500개까지만 받습니다 (한 쪽 100 × 5쪽) */
 const MAX_BOOKMARK_PAGES = 5
+/** 화면 안내 문구에 쓰는 받을 수 있는 최대 개수 */
+export const MAX_BOOKMARK_COUNT = BOOKMARK_PAGE_SIZE * MAX_BOOKMARK_PAGES
 
 async function getBookmarkPage(page: number) {
   const response = await api.get<BookmarkListResponse>(`/api/bookmarks?page=${page}&size=${BOOKMARK_PAGE_SIZE}`)
@@ -30,12 +32,16 @@ async function getBookmarkPage(page: number) {
  *
  * 백엔드에 있습니다(Cue-A/backend#118). `VITE_REAL_APIS` 에 `bookmarks` 를 넣어야 실제 서버로 가고, 아니면 목업이 답합니다.
  */
-export async function getAllBookmarks(): Promise<BookmarkedQuestion[]> {
+export async function getAllBookmarks(): Promise<{ bookmarks: BookmarkedQuestion[]; truncated: boolean }> {
   const first = await getBookmarkPage(0)
   const lastPage = Math.min(first.totalPages, MAX_BOOKMARK_PAGES)
 
   const rest = await Promise.all(Array.from({ length: Math.max(lastPage - 1, 0) }, (_, index) => getBookmarkPage(index + 1)))
-  return [first, ...rest].flatMap((page) => page.bookmarks)
+  return {
+    bookmarks: [first, ...rest].flatMap((page) => page.bookmarks),
+    // 안전장치 때문에 더 못 받은 쪽이 있으면 화면이 "최근 N개까지" 안내를 띄웁니다
+    truncated: first.totalPages > MAX_BOOKMARK_PAGES,
+  }
 }
 
 /**

@@ -84,7 +84,7 @@ const bookmarks: StoredBookmark[] = [
     category: null,
     originalQuestionText: '가장 기억에 남는 프로젝트 경험을 말해주세요.',
     memo: null,
-    companyName: '카카오',
+    companyName: '카카오모빌리티',
   }),
   bookmark(6, 8, {
     type: 'QUESTION',
@@ -92,7 +92,7 @@ const bookmarks: StoredBookmark[] = [
     category: '직무',
     originalQuestionText: null,
     memo: null,
-    companyName: '카카오',
+    companyName: '카카오모빌리티',
   }),
 ]
 

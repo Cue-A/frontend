@@ -9,7 +9,7 @@ import type { BookmarkedQuestion } from '../types/question'
 export type UseBookmarksResult = (
   | { status: 'loading' }
   | { status: 'error'; error: ApiError }
-  | { status: 'ready'; bookmarks: BookmarkedQuestion[] }
+  | { status: 'ready'; bookmarks: BookmarkedQuestion[]; truncated: boolean }
 ) & {
   /** 에러 화면의 "다시 시도" 에 씁니다 */
   reload: () => void
@@ -22,7 +22,7 @@ export type UseBookmarksResult = (
 type State =
   | { status: 'loading' }
   | { status: 'error'; error: ApiError }
-  | { status: 'ready'; bookmarks: BookmarkedQuestion[] }
+  | { status: 'ready'; bookmarks: BookmarkedQuestion[]; truncated: boolean }
 
 /**
  * 내 질문 은행(북마크) 전부입니다. (`GET /api/bookmarks` — `VITE_REAL_APIS` 에 `bookmarks` 가 없으면 목업이 답합니다)
@@ -38,8 +38,8 @@ export function useBookmarks(): UseBookmarksResult {
     let cancelled = false
 
     getAllBookmarks()
-      .then((bookmarks) => {
-        if (!cancelled) setState({ status: 'ready', bookmarks })
+      .then(({ bookmarks, truncated }) => {
+        if (!cancelled) setState({ status: 'ready', bookmarks, truncated })
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -61,7 +61,7 @@ export function useBookmarks(): UseBookmarksResult {
   const removeLocal = useCallback((target: BookmarkedQuestion) => {
     setState((previous) =>
       previous.status === 'ready'
-        ? { status: 'ready', bookmarks: previous.bookmarks.filter((item) => bookmarkKey(item) !== bookmarkKey(target)) }
+        ? { ...previous, bookmarks: previous.bookmarks.filter((item) => bookmarkKey(item) !== bookmarkKey(target)) }
         : previous,
     )
   }, [])
@@ -70,7 +70,7 @@ export function useBookmarks(): UseBookmarksResult {
     setState((previous) =>
       previous.status === 'ready'
         ? {
-            status: 'ready',
+            ...previous,
             bookmarks: previous.bookmarks.map((item) => (bookmarkKey(item) === bookmarkKey(target) ? { ...item, memo } : item)),
           }
         : previous,

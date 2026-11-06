@@ -14,7 +14,7 @@ import type {
  * 연습 기록 목업입니다. **백엔드 응답 모양 그대로** 돌려줍니다. `VITE_REAL_APIS` 에 `practice-records` · `folders` 를
  * 넣으면 실제 서버로 갑니다.
  *
- * 숫자는 시안(삼성전자 5 · 카카오 4 · 네이버 3)에 맞췄습니다. 중단한 세션 하나를 넣어 두었지만 서버처럼 목록 · 개수에서
+ * 숫자는 시안(삼성전자 5 · 카카오모빌리티 4 · 네이버 3)에 맞췄습니다. 중단한 세션 하나를 넣어 두었지만 서버처럼 목록 · 개수에서
  * 뺍니다. 날짜는 홈 목업처럼 **오늘 기준**으로 만듭니다 — 날짜를 박아 두면 "진행 중" 세션이 몇 달 전 것으로 보입니다.
  *
  * 저장은 메모리에만 합니다. 새로 만든 폴더는 새로고침하면 사라집니다.
@@ -40,7 +40,7 @@ const FOLDER_NAVER = '6f1c2a40-1b7e-4b8e-9a31-5d0c2e7a9b03'
 
 const folders: StoredFolder[] = [
   { folderId: FOLDER_SAMSUNG, folderName: '삼성전자', createdAt: '2026-07-01T10:00:00+09:00' },
-  { folderId: FOLDER_KAKAO, folderName: '카카오', createdAt: '2026-07-02T10:00:00+09:00' },
+  { folderId: FOLDER_KAKAO, folderName: '카카오모빌리티', createdAt: '2026-07-02T10:00:00+09:00' },
   { folderId: FOLDER_NAVER, folderName: '네이버', createdAt: '2026-07-03T10:00:00+09:00' },
 ]
 
@@ -55,21 +55,21 @@ function session(
 /** 최신순으로 적었습니다. `daysAgo` 는 오늘로부터 며칠 전에 시작했는지입니다 */
 const sessions: StoredSession[] = [
   session(1, { companyName: '삼성전자', jobRole: '마케팅 직무', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 84, folderId: FOLDER_SAMSUNG, daysAgo: 1 }),
-  session(2, { companyName: '카카오', jobRole: '백엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 76, folderId: FOLDER_KAKAO, daysAgo: 3 }),
+  session(2, { companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 76, folderId: FOLDER_KAKAO, daysAgo: 3 }),
   session(3, { companyName: '삼성전자', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 2, status: 'IN_PROGRESS', questionCount: 6, totalScore: null, folderId: FOLDER_SAMSUNG, daysAgo: 4 }),
   session(4, { companyName: '네이버', jobRole: '데이터 분석가', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 88, folderId: FOLDER_NAVER, daysAgo: 6 }),
   // 끝냈지만 분석 화면에서 나가 리포트를 맡기지 않은 세션입니다. "분석하기" 를 확인할 때 씁니다
-  session(5, { companyName: '카카오', jobRole: '백엔드 개발자', persona: 'PRESSURE', round: 2, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 8, reportStatus: null }),
+  session(5, { companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'PRESSURE', round: 2, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 8, reportStatus: null }),
   session(6, { companyName: '삼성전자', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 71, folderId: FOLDER_SAMSUNG, daysAgo: 11 }),
   // 중간에 그만둔 세션입니다. 서버처럼 목록 · 개수에서 뺍니다
   session(7, { companyName: '네이버', jobRole: '서비스 기획자', persona: 'PRESSURE', round: 1, status: 'ABORTED', questionCount: 6, totalScore: null, folderId: FOLDER_NAVER, daysAgo: 13 }),
   // 분석 중인 리포트는 버튼 없이 "분석 중" 만 보입니다
-  session(8, { companyName: '카카오', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 3, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 16, reportStatus: 'PROCESSING' }),
+  session(8, { companyName: '카카오모빌리티', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 3, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 16, reportStatus: 'PROCESSING' }),
   // 일부 축만 분석된 리포트도 리포트로 갑니다
   session(9, { companyName: '삼성전자', jobRole: '마케팅 직무', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 79, folderId: FOLDER_SAMSUNG, daysAgo: 20, reportStatus: 'PARTIAL' }),
   // 분석이 실패한 리포트는 점수 없이 분석 중 화면으로 갑니다
   session(10, { companyName: '네이버', jobRole: '데이터 분석가', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_NAVER, daysAgo: 24, reportStatus: 'FAILED' }),
-  session(11, { companyName: '카카오', jobRole: '백엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 81, folderId: FOLDER_KAKAO, daysAgo: 29 }),
+  session(11, { companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 81, folderId: FOLDER_KAKAO, daysAgo: 29 }),
   session(12, { companyName: '삼성전자', jobRole: '프론트엔드 개발자', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 66, folderId: FOLDER_SAMSUNG, daysAgo: 35 }),
 ]
 

@@ -46,11 +46,12 @@ export function metaOfCommon(question: CommonQuestion): string {
   return ['공통', question.category].join(' · ')
 }
 
-/** "메모 N개 · 꼬리질문 N개" — 꼬리질문에는 되묻기도 넣습니다. 둘 다 원질문에 딸린 질문이라서입니다 */
+/** "메모 N개 · 꼬리질문 N개 · 되묻기 N개" — 카드의 이름표와 같게 꼬리질문과 되묻기를 따로 셉니다 */
 export function summarize(bookmarks: readonly BookmarkedQuestion[]) {
   return {
     memoCount: bookmarks.filter((bookmark) => bookmark.memo !== null).length,
-    followupCount: bookmarks.filter((bookmark) => bookmark.type !== 'QUESTION').length,
+    followupCount: bookmarks.filter((bookmark) => bookmark.type === 'FOLLOWUP').length,
+    reaskCount: bookmarks.filter((bookmark) => bookmark.type === 'REASK').length,
   }
 }
 

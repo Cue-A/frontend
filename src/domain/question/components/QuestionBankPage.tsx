@@ -6,6 +6,7 @@ import Button from '@/shared/ui/Button'
 import SearchField from '@/shared/ui/SearchField'
 import SegmentedTabs from '@/shared/ui/SegmentedTabs'
 
+import { MAX_BOOKMARK_COUNT } from '../api/questionApi'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useCommonQuestions } from '../hooks/useCommonQuestions'
 import {
@@ -191,9 +192,16 @@ export default function QuestionBankPage() {
         {tab === 'BOOKMARKED' && summary && (
           <p className="text-body-sm text-neutral-500">
             메모 {summary.memoCount}개 · 꼬리질문 {summary.followupCount}개
+            {summary.reaskCount > 0 && ` · 되묻기 ${summary.reaskCount}개`}
           </p>
         )}
       </div>
+
+      {tab === 'BOOKMARKED' && bookmarks.status === 'ready' && bookmarks.truncated && (
+        <p className="text-body-sm text-neutral-500">
+          북마크가 많아 최근 {MAX_BOOKMARK_COUNT}개까지만 보여요. 검색도 이 안에서 해요.
+        </p>
+      )}
 
       {notice && (
         <p role="status" className="text-body-sm text-badge-success-text">

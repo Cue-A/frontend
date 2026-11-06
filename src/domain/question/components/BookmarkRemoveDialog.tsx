@@ -70,7 +70,7 @@ export default function BookmarkRemoveDialog({ bookmark, onRemoved, onGone, onCl
     >
       <div className="flex flex-col gap-3 px-6 py-5">
         <p id={headingId} className="text-h2 text-neutral-900">
-          북마크를 해제하시겠습니까?
+          북마크를 해제할까요?
         </p>
         <p className="break-keep text-body-md text-neutral-500">
           ‘<span className="font-semibold text-neutral-900">{bookmark.text}</span>’
