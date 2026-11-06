@@ -1,7 +1,13 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
-import type { BookmarkListResponse, BookmarkResponse, CommonQuestionListResponse } from './questionResponse'
+import type {
+  BookmarkListResponse,
+  BookmarkResponse,
+  CommonFavoriteResponse,
+  CommonQuestionListResponse,
+  CommonQuestionResponse,
+} from './questionResponse'
 
 /**
  * 질문 은행 목업입니다. 저장은 메모리에만 해서 새로고침하면 처음으로 돌아갑니다.
@@ -170,28 +176,75 @@ registerMock(
   },
 )
 
+/** 공통 질문. 저장은 메모리에만 합니다 */
+const commonQuestions: CommonQuestionResponse[] = [
+  ['1분 자기소개를 해주세요.', '인성'],
+  ['본인의 장점과 보완할 노력을 말해주세요.', '인성'],
+  ['협업 중 갈등을 해결한 경험을 말해주세요.', '경험'],
+  ['가장 도전적이었던 프로젝트와 그 결과를 설명해 주세요.', '경험'],
+  ['실패했던 경험과 그 경험에서 배운 점을 말해주세요.', '경험'],
+  ['팀에서 본인이 주로 맡는 역할은 무엇인가요?', '인성'],
+  ['스트레스를 받을 때 어떻게 해소하나요?', '인성'],
+  ['마감이 촉박한 상황에서 우선순위를 어떻게 정하나요?', '경험'],
+  ['리더로서 팀을 이끌었던 경험이 있나요?', '경험'],
+  ['상사와 의견이 달랐을 때 어떻게 대처했나요?', '인성'],
+  ['입사 후 3년 동안의 성장 계획을 말해주세요.', '지원동기'],
+  ['새로운 기술을 빠르게 익혔던 경험을 말해주세요.', '경험'],
+].map(([text, category], index) => ({
+  questionId: `mock-common-${String(index + 1).padStart(2, '0')}`,
+  text,
+  category,
+  favorite: false,
+  favoritedAt: null,
+  memo: null,
+}))
+
+function findCommon(questionId: string) {
+  const found = commonQuestions.find((question) => question.questionId === questionId)
+  // 백엔드에 없는 API 라 에러 코드가 없습니다. 이미 매핑돼 있는 코드를 임시로 씁니다
+  if (!found) throw new ApiError('QUESTION_NOT_FOUND', `질문을 찾을 수 없습니다 (${questionId})`)
+  return found
+}
+
 registerMock(
   'GET',
   '/api/common-questions',
-  (): CommonQuestionListResponse => ({
-    questions: [
-      ['1분 자기소개를 해주세요.', '인성'],
-      ['본인의 장점과 보완할 노력을 말해주세요.', '인성'],
-      ['협업 중 갈등을 해결한 경험을 말해주세요.', '경험'],
-      ['가장 도전적이었던 프로젝트와 그 결과를 설명해 주세요.', '경험'],
-      ['실패했던 경험과 그 경험에서 배운 점을 말해주세요.', '경험'],
-      ['팀에서 본인이 주로 맡는 역할은 무엇인가요?', '인성'],
-      ['스트레스를 받을 때 어떻게 해소하나요?', '인성'],
-      ['마감이 촉박한 상황에서 우선순위를 어떻게 정하나요?', '경험'],
-      ['리더로서 팀을 이끌었던 경험이 있나요?', '경험'],
-      ['상사와 의견이 달랐을 때 어떻게 대처했나요?', '인성'],
-      ['입사 후 3년 동안의 성장 계획을 말해주세요.', '지원동기'],
-      ['새로운 기술을 빠르게 익혔던 경험을 말해주세요.', '경험'],
-    ].map(([text, category], index) => ({
-      questionId: `mock-common-${String(index + 1).padStart(2, '0')}`,
-      text,
-      category,
-    })),
-  }),
+  (): CommonQuestionListResponse => ({ questions: commonQuestions.map((question) => ({ ...question })) }),
+  { missingInBackend: MISSING_COMMON },
+)
+
+registerMock(
+  'PUT',
+  '/api/common-questions/:questionId/favorite',
+  ({ questionId }, body): CommonFavoriteResponse => {
+    const found = findCommon(questionId)
+    const favorite = (body as { favorite?: unknown } | undefined)?.favorite
+    if (typeof favorite !== 'boolean') throw new ApiError('INVALID_REQUEST', 'favorite 는 true · false 여야 합니다')
+
+    // 이미 그 상태면 아무것도 바꾸지 않습니다
+    if (found.favorite !== favorite) {
+      found.favorite = favorite
+      found.favoritedAt = favorite ? new Date().toISOString() : null
+    }
+    return { favorite: found.favorite }
+  },
+  { missingInBackend: MISSING_COMMON },
+)
+
+registerMock(
+  'PATCH',
+  '/api/common-questions/:questionId/memo',
+  ({ questionId }, body) => {
+    const found = findCommon(questionId)
+    const memo = (body as { memo?: unknown } | undefined)?.memo ?? null
+
+    if (memo !== null && typeof memo !== 'string') throw new ApiError('INVALID_REQUEST', 'memo 는 문자열이어야 합니다')
+    if (typeof memo === 'string' && memo.length > MAX_MEMO_LENGTH) {
+      throw new ApiError('INVALID_REQUEST', `memo 는 ${MAX_MEMO_LENGTH}자까지입니다`)
+    }
+
+    found.memo = memo !== null && memo.trim() !== '' ? memo : null
+    return { memo: found.memo }
+  },
   { missingInBackend: MISSING_COMMON },
 )

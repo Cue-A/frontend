@@ -38,17 +38,34 @@ export type BookmarkMemoResponse = {
 }
 
 /**
- * TODO(백엔드): 공통 질문 API 가 없습니다. 기본 공통 질문을 담는 테이블도 ERD 에 없습니다. 프론트 제안은
- * `GET /api/common-questions` 가 `{ questions: [{ questionId, text, category }] }` 를 주는 것입니다.
+ * TODO(백엔드): 공통 질문 API 가 없습니다. 기본 공통 질문을 담는 테이블도 ERD 에 없습니다. **프론트 임시안**입니다.
+ * - `GET /api/common-questions` — `{ questions: [...] }`. **정렬하지 않은 기본 순서 그대로** `favorite` · `favoritedAt` 만
+ *   붙여 내려 주세요. 즐겨찾기를 위로 올리는 정렬은 프론트(`orderCommon`)가 합니다. 그래야 즐겨찾기를 푼 질문이
+ *   새로고침 직후에도 원래 자리로 돌아갑니다
+ * - `PUT /api/common-questions/{questionId}/favorite` — 본문 `{ favorite: true | false }`. 바뀔 상태를 보내고, 이미 그
+ *   상태면 아무것도 바꾸지 않고 성공합니다 (북마크 `PUT .../bookmark` 와 같은 방식)
+ * - `PATCH /api/common-questions/{questionId}/memo` — 본문 `{ memo }`. 공통 질문은 모두가 같이 보고 메모 · 즐겨찾기는
+ *   내 것이라, 경로로 구분했습니다(질문 자체를 고치는 API 로 읽히지 않게). 북마크 메모와 같은 규칙입니다(처음 쓰기 · 수정 · 삭제가
+ *   한 API, 비우면 삭제, 최대 500자). 응답 `{ memo }`
+ * - 공통 질문은 면접 세션이 없어서 북마크 API 의 키(`sessionId + questionId`)를 쓸 수 없습니다. 즐겨찾기를 풀어도
+ *   메모는 남기는 것으로 가정했습니다(다시 담을 수 있어서). 다르게 하려면 알려 주세요
  */
 export type CommonQuestionResponse = {
   questionId: string
   text: string
   category: string
+  favorite: boolean
+  favoritedAt: string | null
+  memo: string | null
 }
 
 export type CommonQuestionListResponse = {
   questions: CommonQuestionResponse[]
+}
+
+/** `PUT /api/common-questions/{questionId}/favorite` */
+export type CommonFavoriteResponse = {
+  favorite: boolean
 }
 
 export function toBookmarkedQuestion(response: BookmarkResponse): BookmarkedQuestion {
@@ -67,5 +84,12 @@ export function toBookmarkedQuestion(response: BookmarkResponse): BookmarkedQues
 }
 
 export function toCommonQuestion(response: CommonQuestionResponse): CommonQuestion {
-  return { questionId: response.questionId, text: response.text, category: response.category }
+  return {
+    questionId: response.questionId,
+    text: response.text,
+    category: response.category,
+    favorite: response.favorite,
+    favoritedAt: response.favoritedAt,
+    memo: response.memo,
+  }
 }

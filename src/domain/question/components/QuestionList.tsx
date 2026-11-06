@@ -1,4 +1,4 @@
-import { IconBookmarkFilled } from '@tabler/icons-react'
+import { IconBookmarkFilled, IconStar, IconStarFilled } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
 import { ROUTES } from '@/app/routes'
@@ -8,6 +8,7 @@ import { BOOKMARK_TYPE_LABEL, bookmarkKey, metaOfBookmark, metaOfCommon } from '
 import type { BookmarkedQuestion, CommonQuestion } from '../types/question'
 
 import BookmarkMemo from './BookmarkMemo'
+import CommonMemo from './CommonMemo'
 import QuestionCard from './QuestionCard'
 
 /** 목록 자리에 들어갈 것. 카드가 아니면 한 줄짜리 안내입니다 */
@@ -28,6 +29,11 @@ type Props = {
   /** 북마크 카드의 해제 버튼. 확인 모달은 화면이 엽니다 */
   onRemoveBookmark: (bookmark: BookmarkedQuestion) => void
   onMemoSaved: (bookmark: BookmarkedQuestion, memo: string | null) => void
+  /** 공통 질문의 즐겨찾기 별. 누르면 그 질문이 바로 맨 위로 올라갑니다 */
+  onToggleFavorite: (question: CommonQuestion) => void
+  /** 서버에 보내는 중이면 true. 그 카드의 별을 잠급니다 */
+  isFavoritePending: (question: CommonQuestion) => boolean
+  onCommonMemoSaved: (question: CommonQuestion, memo: string | null) => void
 }
 
 function Notice({ children, focusTarget = false }: { children: ReactNode; focusTarget?: boolean }) {
@@ -43,7 +49,14 @@ function Notice({ children, focusTarget = false }: { children: ReactNode; focusT
   )
 }
 
-function renderBody({ body, onRemoveBookmark, onMemoSaved }: Props) {
+function renderBody({
+  body,
+  onRemoveBookmark,
+  onMemoSaved,
+  onToggleFavorite,
+  isFavoritePending,
+  onCommonMemoSaved,
+}: Props) {
   switch (body.kind) {
     case 'loading':
       return (
@@ -119,7 +132,32 @@ function renderBody({ body, onRemoveBookmark, onMemoSaved }: Props) {
     case 'common':
       return body.questions.map((question) => (
         <li key={question.questionId}>
-          <QuestionCard meta={metaOfCommon(question)} text={question.text} />
+          <QuestionCard
+            meta={metaOfCommon(question)}
+            text={question.text}
+            action={
+              <button
+                type="button"
+                onClick={() => onToggleFavorite(question)}
+                // 누르면 카드가 맨 위로 옮겨 가면서 포커스가 풀립니다. 다시 이 별로 돌리려고 찾는 표시입니다 (QuestionBankPage)
+                data-common-favorite={question.questionId}
+                aria-pressed={question.favorite}
+                // `disabled` 로 잠그면 키보드로 누른 순간 포커스가 화면 밖으로 빠집니다. 서버에 보내는 동안의 연타는
+                // 훅이 막으니 여기서는 상태만 알립니다 (shared/ui/Pagination 의 포커스 처리와 같은 이유).
+                aria-disabled={isFavoritePending(question) || undefined}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-primary-500 aria-disabled:cursor-wait"
+              >
+                {question.favorite ? (
+                  <IconStarFilled size={20} aria-hidden className="text-primary-500" />
+                ) : (
+                  <IconStar size={20} stroke={2} aria-hidden className="text-neutral-300" />
+                )}
+                {/* 켜짐 · 꺼짐은 aria-pressed 가 알립니다. 이름까지 "추가 · 해제" 로 바꾸면 "해제, 눌림" 처럼 거꾸로 읽힙니다 */}
+                <span className="sr-only">즐겨찾기 — {question.text}</span>
+              </button>
+            }
+            footer={<CommonMemo question={question} onSaved={onCommonMemoSaved} />}
+          />
         </li>
       ))
   }

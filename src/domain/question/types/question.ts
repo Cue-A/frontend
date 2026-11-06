@@ -33,6 +33,12 @@ export type CommonQuestion = {
   text: string
   /** 화면에 그대로 보여 줄 분류 이름 (인성 · 경험 · 지원동기 …) */
   category: string
+  /** 즐겨찾기했는지. 즐겨찾기한 질문이 목록 위에 옵니다 */
+  favorite: boolean
+  /** 즐겨찾기한 시각(ISO 8601). 즐겨찾기가 아니면 null. 가장 최근에 한 질문이 맨 위입니다 */
+  favoritedAt: string | null
+  /** 내가 쓴 메모. 쓰지 않았으면 null */
+  memo: string | null
 }
 
 /** 탭. 북마크가 먼저입니다 */

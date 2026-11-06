@@ -41,9 +41,9 @@ export function metaOfBookmark(bookmark: BookmarkedQuestion): string {
   return parts.filter((part): part is string => Boolean(part)).join(' · ')
 }
 
-/** 공통 질문 위의 한 줄. `공통 · 인성` */
+/** 공통 질문 위의 한 줄. 분류만 보입니다. 이 탭의 질문은 전부 공통이라 "공통" 은 적지 않습니다 */
 export function metaOfCommon(question: CommonQuestion): string {
-  return ['공통', question.category].join(' · ')
+  return question.category
 }
 
 /** "메모 N개 · 꼬리질문 N개 · 되묻기 N개" — 카드의 이름표와 같게 꼬리질문과 되묻기를 따로 셉니다 */
@@ -72,10 +72,30 @@ export function filterBookmarks(bookmarks: readonly BookmarkedQuestion[], keywor
   )
 }
 
-/** 질문 · 분류에서 찾습니다 */
+/** 질문 · 분류 · 메모에서 찾습니다 */
 export function filterCommon(questions: readonly CommonQuestion[], keyword: string): CommonQuestion[] {
   const needle = keyword.trim().toLowerCase()
   if (!needle) return [...questions]
 
-  return questions.filter((question) => includes([question.text, question.category], needle))
+  return questions.filter((question) => includes([question.text, question.category, question.memo], needle))
+}
+
+/**
+ * 공통 질문 순서. 즐겨찾기한 질문이 위에, 가장 최근에 한 것부터 옵니다. 나머지는 받아 온 순서 그대로입니다.
+ * 서버는 기본 순서 그대로 내려 주고 정렬은 여기서만 합니다. 즐겨찾기를 풀면 별도 정렬 키 없이 원래 자리로 돌아가고,
+ * 누르면 서버 응답을 기다리지 않고 바로 이 순서로 다시 그립니다.
+ */
+export function orderCommon(questions: readonly CommonQuestion[]): CommonQuestion[] {
+  const favorites = questions
+    .filter((question) => question.favorite)
+    .sort((a, b) => (b.favoritedAt ?? '').localeCompare(a.favoritedAt ?? ''))
+  return [...favorites, ...questions.filter((question) => !question.favorite)]
+}
+
+/** 공통 질문 탭의 우측 요약. "즐겨찾기 N개 · 메모 N개" */
+export function summarizeCommon(questions: readonly CommonQuestion[]) {
+  return {
+    favoriteCount: questions.filter((question) => question.favorite).length,
+    memoCount: questions.filter((question) => question.memo !== null).length,
+  }
 }
