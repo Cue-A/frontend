@@ -8,11 +8,10 @@ import { deleteCalendarEvent } from '../api/growthApi'
 export type UseDeleteCalendarEventResult = {
   /** 지웠으면 true, 실패하면 false(`error` 에 문구) */
   remove: (eventId: string) => Promise<boolean>
-  /** 지우는 중인 일정. 그 일정의 버튼만 잠급니다 */
-  deletingId: string | null
+  /** 지우는 중이면 true. 확인 창의 버튼과 닫기를 잠급니다 */
+  deleting: boolean
   /** 사용자에게 그대로 보여줄 문구 */
   error: string | null
-  clearError: () => void
 }
 
 /**
@@ -22,11 +21,11 @@ export type UseDeleteCalendarEventResult = {
  * 404 를 줍니다(멱등하지 않음).
  */
 export function useDeleteCalendarEvent(): UseDeleteCalendarEventResult {
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const remove = useCallback(async (eventId: string) => {
-    setDeletingId(eventId)
+    setDeleting(true)
     setError(null)
 
     try {
@@ -39,11 +38,9 @@ export function useDeleteCalendarEvent(): UseDeleteCalendarEventResult {
       setError(toUserMessage(code))
       return false
     } finally {
-      setDeletingId(null)
+      setDeleting(false)
     }
   }, [])
 
-  const clearError = useCallback(() => setError(null), [])
-
-  return { remove, deletingId, error, clearError }
+  return { remove, deleting, error }
 }
