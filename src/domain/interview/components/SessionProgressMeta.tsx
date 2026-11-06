@@ -1,3 +1,5 @@
+import { IconClock } from '@tabler/icons-react'
+
 import { formatDuration } from '@/shared/lib/formatDuration'
 
 type Props = {
@@ -34,10 +36,7 @@ export default function SessionProgressMeta({ questionNumber, questionTotal, ela
           limitSec !== null ? 'w-44' : 'w-28'
         }`}
       >
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <IconClock size={18} aria-hidden="true" />
         <span>{formatDuration(elapsedSec)}</span>
         {limitSec !== null && <span className="text-stage-sub">/ {formatDuration(limitSec)}</span>}
       </div>

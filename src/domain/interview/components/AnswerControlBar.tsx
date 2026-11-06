@@ -1,3 +1,4 @@
+import { IconMicrophone, IconMicrophoneOff, IconVideo, IconVideoOff } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
 import type { SubmitErrorState } from '../hooks/useInterviewSession'
@@ -31,7 +32,7 @@ const ROUND_BUTTON = 'flex h-13 w-13 items-center justify-center rounded-full bo
  */
 const ICON_BUTTON = `${ROUND_BUTTON} relative bg-stage-surface-hover/80`
 
-/** 꺼진 것을 알리는 사선. 마이크 · 카메라 · CC 가 같이 쓴다. */
+/** 꺼진 것을 알리는 사선. CC 버튼이 쓴다. 마이크 · 카메라는 Tabler 의 Off 아이콘이 사선을 포함한다. */
 function OffSlash() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" className="absolute" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -48,7 +49,6 @@ function DeviceStatusIcon({ label, on, children }: { label: string; on: boolean;
       className={`${ICON_BUTTON} ${on ? 'text-stage-text' : 'text-stage-muted'}`}
     >
       {children}
-      {!on && <OffSlash />}
     </span>
   )
 }
@@ -83,16 +83,10 @@ export default function AnswerControlBar({
       <div className="flex items-center gap-4 rounded-full bg-stage-surface/70 px-4 py-3">
         <div className="flex items-center gap-3">
           <DeviceStatusIcon label="마이크" on={micOn}>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="9" y="3" width="6" height="12" rx="3" />
-              <path d="M5 11a7 7 0 0014 0M12 18v3" strokeLinecap="round" />
-            </svg>
+            {micOn ? <IconMicrophone size={22} aria-hidden="true" /> : <IconMicrophoneOff size={22} aria-hidden="true" />}
           </DeviceStatusIcon>
           <DeviceStatusIcon label="카메라" on={cameraOn}>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="2" y="6" width="14" height="12" rx="2" />
-              <path d="M16 10l6-3v10l-6-3" strokeLinejoin="round" />
-            </svg>
+            {cameraOn ? <IconVideo size={22} aria-hidden="true" /> : <IconVideoOff size={22} aria-hidden="true" />}
           </DeviceStatusIcon>
           <button
             type="button"

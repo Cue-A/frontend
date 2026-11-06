@@ -1,3 +1,5 @@
+import { IconX } from '@tabler/icons-react'
+
 type Props = {
   onClick?: () => void
 }
@@ -14,9 +16,7 @@ export default function ExitButton({ onClick }: Props) {
       aria-label="면접 종료"
       className="flex h-11 w-11 items-center justify-center rounded-full bg-stage-surface/70 text-stage-text hover:bg-stage-surface"
     >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-      </svg>
+      <IconX size={20} aria-hidden="true" />
     </button>
   )
 }
