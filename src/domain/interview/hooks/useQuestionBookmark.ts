@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ApiError } from '@/shared/api/apiError'
 import { toUserMessage } from '@/shared/api/errorMessage'
@@ -10,6 +10,8 @@ export type UseQuestionBookmarkResult = {
   /** 서버에 보내는 중. 이 동안은 버튼을 잠가 요청 순서가 뒤바뀌는 걸 막습니다 */
   pending: boolean
   toggle: () => void
+  /** 방금 성공한 동작. 잠깐 보여주는 확인 문구용이라 시간이 지나면 null 로 돌아간다. */
+  notice: 'saved' | 'removed' | null
   /** 마지막으로 누르다 실패한 이유. 사용자에게 그대로 보여줄 문구입니다 */
   error: string | null
 }
@@ -23,24 +25,47 @@ export type UseQuestionBookmarkResult = {
  * 면접 중 새로고침하면 지금 질문의 북마크 여부를 다시 받을 방법이 없어 빈 아이콘으로 보입니다(서버 명세의 한계).
  * 그때 눌러서 `true` 를 보내도 이미 담겨 있으면 그대로라 안전합니다.
  */
-type State = { questionId: string | null; bookmarked: boolean; pending: boolean; error: string | null }
+type State = {
+  questionId: string | null
+  bookmarked: boolean
+  pending: boolean
+  error: string | null
+  notice: UseQuestionBookmarkResult['notice']
+}
 
-const EMPTY: State = { questionId: null, bookmarked: false, pending: false, error: null }
+const EMPTY: State = { questionId: null, bookmarked: false, pending: false, error: null, notice: null }
+
+/** 확인 문구를 보여주는 시간. */
+const NOTICE_DURATION_MS = 2500
 
 export function useQuestionBookmark(sessionId: string, questionId: string | null): UseQuestionBookmarkResult {
   // 상태에 질문 id 를 같이 두고, 지금 질문의 것일 때만 쓴다. 새 질문이 오면 effect 로 되돌리지 않아도 빈 상태로 보인다.
   const [state, setState] = useState<State>(EMPTY)
   const current = state.questionId === questionId ? state : EMPTY
 
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+    },
+    [],
+  )
+
   const toggle = useCallback(() => {
     if (!questionId || current.pending) return
 
     const before = current.bookmarked
-    setState({ questionId, bookmarked: !before, pending: true, error: null })
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+    setState({ questionId, bookmarked: !before, pending: true, error: null, notice: null })
 
     setQuestionBookmark(sessionId, questionId, !before)
       .then(() => {
-        setState((previous) => (previous.questionId === questionId ? { ...previous, pending: false } : previous))
+        setState((previous) =>
+          previous.questionId === questionId ? { ...previous, pending: false, notice: before ? 'removed' : 'saved' } : previous,
+        )
+        noticeTimerRef.current = setTimeout(() => {
+          setState((previous) => (previous.questionId === questionId ? { ...previous, notice: null } : previous))
+        }, NOTICE_DURATION_MS)
       })
       .catch((cause: unknown) => {
         const apiError = cause instanceof ApiError ? cause : new ApiError('UNKNOWN', '알 수 없는 오류가 발생했어요.')
@@ -48,11 +73,11 @@ export function useQuestionBookmark(sessionId: string, questionId: string | null
         // 질문이 이미 바뀌었으면 되돌릴 대상이 없다.
         setState((previous) =>
           previous.questionId === questionId
-            ? { questionId, bookmarked: before, pending: false, error: toUserMessage(apiError.code) }
+            ? { questionId, bookmarked: before, pending: false, error: toUserMessage(apiError.code), notice: null }
             : previous,
         )
       })
   }, [sessionId, questionId, current.bookmarked, current.pending])
 
-  return { bookmarked: current.bookmarked, pending: current.pending, toggle, error: current.error }
+  return { bookmarked: current.bookmarked, pending: current.pending, toggle, notice: current.notice, error: current.error }
 }

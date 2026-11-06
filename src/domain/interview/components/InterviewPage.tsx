@@ -302,6 +302,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         sessionId={sessionId}
         onSubmitAnswer={handleSubmitAnswer}
         progressLabel={session.progressLabel}
+        answerDelayed={session.answerProcessingTimedOut}
         needsRerecord={session.needsRerecord}
         submitError={session.submitError}
         remainingSec={session.remainingSec}
