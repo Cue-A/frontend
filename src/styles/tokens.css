@@ -135,6 +135,25 @@
   --color-surface-muted: #f9f8ff; /* 카드 안 보조 패널 (Figma 1377:1462) */
 
   /* ---------------------------------------------------------------------
+   * 면접 진행 화면 배경 (Stage)
+   * 출처: 면접 진행 화면 리디자인 (Figma 노드 미확정 — 확정되면 값 · 출처를 맞춘다)
+   *
+   * 면접 진행 화면(InterviewSessionPage)에서만 쓴다. 흰색에 가까운 중심에서 가장자리 연보라(primary 계열)로 번지는
+   * 방사형 그라디언트와 그 위에 얹는 알약 · 원형 버튼 색이다.
+   * ------------------------------------------------------------------- */
+  --color-stage-bg: #f1effe; /* 화면 가장자리 — primary-100(#e4e1fe)보다 훨씬 옅은 연보라 */
+  --color-stage-glow: #ffffff; /* 아바타 뒤 중심 빛 */
+  --color-stage-surface: #ffffff; /* 알약 · 원형 버튼 배경 */
+  --color-stage-surface-hover: #f5f4ff;
+  --color-stage-border: #e0ddf6; /* 진행 막대 빈 칸 · 구분선 */
+  --color-stage-card: rgb(255 255 255 / 0.8); /* 질문 카드 배경 */
+  --color-stage-text: #26262b; /* 알약 · 버튼 · 제목 글자 */
+  --color-stage-soft: #46464f; /* 한 단계 옅은 글자 */
+  --color-stage-sub: #70707b; /* 보조 글자 */
+  --color-stage-muted: #a8a8b3; /* 안내 · 빈 상태 글자 */
+  --color-stage-cta-disabled: #e5e5ea; /* 답변 완료 비활성 배경 */
+
+  /* ---------------------------------------------------------------------
    * 배경 장식 원 모션 (AnalyzingPage 전용)
    *
    * 규칙적인 왕복(2점 ping-pong)이 아니라 불규칙한 % 지점에 서로 다른 이동값을
@@ -322,6 +341,11 @@
       transform: translateY(0);
     }
   }
+}
+
+/* 면접 진행 화면 배경: 아바타 뒤 중심에서 가장자리로 번지는 방사형. 색은 stage 토큰을 따른다. */
+@utility bg-stage-gradient {
+  background-image: radial-gradient(ellipse at 50% 42%, var(--color-stage-glow), var(--color-stage-bg) 70%);
 }
 
 /* ---------------------------------------------------------------------

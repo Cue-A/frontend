@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { DeviceStatus, InterviewerStyle, Question, QuestionType, SessionPhase } from '../types/interview'
+import type { InterviewerStyle, Question, QuestionType, SessionPhase } from '../types/interview'
 
-import DeviceStatusChip from './DeviceStatusChip'
 import InterviewSessionPage from './InterviewSessionPage'
 import QuestionCard from './QuestionCard'
 
@@ -18,7 +17,6 @@ import QuestionCard from './QuestionCard'
 
 const QUESTION_TYPES: QuestionType[] = ['QUESTION', 'FOLLOWUP', 'REASK']
 const PHASES: SessionPhase[] = ['presenting', 'answering', 'submitting', 'waitingNextQuestion', 'finished']
-const DEVICE_STATUSES: DeviceStatus[] = ['ok', 'warning']
 const INTERVIEWER_STYLES: InterviewerStyle[] = ['friendly', 'pressure']
 const SPEAKING_INTENSITIES = [0, 0.3, 0.7, 1] as const
 /** pickAvatarPreset 해시로 각각 A · B · C · D 가 나오는 세션 id (이슈 #124). */
@@ -28,11 +26,6 @@ const SAMPLE_TEXT: Record<QuestionType, string> = {
   QUESTION: '포트폴리오에 랜덤 포레스트를 쓰셨네요. 왜 이 모델을 선택하셨나요?',
   FOLLOWUP: '방금 답변에서 언급한 전처리 과정을 조금 더 자세히 설명해 주시겠어요?',
   REASK: '죄송하지만 답변이 잘 들리지 않았어요. 다시 한 번 말씀해 주시겠어요?',
-}
-
-const DEVICE_STATUS_MESSAGE: Record<DeviceStatus, string> = {
-  ok: '카메라 · 마이크 정상',
-  warning: '마이크 입력이 약해요',
 }
 
 function buildQuestion(questionType: QuestionType, audioAvailable: boolean): Question {
@@ -90,9 +83,9 @@ type PreviewState = {
   hideQuestionText: boolean
   audioAvailable: boolean
   phase: SessionPhase
-  deviceStatus: DeviceStatus
   interviewerStyle: InterviewerStyle
   hasCameraStream: boolean
+  isMicAvailable: boolean
   speakingIntensity: number
   sessionId: string
   showProgressLabel: boolean
@@ -106,9 +99,9 @@ const INITIAL_STATE: PreviewState = {
   hideQuestionText: false,
   audioAvailable: true,
   phase: 'answering',
-  deviceStatus: 'ok',
   interviewerStyle: 'friendly',
   hasCameraStream: false,
+  isMicAvailable: true,
   speakingIntensity: 0,
   sessionId: AVATAR_SESSION_IDS[0],
   showProgressLabel: false,
@@ -176,7 +169,6 @@ function LiveFullWidthPreview() {
           onChange={(v) => set('audioAvailable')(v === 'true')}
         />
         <ControlGroup label="phase" value={state.phase} options={PHASES} onChange={set('phase')} />
-        <ControlGroup label="deviceStatus" value={state.deviceStatus} options={DEVICE_STATUSES} onChange={set('deviceStatus')} />
         <ControlGroup
           label="interviewerStyle"
           value={state.interviewerStyle}
@@ -188,6 +180,12 @@ function LiveFullWidthPreview() {
           value={String(state.hasCameraStream) as 'true' | 'false'}
           options={['false', 'true']}
           onChange={(v) => set('hasCameraStream')(v === 'true')}
+        />
+        <ControlGroup
+          label="마이크 연결"
+          value={String(state.isMicAvailable) as 'true' | 'false'}
+          options={['true', 'false']}
+          onChange={(v) => set('isMicAvailable')(v === 'true')}
         />
         <ControlGroup
           label="progressLabel (waitingNextQuestion)"
@@ -254,14 +252,15 @@ function LiveFullWidthPreview() {
           onExit={() => {}}
           recordingStartedAt={previewStartedAt - 13_000}
           interviewerStyle={state.interviewerStyle}
+          jobRole="데이터 분석"
+          companyName="네이버"
           sessionStartedAt={previewStartedAt - 324_000}
           isSessionFinished={false}
           sessionLimitSec={900}
-          deviceStatus={state.deviceStatus}
-          deviceStatusMessage={DEVICE_STATUS_MESSAGE[state.deviceStatus]}
           speakingIntensity={state.speakingIntensity}
           sessionId={state.sessionId}
           hasCameraStream={state.hasCameraStream}
+          isMicAvailable={state.isMicAvailable}
           caption="저는 데이터 분석 프로젝트에서 전처리를 담당했고..."
           question={buildQuestion(state.questionType, state.audioAvailable)}
           hideQuestionText={state.hideQuestionText}
@@ -287,24 +286,23 @@ function ComboLabel({ text }: { text: string }) {
 function QuestionCardComboGrid() {
   const HIDE_OPTIONS = [false, true]
   const AUDIO_OPTIONS = [true, false]
-  const CARD_PHASES: SessionPhase[] = ['presenting', 'answering', 'submitting']
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {QUESTION_TYPES.flatMap((questionType) =>
         HIDE_OPTIONS.flatMap((hideQuestionText) =>
           AUDIO_OPTIONS.flatMap((audioAvailable) =>
-            CARD_PHASES.map((phase) => {
-              const key = `${questionType}-${hideQuestionText}-${audioAvailable}-${phase}`
+            [null].map(() => {
+              const key = `${questionType}-${hideQuestionText}-${audioAvailable}`
               return (
                 <div key={key} className="flex flex-col gap-2">
                   <ComboLabel
-                    text={`${questionType} · hideQuestionText=${hideQuestionText} · audioAvailable=${audioAvailable} · phase=${phase}`}
+                    text={`${questionType} · hideQuestionText=${hideQuestionText} · audioAvailable=${audioAvailable}`}
                   />
                   <QuestionCard
                     question={buildQuestion(questionType, audioAvailable)}
                     hideQuestionText={hideQuestionText}
-                    phase={phase}
+                    sessionId="preview-1"
                   />
                 </div>
               )
@@ -333,16 +331,7 @@ export default function InterviewSessionPreview() {
           </p>
         </div>
 
-        {DEVICE_STATUSES.map((deviceStatus) => (
-          <div key={deviceStatus} className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <h3 className="text-body-lg text-neutral-900">deviceStatus = {deviceStatus}</h3>
-              <DeviceStatusChip status={deviceStatus} message={DEVICE_STATUS_MESSAGE[deviceStatus]} />
-            </div>
-
-            <QuestionCardComboGrid />
-          </div>
-        ))}
+        <QuestionCardComboGrid />
       </section>
     </div>
   )

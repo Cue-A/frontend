@@ -173,3 +173,14 @@ registerMock('POST', '/api/interviews/:sessionId/answers', ({ sessionId }) => {
  * sessionApi.abortSession 주석 참고.
  */
 registerMock('POST', '/api/interviews/:sessionId/abort', () => {})
+
+/**
+ * 면접 중 질문 북마크 목업입니다. 받은 값을 그대로 돌려주고 저장은 하지 않습니다.
+ * 실패 경로(409 등)를 보려면 이 핸들러를 잠깐 `throw new ApiError('SESSION_ENDED', ...)` 로 바꿔서 확인합니다.
+ * 백엔드에는 배포되어 있어서 `missingInBackend` 를 달지 않습니다. `interviews` 를 `VITE_REAL_APIS` 로 켜면 실제 서버로 갑니다.
+ */
+registerMock(
+  'PUT',
+  '/api/interviews/:sessionId/questions/:questionId/bookmark',
+  (_params, body) => ({ bookmarked: (body as { bookmarked: boolean }).bookmarked }),
+)

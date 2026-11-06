@@ -64,7 +64,7 @@ export function recallSessionOptions(sessionId: string): InterviewSessionOptions
 }
 
 /**
- * 장치 테스트의 "면접 요약"이 보여줄, 세션을 만들 때의 직무와 질문 수입니다.
+ * 장치 테스트의 "면접 요약"과 면접 화면 상단의 "기업 · 직무"가 보여줄, 세션을 만들 때의 직무 · 기업명 · 질문 수입니다.
  *
  * 조회 API(`GET /api/interviews/{sessionId}`)에는 이 둘이 없어서 서버에서 다시 읽을 수 없습니다. 그래서 옵션 설정에서
  * 고른 값이 아니라 **그 세션을 만들 때의 값**을 세션별로 남깁니다. 옵션을 바꾼 뒤 예전 장치 테스트 주소로 돌아와도
@@ -75,6 +75,8 @@ export function recallSessionOptions(sessionId: string): InterviewSessionOptions
  */
 export type SessionSummary = {
   jobRole: string
+  /** 기업을 고르지 않은 면접(연습 모드)이면 null. 면접 화면 상단의 "기업 · 직무" 표시에 쓴다 */
+  companyName: string | null
   questionCount: number
 }
 
@@ -87,7 +89,7 @@ export function rememberSessionSummary(sessionId: string, summary: SessionSummar
   saveDraft(summaryDraftName(sessionId), summary)
 }
 
-/** 이 세션을 만들 때 남긴 직무 · 질문 수입니다. 없거나 모양이 맞지 않으면 null 입니다 */
+/** 이 세션을 만들 때 남긴 직무 · 기업명 · 질문 수입니다. 없거나 모양이 맞지 않으면 null 입니다 */
 export function recallSessionSummary(sessionId: string): SessionSummary | null {
   const remembered = summaryMemory.get(sessionId)
   if (remembered) return remembered
@@ -95,11 +97,12 @@ export function recallSessionSummary(sessionId: string): SessionSummary | null {
   const saved = loadDraft(summaryDraftName(sessionId))
   if (typeof saved !== 'object' || saved === null) return null
 
-  const { jobRole, questionCount } = saved as Record<string, unknown>
+  const { jobRole, companyName, questionCount } = saved as Record<string, unknown>
   if (typeof jobRole !== 'string' || !jobRole || !Number.isInteger(questionCount) || (questionCount as number) <= 0) {
     removeDraft(summaryDraftName(sessionId))
     return null
   }
 
-  return { jobRole, questionCount: questionCount as number }
+  // 기업명은 나중에 더한 값이라 예전에 남긴 값에는 없다 — 없으면 null 로 본다.
+  return { jobRole, companyName: typeof companyName === 'string' && companyName ? companyName : null, questionCount: questionCount as number }
 }
