@@ -20,7 +20,7 @@ type Props = {
   showCaptionLine?: boolean
   /** 답변 제출 후 진행 문구. 있으면 자막 대신 그 자리에 가운데 정렬로 보여준다(자막은 바로 숨긴다). */
   loadingLabel?: string | null
-  /** 답변 처리가 오래 걸리는 중. true 면 진행 문구(loadingLabel) 자리에 지연 안내를 보여준다. */
+  /** 답변 처리가 오래 걸리는 중. true 면 진행 문구(loadingLabel) 아래에 지연 안내를 덧붙인다. */
   delayed?: boolean
   /** 첫 질문의 제시 · 답변 중 true. 북마크 버튼 옆에 "저장할 수 있다"는 안내 말풍선을 한 번 보여준다. */
   bookmarkHintEligible?: boolean
@@ -29,7 +29,7 @@ type Props = {
 }
 
 const BOOKMARK_NOTICE_TEXT = {
-  saved: '질문은행에 저장했어요',
+  saved: '질문 은행에 저장했어요',
   removed: '북마크를 해제했어요',
 } as const
 
@@ -51,7 +51,7 @@ export default function QuestionCard({
   const bubbleText = bookmark.notice
     ? BOOKMARK_NOTICE_TEXT[bookmark.notice]
     : bookmarkHint.visible
-      ? '마음에 드는 질문은 북마크해 두면 질문은행에서 다시 볼 수 있어요'
+      ? '마음에 드는 질문은 북마크해 두면 질문 은행에서 다시 볼 수 있어요'
       : null
 
   const handleBookmarkClick = () => {
@@ -84,10 +84,12 @@ export default function QuestionCard({
         </p>
       )}
 
-      {delayed ? (
-        <AnswerDelayNotice />
-      ) : loadingLabel ? (
-        <LoadingLine label={loadingLabel} />
+      {loadingLabel ? (
+        delayed ? (
+          <AnswerDelayNotice label={loadingLabel} />
+        ) : (
+          <LoadingLine label={loadingLabel} />
+        )
       ) : (
         showCaptionLine && <CaptionLine caption={caption} isSupported={captionSupported} />
       )}

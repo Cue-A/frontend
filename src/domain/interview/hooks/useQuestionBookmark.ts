@@ -64,7 +64,9 @@ export function useQuestionBookmark(sessionId: string, questionId: string | null
     setQuestionBookmark(sessionId, questionId, !before)
       .then(() => {
         setState((previous) =>
-          previous.questionId === questionId ? { ...previous, pending: false, notice: before ? 'removed' : 'saved' } : previous,
+          previous.questionId === questionId
+            ? { ...previous, pending: false, notice: before ? 'removed' : 'saved' }
+            : previous,
         )
         if (!mountedRef.current) return
         noticeTimerRef.current = setTimeout(() => {
@@ -83,5 +85,11 @@ export function useQuestionBookmark(sessionId: string, questionId: string | null
       })
   }, [sessionId, questionId, current.bookmarked, current.pending])
 
-  return { bookmarked: current.bookmarked, pending: current.pending, toggle, notice: current.notice, error: current.error }
+  return {
+    bookmarked: current.bookmarked,
+    pending: current.pending,
+    toggle,
+    notice: current.notice,
+    error: current.error,
+  }
 }
