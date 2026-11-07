@@ -39,6 +39,8 @@ export type CommonQuestion = {
   favoritedAt: string | null
   /** 내가 쓴 메모. 쓰지 않았으면 null */
   memo: string | null
+  /** 내가 직접 추가한 질문인지. 기본 공통 질문이면 false. 내가 추가한 질문만 고치고 지울 수 있습니다 */
+  custom: boolean
 }
 
 /** 탭. 북마크가 먼저입니다 */
