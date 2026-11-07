@@ -20,6 +20,12 @@ export const BOOKMARK_TYPE_LABEL: Record<BookmarkType, string | null> = {
 /** 메모는 질문마다 하나이고 최대 500자입니다 (PATCH /api/bookmarks) */
 export const MAX_MEMO_LENGTH = 500
 
+/** 내 질문을 추가할 때 고르는 분류. 기본 공통 질문의 분류와 같습니다 */
+export const QUESTION_CATEGORIES = ['인성', '경험', '지원동기', '직무', '기타'] as const
+
+/** 내 질문 문구의 최대 길이 */
+export const MAX_QUESTION_LENGTH = 200
+
 /** 같은 질문을 재연습에서 또 담으면 줄이 따로 생겨서, 한 줄은 `(sessionId, questionId)` 둘로 가립니다 */
 export function bookmarkKey(bookmark: Pick<BookmarkedQuestion, 'sessionId' | 'questionId'>): string {
   return `${bookmark.sessionId}:${bookmark.questionId}`

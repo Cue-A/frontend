@@ -1,11 +1,14 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
+import { MAX_QUESTION_LENGTH, QUESTION_CATEGORIES } from '../lib/questionDisplay'
+
 import type {
   BookmarkListResponse,
   BookmarkResponse,
   CommonFavoriteResponse,
   CommonQuestionListResponse,
+  CommonQuestionRequest,
   CommonQuestionResponse,
 } from './questionResponse'
 
@@ -17,7 +20,8 @@ import type {
  * 표시가 없고, **`VITE_REAL_APIS` 에 `bookmarks` 를 넣으면 실제 서버로 갑니다**. 안 넣으면 이 목업이 답합니다.
  * 이 목업은 백엔드 동작을 따라 만들었습니다 — 되묻기는 `originalQuestionText` 가 되물은 질문, 꼬리질문은 그 토픽의
  * 주질문, 되묻기는 분류 · 난이도가 null, 메모는 공백뿐이면 지움.
- * 공통 질문(`/api/common-questions`): 백엔드에 없습니다. 명세가 정해지면
+ * 공통 질문(`/api/common-questions`): 백엔드에 없습니다. 내 질문 추가 · 수정 · 삭제(`POST` · `PATCH` · `DELETE`)도 같은
+ * 임시안입니다(`custom: true` 인 질문만 고치고 지울 수 있음). 명세가 정해지면
  * 1. `questionResponse.ts` 의 응답 타입과 변환 함수, `questionApi.ts` 의 경로를 고칩니다
  * 2. 아래 `registerMock` 의 `{ missingInBackend: MISSING_COMMON }` 을 지웁니다
  * 3. 북마크도 실서버로 확인이 끝나면 이 파일을 통째로 지우고, `questionApi.ts` 맨 위의 `import './questionMock'` 도
@@ -197,6 +201,7 @@ const commonQuestions: CommonQuestionResponse[] = [
   favorite: false,
   favoritedAt: null,
   memo: null,
+  custom: false,
 }))
 
 function findCommon(questionId: string) {
@@ -245,6 +250,70 @@ registerMock(
 
     found.memo = memo !== null && memo.trim() !== '' ? memo : null
     return { memo: found.memo }
+  },
+  { missingInBackend: MISSING_COMMON },
+)
+
+/** 본문을 검사해 `{ text, category }` 로 돌려줍니다. 서버 검증을 흉내 냅니다 */
+function parseQuestionRequest(body: unknown): CommonQuestionRequest {
+  const { text, category } = (body ?? {}) as Partial<Record<keyof CommonQuestionRequest, unknown>>
+
+  if (typeof text !== 'string' || text.trim() === '') throw new ApiError('INVALID_REQUEST', 'text 는 비어 있을 수 없습니다')
+  if (text.trim().length > MAX_QUESTION_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `text 는 ${MAX_QUESTION_LENGTH}자까지입니다`)
+  }
+  if (typeof category !== 'string' || !(QUESTION_CATEGORIES as readonly string[]).includes(category)) {
+    throw new ApiError('INVALID_REQUEST', `category 는 ${QUESTION_CATEGORIES.join(' · ')} 중 하나여야 합니다`)
+  }
+
+  return { text: text.trim(), category }
+}
+
+let nextCustomId = 1
+
+registerMock(
+  'POST',
+  '/api/common-questions',
+  (_params, body): CommonQuestionResponse => {
+    const { text, category } = parseQuestionRequest(body)
+    const created: CommonQuestionResponse = {
+      questionId: `mock-custom-${nextCustomId++}`,
+      text,
+      category,
+      favorite: false,
+      favoritedAt: null,
+      memo: null,
+      custom: true,
+    }
+    // 내가 추가한 질문은 기본 질문보다 앞에 둡니다 (가장 최근 것이 맨 위)
+    commonQuestions.unshift(created)
+    return { ...created }
+  },
+  { missingInBackend: MISSING_COMMON },
+)
+
+registerMock(
+  'PATCH',
+  '/api/common-questions/:questionId',
+  ({ questionId }, body): CommonQuestionResponse => {
+    const found = findCommon(questionId)
+    // 백엔드에 없는 API 라 에러 코드가 없습니다. 이미 매핑돼 있는 코드를 임시로 씁니다
+    if (!found.custom) throw new ApiError('FORBIDDEN', '기본 질문은 고칠 수 없습니다')
+
+    Object.assign(found, parseQuestionRequest(body))
+    return { ...found }
+  },
+  { missingInBackend: MISSING_COMMON },
+)
+
+registerMock(
+  'DELETE',
+  '/api/common-questions/:questionId',
+  ({ questionId }) => {
+    const found = findCommon(questionId)
+    if (!found.custom) throw new ApiError('FORBIDDEN', '기본 질문은 지울 수 없습니다')
+
+    commonQuestions.splice(commonQuestions.indexOf(found), 1)
   },
   { missingInBackend: MISSING_COMMON },
 )

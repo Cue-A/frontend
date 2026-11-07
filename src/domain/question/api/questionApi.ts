@@ -9,6 +9,8 @@ import {
   type BookmarkMemoResponse,
   type CommonFavoriteResponse,
   type CommonQuestionListResponse,
+  type CommonQuestionRequest,
+  type CommonQuestionResponse,
 } from './questionResponse'
 
 import './questionMock'
@@ -96,6 +98,24 @@ export function setCommonFavorite(questionId: string, favorite: boolean) {
 export async function updateCommonMemo(questionId: string, memo: string) {
   const response = await api.patch<BookmarkMemoResponse>(commonPath(questionId, '/memo'), { memo })
   return response.memo
+}
+
+/**
+ * 내 질문 추가. `POST /api/common-questions` — 공통 질문 탭에 "내 질문" 배지가 붙은 질문으로 들어갑니다.
+ * **백엔드에 없는 API 입니다.** 임시안이고 목업이 답합니다.
+ */
+export async function createCommonQuestion(request: CommonQuestionRequest): Promise<CommonQuestion> {
+  return toCommonQuestion(await api.post<CommonQuestionResponse>('/api/common-questions', request))
+}
+
+/** 내가 추가한 질문 고치기. `PATCH /api/common-questions/{questionId}` — 기본 질문은 고칠 수 없습니다. 백엔드에 없는 임시안입니다 */
+export async function updateCommonQuestion(questionId: string, request: CommonQuestionRequest): Promise<CommonQuestion> {
+  return toCommonQuestion(await api.patch<CommonQuestionResponse>(commonPath(questionId), request))
+}
+
+/** 내가 추가한 질문 지우기. `DELETE /api/common-questions/{questionId}` — 메모 · 즐겨찾기도 함께 지워집니다. 백엔드에 없는 임시안입니다 */
+export function deleteCommonQuestion(questionId: string) {
+  return api.delete<void>(commonPath(questionId))
 }
 
 function commonPath(questionId: string, suffix = '') {
