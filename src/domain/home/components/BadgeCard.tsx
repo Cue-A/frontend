@@ -31,7 +31,8 @@ type Props = {
 }
 
 /**
- * 획득한 뱃지. **받은 배지만** 보여주고 오른쪽 위에 받은 개수를 적습니다. 전에는 못 받은 배지도 회색으로 두고 "3 / 5" 로
+ * 획득한 뱃지. **받은 배지만** 보여주고 오른쪽 위에 받은 개수를 적습니다. 개수는 그린 배지 수로 셉니다 — 서버의 `earnedCount`
+ * 를 쓰면 `featured` 가 일부만 올 때 개수와 목록이 어긋납니다 (PR #191 리뷰). 전에는 못 받은 배지도 회색으로 두고 "3 / 5" 로
  * 적었는데, 카드 제목이 "획득한 뱃지" 라 받은 것처럼 읽혀서 뺐습니다 (이슈 #190 작업 중 결정). 성장 관리의 배지 카드도 같습니다.
  * 다음에 무엇을 하면 받는지는 아래 안내(`nextHint`)가 알려 줍니다.
  */
@@ -45,7 +46,7 @@ export default function BadgeCard({ badges }: Props) {
         aside={
           badges && (
             <span className="text-body-md font-semibold text-primary-500">
-              {badges.earnedCount}개<span className="sr-only"> 획득</span>
+              {earned.length}개<span className="sr-only"> 획득</span>
             </span>
           )
         }

@@ -75,13 +75,37 @@ export default function GrowthPage() {
   const interviewError =
     latest.status === 'error' ? `최근 리포트를 불러오지 못했어요. ${toUserMessage(latest.error.code)}` : null
 
+  /*
+    창을 닫은 뒤 돌아갈 자리. 보기 창에서 "수정" 을 누르면 보기 창이 사라지면서, 브라우저가 수정 창을 닫을 때 돌려줄
+    포커스("수정" 버튼)도 같이 없어져 포커스가 화면 맨 앞으로 떨어집니다. 그래서 창을 연 버튼(날짜 칸 · 일정 목록 줄)을
+    기억해 두고, 닫은 뒤 포커스가 갈 곳을 잃었으면 그리로 돌립니다. 그 버튼도 없어졌으면(그날 일정을 다 지웠거나 다른 달로
+    옮김) 캘린더 카드로 돌립니다. (PR #191 리뷰)
+  */
+  const openerRef = useRef<HTMLElement | null>(null)
+  const calendarRef = useRef<HTMLDivElement | null>(null)
+  const rememberOpener = () => {
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  }
+  const restoreFocus = () => {
+    // 닫힌 창이 빠지고 캘린더가 다시 그려진 뒤에 봅니다
+    requestAnimationFrame(() => {
+      const active = document.activeElement
+      if (active && active !== document.body && active.isConnected) return
+      const opener = openerRef.current
+      if (opener?.isConnected) opener.focus()
+      else calendarRef.current?.focus()
+    })
+  }
+
   // 창을 열면 앞서 남은 알림은 지웁니다
   const openGoal = () => {
+    rememberOpener()
     setGoalNotice(null)
     setEventNotice(null)
     setOpenDialog('goal')
   }
   const openEvent = () => {
+    rememberOpener()
     setGoalNotice(null)
     setEventNotice(null)
     setOpenDialog('event')
@@ -89,6 +113,7 @@ export default function GrowthPage() {
 
   const closeDialog = () => {
     setOpenDialog(null)
+    restoreFocus()
     if (searchParams.has(GROWTH_OPEN_PARAM)) {
       setSearchParams(
         (params) => {
@@ -146,7 +171,10 @@ export default function GrowthPage() {
   const handleEventDeleted = (event: CalendarEvent) => {
     setEventNotice(`‘${event.title}’ 일정을 지웠어요.`)
     calendar.removeEvent(event.eventId)
-    if (!dayEvents.some((item) => item.eventId !== event.eventId)) setOpenDialog(null)
+    if (!dayEvents.some((item) => item.eventId !== event.eventId)) {
+      setOpenDialog(null)
+      restoreFocus()
+    }
   }
 
   // 고치려던 일정이 이미 없었습니다(다른 탭에서 지움). 저장할 수 없으니 이 달에서 빼고 알립니다
@@ -163,6 +191,7 @@ export default function GrowthPage() {
       : []
 
   const openDate = (date: string) => {
+    rememberOpener()
     setGoalNotice(null)
     setEventNotice(null)
     setOpenDialog({ kind: 'detail', date })
@@ -208,7 +237,8 @@ export default function GrowthPage() {
           </>
         )}
 
-        <div id={GROWTH_CALENDAR_ID} className="scroll-mt-6">
+        {/* 창을 닫은 뒤 돌아갈 버튼이 없어졌을 때 포커스를 받는 자리입니다(restoreFocus) */}
+        <div ref={calendarRef} id={GROWTH_CALENDAR_ID} tabIndex={-1} className="scroll-mt-6 outline-none">
           <InterviewCalendarCard
             month={month}
             today={today}

@@ -93,7 +93,7 @@ export default function EventFormDialog({ event: target = null, defaultDate, onS
   // 처음 연 빈 칸은 틀린 게 아니라서 빨간 글씨로 쓰지 않습니다.
   const invalidDate = date !== '' && !isValidDate(date)
   const blockReason = !trimmedTitle
-    ? '일정 제목을 적으면 등록할 수 있어요.'
+    ? `일정 제목을 적으면 ${editing ? '저장' : '등록'}할 수 있어요.`
     : !date
       ? '날짜를 골라 주세요.'
       : invalidDate
