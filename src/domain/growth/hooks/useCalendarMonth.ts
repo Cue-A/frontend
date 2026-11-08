@@ -23,6 +23,13 @@ export type UseCalendarMonthResult = (
    * 받아 둔 달과 다른 달의 일정이면 아무것도 하지 않습니다. 그 달로 넘어가면 새로 받습니다. (PR #137 리뷰)
    */
   addEvent: (event: CalendarEvent) => void
+  /**
+   * 고친 일정을 그 달 데이터에서 바꿔 넣습니다. 다른 달로 옮겼으면 이 달에서 빼기만 합니다 — 그 달로 넘어가면 새로 받습니다.
+   * 다시 받지 않는 이유는 `addEvent` 와 같습니다 (이슈 #190)
+   */
+  replaceEvent: (event: CalendarEvent) => void
+  /** 지운 일정을 그 달 데이터에서 뺍니다 (이슈 #190) */
+  removeEvent: (eventId: string) => void
 }
 
 type State =
@@ -68,19 +75,27 @@ export function useCalendarMonth(month: string): UseCalendarMonthResult {
     setAttempt((value) => value + 1)
   }, [])
 
-  const addEvent = useCallback((event: CalendarEvent) => {
+  // 받아 둔 달의 일정 목록을 바꿉니다. `event` 를 주면 같은 달일 때만 넣고, 늘 날짜 · 시간 순으로 다시 늘어놓습니다
+  const updateEvents = useCallback((dropId: string | null, event: CalendarEvent | null) => {
     setState((previous) => {
-      if (previous.status !== 'ready' || previous.calendar.month !== monthOf(event.date)) return previous
-      const events = [...previous.calendar.events, event].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+      if (previous.status !== 'ready') return previous
+      const kept = previous.calendar.events.filter((item) => item.eventId !== dropId)
+      const events = event && previous.calendar.month === monthOf(event.date) ? [...kept, event] : kept
+      events.sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
       return { status: 'ready', calendar: { ...previous.calendar, events } }
     })
   }, [])
 
+  const addEvent = useCallback((event: CalendarEvent) => updateEvents(null, event), [updateEvents])
+  const replaceEvent = useCallback((event: CalendarEvent) => updateEvents(event.eventId, event), [updateEvents])
+  const removeEvent = useCallback((eventId: string) => updateEvents(eventId, null), [updateEvents])
+  const actions = { reload, addEvent, replaceEvent, removeEvent }
+
   if (state.status === 'ready') {
-    return { status: 'ready', calendar: state.calendar, updating: state.calendar.month !== month, reload, addEvent }
+    return { status: 'ready', calendar: state.calendar, updating: state.calendar.month !== month, ...actions }
   }
   if (state.status === 'error' && state.month === month) {
-    return { status: 'error', error: state.error, reload, addEvent }
+    return { status: 'error', error: state.error, ...actions }
   }
-  return { status: 'loading', reload, addEvent }
+  return { status: 'loading', ...actions }
 }

@@ -13,7 +13,8 @@ import type {
 } from './growthResponse'
 
 /**
- * 성장 관리 목업입니다. **백엔드에 컨트롤러가 없어서** `growth` · `calendar` 를 `VITE_REAL_APIS` 에 넣어도 목업이 답합니다.
+ * 성장 관리 목업입니다. **백엔드 컨트롤러가 아직 배포되지 않아서** `growth` · `calendar` 를 `VITE_REAL_APIS` 에 넣어도 목업이
+ * 답합니다. 둘 다 백엔드 PR 로 나와 있습니다 — 목표 · 배지 Cue-A/backend#132, 캘린더 Cue-A/backend#133.
  *
  * ## 시나리오
  *
@@ -35,7 +36,7 @@ import type {
  *
  * 시안의 8월을 그대로 박지 않고 **오늘 기준으로** 만듭니다. 연습한 날 · 면접 일정은 이번 달과 다음 달에 찍힙니다.
  *
- * 목표 수정 · 일정 등록은 메모리에만 남습니다. 새로고침하면 처음으로 돌아갑니다.
+ * 목표 수정 · 일정 등록 · 수정 · 삭제는 메모리에만 남습니다. 새로고침하면 처음으로 돌아갑니다.
  */
 
 const SCENARIO_KEY = 'cue-a:mock:growth'
@@ -61,7 +62,13 @@ function currentScenario(): Scenario {
   }
 }
 
-const MISSING = '성장 관리 API 없음 — growth · calendar 컨트롤러가 백엔드에 없음 (경로 · 응답 모양 프론트 임시안)'
+const MISSING = '성장 관리 API 미배포 — /api/growth 는 Cue-A/backend#132 (리뷰 중)'
+
+/**
+ * 캘린더 API 는 백엔드 PR(Cue-A/backend#133)로 나와 있고 경로 · 본문 · 응답이 이 목업과 같습니다. 머지 · 배포되면 캘린더
+ * 목업의 `missingInBackend` 를 지우고 `VITE_REAL_APIS` 에 `calendar` 를 넣으면 실서버로 갑니다.
+ */
+const CALENDAR_MISSING = '면접 캘린더 API 미배포 — Cue-A/backend#133 (리뷰 중)'
 
 /**
  * 배지 목록. **홈 목업(`home/api/homeMock.ts` 의 `BADGES`)과 같은 다섯 개 · 같은 획득 상태입니다** — 도메인끼리 api 를
@@ -201,37 +208,66 @@ registerMock(
 
     return { month, events, practicedDates }
   },
-  { missingInBackend: MISSING },
+  { missingInBackend: CALENDAR_MISSING },
 )
+
+/** 등록 · 수정 본문을 읽고 규칙을 봅니다. 맞지 않으면 `INVALID_REQUEST` 로 던집니다 */
+function readEventRequest(body: unknown) {
+  const request = (typeof body === 'object' && body !== null ? body : {}) as Partial<CalendarEventCreateRequest>
+  const title = typeof request.title === 'string' ? request.title.trim() : ''
+  const memo = typeof request.memo === 'string' ? request.memo.trim() : null
+  const scheduledAt = typeof request.scheduledAt === 'string' ? request.scheduledAt : ''
+
+  if (!title || title.length > MAX_EVENT_TITLE_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `일정 제목은 1~${MAX_EVENT_TITLE_LENGTH}자입니다`)
+  }
+  if (memo && memo.length > MAX_EVENT_MEMO_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `메모는 ${MAX_EVENT_MEMO_LENGTH}자까지입니다`)
+  }
+  if (Number.isNaN(new Date(scheduledAt).getTime())) {
+    throw new ApiError('INVALID_REQUEST', '날짜를 읽을 수 없습니다')
+  }
+
+  return { title, scheduledAt, timeSpecified: request.timeSpecified === true, memo: memo || null }
+}
+
+/** 이 시나리오의 일정 목록에서 그 일정의 자리. 없으면 `CALENDAR_EVENT_NOT_FOUND` 로 던집니다 */
+function indexOfEvent(calendarEventId: string) {
+  const index = eventsOf(currentScenario()).findIndex((event) => event.calendarEventId === calendarEventId)
+  if (index < 0) throw new ApiError('CALENDAR_EVENT_NOT_FOUND', '일정을 찾을 수 없습니다')
+  return index
+}
 
 registerMock(
   'POST',
   '/api/calendar/events',
   (_params, body): CalendarEventResponse => {
-    const request = (typeof body === 'object' && body !== null ? body : {}) as Partial<CalendarEventCreateRequest>
-    const title = typeof request.title === 'string' ? request.title.trim() : ''
-    const memo = typeof request.memo === 'string' ? request.memo.trim() : null
-    const scheduledAt = typeof request.scheduledAt === 'string' ? request.scheduledAt : ''
-
-    if (!title || title.length > MAX_EVENT_TITLE_LENGTH) {
-      throw new ApiError('INVALID_REQUEST', `일정 제목은 1~${MAX_EVENT_TITLE_LENGTH}자입니다`)
-    }
-    if (memo && memo.length > MAX_EVENT_MEMO_LENGTH) {
-      throw new ApiError('INVALID_REQUEST', `메모는 ${MAX_EVENT_MEMO_LENGTH}자까지입니다`)
-    }
-    if (Number.isNaN(new Date(scheduledAt).getTime())) {
-      throw new ApiError('INVALID_REQUEST', '날짜를 읽을 수 없습니다')
-    }
-
-    const event: CalendarEventResponse = {
-      calendarEventId: crypto.randomUUID(),
-      title,
-      scheduledAt,
-      timeSpecified: request.timeSpecified === true,
-      memo: memo || null,
-    }
+    const event: CalendarEventResponse = { calendarEventId: crypto.randomUUID(), ...readEventRequest(body) }
     eventsOf(currentScenario()).push(event)
     return event
   },
-  { missingInBackend: MISSING },
+  { missingInBackend: CALENDAR_MISSING },
+)
+
+/** 일정 수정 (이슈 #190). 등록과 같은 네 칸을 받아 통째로 바꿉니다(PUT) */
+registerMock(
+  'PUT',
+  '/api/calendar/events/:calendarEventId',
+  ({ calendarEventId }, body): CalendarEventResponse => {
+    const index = indexOfEvent(calendarEventId)
+    const event: CalendarEventResponse = { calendarEventId, ...readEventRequest(body) }
+    eventsOf(currentScenario())[index] = event
+    return event
+  },
+  { missingInBackend: CALENDAR_MISSING },
+)
+
+/** 일정 삭제 (이슈 #190). 없는 일정은 404 — 서버처럼 다시 지워도 404 입니다 */
+registerMock(
+  'DELETE',
+  '/api/calendar/events/:calendarEventId',
+  ({ calendarEventId }) => {
+    eventsOf(currentScenario()).splice(indexOfEvent(calendarEventId), 1)
+  },
+  { missingInBackend: CALENDAR_MISSING },
 )

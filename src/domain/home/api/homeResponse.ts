@@ -48,6 +48,10 @@ export type HomeExtrasResponse = {
   badges: {
     earnedCount: number
     totalCount: number
+    /**
+     * 배지 **전부**(받은 것 · 못 받은 것)를 내려 주세요. 홈은 이 중 받은 것만 그리고, 받은 개수도 이 목록에서 셉니다
+     * — 일부만 내려 주면 화면의 개수가 실제보다 적어집니다
+     */
     featured: Array<{
       badgeCode: BadgeCode
       badgeName: string

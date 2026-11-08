@@ -64,7 +64,10 @@ export type CalendarMonthResponse = {
 }
 
 /**
- * `POST /api/calendar/events` 본문. 응답은 `CalendarEventResponse` 입니다.
+ * `POST /api/calendar/events` · `PUT /api/calendar/events/{calendarEventId}` 본문. 응답은 `CalendarEventResponse` 입니다.
+ *
+ * 수정도 같은 네 칸을 다 보내 통째로 바꿉니다(PUT, 이슈 #190). 백엔드(Cue-A/backend#133 `CalendarEventRequest`)가
+ * 이 모양과 1:1 로 맞췄습니다.
  *
  * 백엔드 `calendar_event.scheduled_at` 이 시각 하나라서 날짜 · 시간을 합쳐 보냅니다. 시간을 안 적으면 그날 00:00 으로
  * 보내고 `timeSpecified: false` 로 구분합니다 — "자정 면접" 과 "시간 미정" 이 같은 값이 되지 않게 하려는 칸이라,

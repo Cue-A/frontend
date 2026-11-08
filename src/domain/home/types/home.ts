@@ -79,7 +79,7 @@ export type HomeBadge = {
 export type BadgeSummary = {
   earnedCount: number
   totalCount: number
-  /** 홈에 보여줄 배지. 아직 못 딴 것도 들어 있습니다(`earned: false`) */
+  /** 배지 전부. 아직 못 딴 것도 들어 있고(`earned: false`), 화면은 받은 것만 그립니다 */
   featured: HomeBadge[]
   /** "다음 뱃지까지 연습 2회 남았어요" 같은 안내. 줄 게 없으면 null */
   nextHint: string | null

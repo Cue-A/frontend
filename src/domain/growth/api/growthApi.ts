@@ -67,18 +67,45 @@ function toScheduledAt(date: string, time: string | null) {
   return new Date(year, month - 1, day, hours, minutes).toISOString()
 }
 
+function toEventRequest(draft: CalendarEventDraft): CalendarEventCreateRequest {
+  return {
+    title: draft.title,
+    scheduledAt: toScheduledAt(draft.date, draft.time),
+    timeSpecified: draft.time !== null,
+    memo: draft.memo,
+  }
+}
+
 /**
  * 면접 일정을 등록합니다. `POST /api/calendar/events`
  *
  * 제목은 앞뒤 공백을 자른 뒤 1 ~ 50자, 메모는 300자까지입니다. 넘으면 `INVALID_REQUEST` 로 봅니다.
  */
 export async function createCalendarEvent(draft: CalendarEventDraft) {
-  const body: CalendarEventCreateRequest = {
-    title: draft.title,
-    scheduledAt: toScheduledAt(draft.date, draft.time),
-    timeSpecified: draft.time !== null,
-    memo: draft.memo,
-  }
-  const response = await api.post<CalendarEventResponse>('/api/calendar/events', body)
+  const response = await api.post<CalendarEventResponse>('/api/calendar/events', toEventRequest(draft))
   return toCalendarEvent(response)
+}
+
+/**
+ * 면접 일정을 고칩니다. `PUT /api/calendar/events/{calendarEventId}` (이슈 #190, Cue-A/backend#133)
+ *
+ * 등록과 같은 네 칸을 다 보내 통째로 바꾸고(PUT), 고친 일정을 돌려받습니다. 규칙도 등록과 같습니다. 없는 일정(다른 탭에서
+ * 지움)은 `CALENDAR_EVENT_NOT_FOUND`(404) 입니다.
+ */
+export async function updateCalendarEvent(eventId: string, draft: CalendarEventDraft) {
+  const response = await api.put<CalendarEventResponse>(
+    `/api/calendar/events/${encodeURIComponent(eventId)}`,
+    toEventRequest(draft),
+  )
+  return toCalendarEvent(response)
+}
+
+/**
+ * 면접 일정을 지웁니다. `DELETE /api/calendar/events/{calendarEventId}` (이슈 #190, Cue-A/backend#133)
+ *
+ * 되돌릴 수 없어서 화면이 한 번 묻고 부릅니다. 이미 지운 일정을 다시 지우면 `CALENDAR_EVENT_NOT_FOUND`(404) 입니다
+ * (서버가 멱등하게 두지 않았습니다).
+ */
+export async function deleteCalendarEvent(eventId: string) {
+  await api.delete<void>(`/api/calendar/events/${encodeURIComponent(eventId)}`)
 }
