@@ -89,8 +89,19 @@ export function toSessionSetup(companyId?: string) {
   return `${ROUTES.SESSION_SETUP}?${SESSION_SETUP_COMPANY_PARAM}=${encodeURIComponent(companyId)}`
 }
 
-export function toCompany(companyId: string) {
-  return `/companies/${encodeURIComponent(companyId)}`
+/**
+ * 기업 상세 주소에 붙여 어디서 들어왔는지 알려줍니다. `/companies/6?from=interests`
+ * 상세의 돌아가기 링크가 이 값을 보고 관심 기업 · 기업 탐색 중 돌아갈 곳을 고릅니다 (이슈 #186).
+ * 새로고침하거나 주소를 복사해 열어도 남도록 `location.state` 가 아니라 주소에 싣습니다.
+ */
+export const COMPANY_FROM_PARAM = 'from'
+
+/** 기업 상세로 들어오는 곳 중 돌아갈 곳이 기업 탐색이 아닌 곳. 없으면 기업 탐색으로 돌아갑니다 */
+export type CompanyFrom = 'interests'
+
+export function toCompany(companyId: string, from?: CompanyFrom) {
+  const path = `/companies/${encodeURIComponent(companyId)}`
+  return from ? `${path}?${COMPANY_FROM_PARAM}=${from}` : path
 }
 
 export function toDeviceCheck(sessionId: string) {

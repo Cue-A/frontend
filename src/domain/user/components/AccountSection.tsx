@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { MYPAGE_ACCOUNT_ID, ROUTES } from '@/app/routes'
+import LogoutConfirmDialog from '@/domain/auth/components/LogoutConfirmDialog'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
@@ -10,7 +11,6 @@ import type { UseAccountResult } from '../hooks/useAccount'
 import type { UseMeResult } from '../hooks/useMe'
 import type { LoginProvider } from '../types/user'
 
-import LogoutConfirmDialog from './LogoutConfirmDialog'
 
 const PROVIDER_LABEL: Record<LoginProvider, string> = {
   LOCAL: '이메일',

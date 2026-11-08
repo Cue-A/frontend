@@ -2,7 +2,7 @@ import { IconSettings } from '@tabler/icons-react'
 import { Link } from 'react-router-dom'
 
 import { MYPAGE_ACCOUNT_ID, ROUTES, toMyPageProfile } from '@/app/routes'
-import { useLogout } from '@/domain/auth/hooks/useLogout'
+import { useLogoutConfirm } from '@/domain/auth/hooks/useLogoutConfirm'
 import { toTopBarProfile, type UseMeResult } from '@/domain/user/hooks/useMe'
 import TopBarActions from '@/shared/ui/TopBarActions'
 
@@ -20,7 +20,7 @@ type Props = {
  * 시안의 화면 테마 색 점은 지웠습니다 — 테마 · 다크모드는 MVP 밖이라 누를 수 없는 장식으로만 있었습니다 (이슈 #185).
  */
 export default function HomeTopBar({ me }: Props) {
-  const logout = useLogout()
+  const { openLogoutConfirm, logoutConfirmDialog } = useLogoutConfirm()
 
   return (
     <div className="flex items-center justify-end gap-3">
@@ -33,7 +33,9 @@ export default function HomeTopBar({ me }: Props) {
         <span className="sr-only">계정 설정</span>
       </Link>
 
-      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
+      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={openLogoutConfirm} />
+
+      {logoutConfirmDialog}
     </div>
   )
 }
