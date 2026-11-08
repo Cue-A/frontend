@@ -28,7 +28,7 @@ const SAMPLE_TEXT: Record<QuestionType, string> = {
   REASK: '죄송하지만 답변이 잘 들리지 않았어요. 다시 한 번 말씀해 주시겠어요?',
 }
 
-function buildQuestion(questionType: QuestionType, audioAvailable: boolean): Question {
+function buildQuestion(questionType: QuestionType, audioAvailable: boolean, questionNumber = 2): Question {
   return {
     questionId: `preview-${questionType}`,
     questionType,
@@ -37,7 +37,7 @@ function buildQuestion(questionType: QuestionType, audioAvailable: boolean): Que
     audioAvailable,
     category: questionType === 'REASK' ? null : '프로젝트경험',
     difficulty: questionType === 'REASK' ? null : 'L2',
-    questionNumber: 2,
+    questionNumber,
     questionTotal: 6,
   }
 }
@@ -89,6 +89,8 @@ type PreviewState = {
   speakingIntensity: number
   sessionId: string
   showProgressLabel: boolean
+  answerDelayed: boolean
+  firstQuestion: boolean
   needsRerecord: boolean
   showSubmitError: boolean
   remainingSec: number | null
@@ -105,6 +107,8 @@ const INITIAL_STATE: PreviewState = {
   speakingIntensity: 0,
   sessionId: AVATAR_SESSION_IDS[0],
   showProgressLabel: false,
+  answerDelayed: false,
+  firstQuestion: false,
   needsRerecord: false,
   showSubmitError: false,
   remainingSec: null,
@@ -194,6 +198,18 @@ function LiveFullWidthPreview() {
           onChange={(v) => set('showProgressLabel')(v === 'true')}
         />
         <ControlGroup
+          label="answerDelayed (waitingNextQuestion, 60초 지연 안내)"
+          value={String(state.answerDelayed) as 'true' | 'false'}
+          options={['false', 'true']}
+          onChange={(v) => set('answerDelayed')(v === 'true')}
+        />
+        <ControlGroup
+          label="첫 질문 (presenting · answering 일 때 북마크 안내 말풍선 6초, 한 번 보면 이 탭에선 다시 안 뜸)"
+          value={String(state.firstQuestion) as 'true' | 'false'}
+          options={['false', 'true']}
+          onChange={(v) => set('firstQuestion')(v === 'true')}
+        />
+        <ControlGroup
           label="needsRerecord"
           value={String(state.needsRerecord) as 'true' | 'false'}
           options={['false', 'true']}
@@ -262,10 +278,11 @@ function LiveFullWidthPreview() {
           hasCameraStream={state.hasCameraStream}
           isMicAvailable={state.isMicAvailable}
           caption="저는 데이터 분석 프로젝트에서 전처리를 담당했고..."
-          question={buildQuestion(state.questionType, state.audioAvailable)}
+          question={buildQuestion(state.questionType, state.audioAvailable, state.firstQuestion ? 1 : 2)}
           hideQuestionText={state.hideQuestionText}
           phase={state.phase}
           progressLabel={state.showProgressLabel ? '답변 정리 중' : null}
+          answerDelayed={state.answerDelayed}
           needsRerecord={state.needsRerecord}
           submitError={
             state.showSubmitError

@@ -5,7 +5,7 @@ type Props = {
   onClick: () => void
 }
 
-/** 질문 카드 우측 상단 북마크. 누르면 이 질문이 질문은행 "북마크" 에 담기고, 다시 누르면 빠진다. */
+/** 질문 카드 우측 상단 북마크. 누르면 이 질문이 질문 은행 "북마크" 에 담기고, 다시 누르면 빠진다. */
 export default function BookmarkButton({ bookmarked, pending = false, onClick }: Props) {
   return (
     <button

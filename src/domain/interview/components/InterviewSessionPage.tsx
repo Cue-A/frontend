@@ -43,6 +43,8 @@ type Props = {
   sessionId: string
   onSubmitAnswer?: () => void
   progressLabel?: string | null
+  /** 답변 처리가 60초 넘게 걸리는 중인지. true 면 진행 문구 대신 지연 안내를 보여준다. */
+  answerDelayed?: boolean
   needsRerecord?: boolean
   submitError?: SubmitErrorState | null
   remainingSec?: number | null
@@ -79,6 +81,7 @@ export default function InterviewSessionPage({
   sessionId,
   onSubmitAnswer,
   progressLabel = null,
+  answerDelayed = false,
   needsRerecord = false,
   submitError = null,
   remainingSec = null,
@@ -137,6 +140,8 @@ export default function InterviewSessionPage({
           sessionId={sessionId}
           showCaptionLine={captionVisible}
           loadingLabel={loadingLabel}
+          delayed={answerDelayed && phase === 'waitingNextQuestion'}
+          bookmarkHintEligible={(phase === 'presenting' || phase === 'answering') && question.questionNumber === 1}
           caption={caption}
           captionSupported={captionSupported}
         />
