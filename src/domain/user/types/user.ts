@@ -65,14 +65,17 @@ export type AccountAuth = {
   provider: LoginProvider
   /** 비밀번호가 있는지. 카카오 전용이면 false 라 비밀번호를 바꿀 수 없습니다 */
   hasPassword: boolean
-  /** 이 수단을 연결한 때. 서버는 시간대 없는 시각(`2026-09-01T10:00:00`)을 줍니다 */
+  /** 이 수단을 연결한 때. 지금 서버는 시간대 없는 한국 시각(`2026-09-01T10:00:00`)을 줍니다 */
   linkedAt: string
 }
 
 /** 계정 정보. `GET /api/users/me/account` (Cue-A/backend#126) */
 export type AccountInfo = {
   email: string | null
-  /** 가입한 때. 서버는 시간대 없는 시각을 줍니다 — 날짜는 앞 10자리를 그대로 씁니다(시간대로 옮기면 하루 밀릴 수 있음) */
+  /**
+   * 가입한 때. 지금 서버는 시간대 없는 한국 시각을 줍니다(`LocalDateTime`). 다른 응답처럼 UTC(`...Z`)로 바뀌어도
+   * 하루 밀리지 않게, 화면은 앞 10자리를 자르지 않고 `formatDate` 로 보는 사람의 시간대 날짜를 씁니다 (PR #202 리뷰)
+   */
   createdAt: string
   auths: AccountAuth[]
 }

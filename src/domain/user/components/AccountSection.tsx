@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { MYPAGE_ACCOUNT_ID, ROUTES } from '@/app/routes'
+import { formatDate } from '@/shared/lib/formatDate'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
@@ -15,11 +16,6 @@ import LogoutConfirmDialog from './LogoutConfirmDialog'
 const PROVIDER_LABEL: Record<LoginProvider, string> = {
   LOCAL: '이메일',
   KAKAO: '카카오',
-}
-
-/** '2026-09-01T10:00:00' → '2026.09.01' */
-function toDateLabel(iso: string) {
-  return iso.slice(0, 10).replace(/-/g, '.')
 }
 
 type Props = {
@@ -63,7 +59,7 @@ export default function AccountSection({ me, account }: Props) {
                   ? info.auths.map((auth) => (
                       <span key={auth.provider} className="flex items-center gap-2">
                         <Badge>{PROVIDER_LABEL[auth.provider] ?? auth.provider}</Badge>
-                        <span className="text-body-sm text-neutral-500">{toDateLabel(auth.linkedAt)} 연결</span>
+                        <span className="text-body-sm text-neutral-500">{formatDate(auth.linkedAt)} 연결</span>
                       </span>
                     ))
                   : me.status === 'ready' &&
@@ -75,7 +71,7 @@ export default function AccountSection({ me, account }: Props) {
             {info && (
               <div className="flex flex-col gap-2">
                 <dt className="text-body-sm text-neutral-500">가입일</dt>
-                <dd className="text-body-md text-neutral-900">{toDateLabel(info.createdAt)}</dd>
+                <dd className="text-body-md text-neutral-900">{formatDate(info.createdAt)}</dd>
               </div>
             )}
           </dl>

@@ -31,7 +31,8 @@ import WeeklyGoalCard from './WeeklyGoalCard'
  * (api/homeMock.ts — `?mock=empty` 로 막 가입한 사람의 빈 화면을 볼 수 있습니다). 이번 주 목표는 성장 관리와 같은
  * `/api/growth` 로 따로 받습니다(이슈 #201) — 두 화면의 목표 숫자가 늘 같아야 합니다.
  *
- * 칸마다 따로 받아서 한 칸이 실패하면 그 칸에만 "다시 불러오기" 를 둡니다. 화면 전체를 막는 안내는 셋 다 실패했을 때만 띄웁니다.
+ * 칸마다 따로 받아서 한 칸이 실패하면 그 칸에만 "다시 불러오기" 를 둡니다. 화면 전체를 막는 안내는 네 칸(숫자 카드 · 최근 리포트 ·
+ * 배지와 일정 · 이번 주 목표)이 다 실패했을 때만 띄웁니다.
  *
  * 배경은 시안처럼 화면 전체에 옅은 워시를 깔아서, 여백을 레이아웃이 아니라 이 화면이 정합니다
  * (router.tsx 의 `fullBleed`).
@@ -47,7 +48,12 @@ export default function HomePage() {
   const extrasData = extras.status === 'ready' ? extras.data : null
   const isNewUser = statsData !== null && statsData.streak.best === 0 && reportsData?.length === 0
 
-  const allFailed = stats.status === 'error' && recentReports.status === 'error' && extras.status === 'error'
+  // 넷 다 실패했을 때만 화면 전체를 막습니다. 이번 주 목표 하나라도 받았으면 그 칸은 보여줍니다 (PR #202 리뷰)
+  const allFailed =
+    stats.status === 'error' &&
+    recentReports.status === 'error' &&
+    extras.status === 'error' &&
+    weeklyGoal.status === 'error'
   const retryAll = () => {
     stats.retry()
     recentReports.retry()
