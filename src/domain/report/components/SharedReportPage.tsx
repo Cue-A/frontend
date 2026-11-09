@@ -108,7 +108,7 @@ function SharedReportBody({ shared }: { shared: SharedReport }) {
  * - 회차 칩 · 회차 비교 · 성장 추이 탭 — 받은 사람에게 남의 다른 회차는 열리지 않아서
  * - 답변 영상 · 녹음 — 공유되지 않습니다
  *
- * 답변 내용이 들어 있어서 검색 엔진이 담지 않게 `noindex` 를 답니다. React 19 는 컴포넌트 안의 `<meta>` · `<title>` 을
+ * 답변 내용이 들어 있어서 검색 엔진이 담지 않게 `noindex` 를, 링크 주소(`shareId`)가 다른 사이트로 새지 않게 `no-referrer` 를 답니다. React 19 는 컴포넌트 안의 `<meta>` · `<title>` 을
  * 문서 머리로 올려 주고, 화면을 떠나면 걷어 갑니다.
  */
 export default function SharedReportPage() {
@@ -119,6 +119,8 @@ export default function SharedReportPage() {
     <div className="min-h-screen bg-neutral-50">
       <title>{PAGE_TITLE}</title>
       <meta name="robots" content="noindex, nofollow" />
+      {/* 이 화면에서 밖으로 나가는 링크가 생겨도 주소의 shareId 가 Referer 로 새지 않게 합니다 (PR #200 리뷰) */}
+      <meta name="referrer" content="no-referrer" />
 
       <SharedTopBar />
 

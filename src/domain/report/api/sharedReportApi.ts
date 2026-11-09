@@ -25,7 +25,8 @@ export type SharedReport = {
   timeline: ReportTimeline
 }
 
-export function toSharedReport(response: PublicReportResponse): SharedReport {
+/** 공개 리포트 응답 → 화면 모양. 주소를 만드는 `app/routes` 의 `toSharedReport` 와 헷갈리지 않게 이름을 나눴습니다 (PR #200 리뷰) */
+export function fromPublicReportResponse(response: PublicReportResponse): SharedReport {
   return {
     // 남의 리포트라 다시 분석할 수 없습니다. 안내 문구에 "다시 분석할 수 있어요" 를 붙이지 않습니다
     report: toReportContent(response, { canRetry: false }),
@@ -51,5 +52,5 @@ export function toSharedReport(response: PublicReportResponse): SharedReport {
  */
 export async function getSharedReport(shareId: string) {
   const response = await api.get<PublicReportResponse>(`/api/public/reports/${encodeURIComponent(shareId)}`)
-  return toSharedReport(response)
+  return fromPublicReportResponse(response)
 }

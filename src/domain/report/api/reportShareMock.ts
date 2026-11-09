@@ -17,6 +17,9 @@ import { mockTimelineOf } from './timelineMock'
  * 목업은 메모리에만 둬서 **새 탭에서는 이 탭의 공유 상태를 모릅니다.** 그래도 받은 사람 화면을 새 탭으로 열어 볼 수 있게,
  * 목업 리포트(`MOCK_REPORT_IDS`)의 링크는 `shareId` 만 보고 어느 리포트인지 찾습니다. 이 탭에서 해제했거나 다시 만든
  * 링크는 이 탭에서만 막힙니다.
+ *
+ * `shareId` 에 리포트 · 몇 번째 링크인지 넣는 인코딩(`shareIdOf` · `generations` · `openLinks`)은 **목업 전용**입니다.
+ * 실서버의 `shareId` 는 아무 뜻 없는 UUID 입니다. 이 목업을 걷어낼 때 같이 지워 주세요 (PR #200 리뷰).
  */
 
 const SCENARIO_IDS: string[] = Object.values(MOCK_REPORT_IDS)

@@ -599,7 +599,7 @@ export function toReportShare(share: ReportShareResponse | null | undefined): Re
 }
 
 /**
- * 리포트 내용을 화면 모양으로 바꿉니다. 본인 리포트(`toReport`)와 공개 리포트(`toSharedReport`)가 같이 씁니다.
+ * 리포트 내용을 화면 모양으로 바꿉니다. 본인 리포트(`toReport`)와 공개 리포트(`fromPublicReportResponse`)가 같이 씁니다.
  * 두 화면이 같은 응답 칸을 다르게 읽으면 같은 리포트가 링크로 열 때만 다르게 보입니다.
  * 공개 리포트는 `canRetry: false` 로 부릅니다 — 안내 문구에서 "다시 분석할 수 있어요" 를 뺍니다.
  */

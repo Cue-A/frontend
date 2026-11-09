@@ -30,7 +30,10 @@ export default function ReportUnshareDialog({ onUnshare, onClose }: Props) {
     if (dialog && !dialog.open) dialog.showModal()
   }, [])
 
-  // Esc 를 연달아 누르면 브라우저가 cancel 을 막아도 창을 닫을 때가 있어서, 해제하는 동안은 키 자체를 막습니다
+  // 해제하는 동안은 Esc 키 자체를 막습니다. onCancel 의 preventDefault 만으로는 부족합니다 —
+  // Chrome 은 Esc 를 연달아 두 번 누르면 두 번째 cancel 을 막지 못하게 하고 창을 닫습니다(사용자 활성화 없이 반복되는
+  // 닫기 막기를 무시하는 close watcher 규칙). 해제 요청 중(`removing`)에 Esc 를 두 번 빠르게 누르면 재현됩니다.
+  // 일정 삭제 · 문서 올리기 창(EventDeleteDialog · DocumentUploadDialog)도 같은 이유로 둘 다 둡니다
   useEffect(() => {
     if (!removing) return
 
