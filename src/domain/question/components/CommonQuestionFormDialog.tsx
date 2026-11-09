@@ -18,7 +18,10 @@ type Props = {
   onClose: () => void
 }
 
-const CATEGORY_OPTIONS = QUESTION_CATEGORIES.map((category) => ({ value: category, label: category }))
+const CATEGORY_OPTIONS = QUESTION_CATEGORIES.map((category) => ({
+  value: category,
+  label: category,
+}))
 
 /**
  * 내 질문을 추가하거나 고치는 창입니다. (질문 은행 > 공통 질문 탭의 "질문 추가", 내 질문 카드의 "수정")
@@ -112,13 +115,14 @@ export default function CommonQuestionFormDialog({ editing, onSaved, onGone, onC
               maxLength={MAX_QUESTION_LENGTH}
               rows={3}
               autoFocus
-              disabled={saving}
+              // `disabled` 로 잠그면 포커스가 body 로 빠져서, 저장이 실패했을 때 키보드 사용자가 칸으로 돌아오기 어렵습니다
+              readOnly={saving}
               onChange={(event) => {
                 setText(event.target.value)
                 clearError()
               }}
               placeholder="연습하고 싶은 질문을 적어 주세요"
-              className="block w-full resize-y rounded-sm border border-neutral-300 bg-neutral-0 px-4 py-3 text-body-md text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none disabled:opacity-50"
+              className="block w-full resize-y rounded-sm border border-neutral-300 bg-neutral-0 px-4 py-3 text-body-md text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none read-only:opacity-50"
             />
             <p className="text-right text-body-sm text-neutral-500">
               {text.length} / {MAX_QUESTION_LENGTH}
@@ -149,7 +153,8 @@ export default function CommonQuestionFormDialog({ editing, onSaved, onGone, onC
           <Button size="sm" onClick={close} disabled={saving}>
             취소
           </Button>
-          <Button variant="primary" size="sm" type="submit" disabled={!canSave}>
+          {/* 저장 중에도 `disabled` 로 잠그지 않습니다. 누른 버튼이 잠기면 포커스가 빠집니다. 연타는 `handleSave` 가 막습니다 */}
+          <Button variant="primary" size="sm" type="submit" disabled={trimmed === ''}>
             {saving ? '저장 중…' : editing ? '수정' : '추가'}
           </Button>
         </div>

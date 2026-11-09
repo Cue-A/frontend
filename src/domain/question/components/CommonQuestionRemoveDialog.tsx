@@ -69,7 +69,9 @@ export default function CommonQuestionRemoveDialog({ question, onRemoved, onGone
         <p className="break-keep text-body-md text-neutral-500">
           ‘<span className="font-semibold text-neutral-900">{question.text}</span>’
         </p>
-        <p className="break-keep text-body-md text-neutral-500">삭제하면 되돌릴 수 없고 메모와 즐겨찾기도 함께 지워져요.</p>
+        <p className="break-keep text-body-md text-neutral-500">
+          삭제하면 되돌릴 수 없고 메모와 즐겨찾기도 함께 지워져요.
+        </p>
 
         {error && (
           <p role="alert" className="break-keep text-body-sm text-semantic-danger">
