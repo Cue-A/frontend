@@ -97,7 +97,13 @@ export function toSessionSetup(companyId?: string) {
 export const COMPANY_FROM_PARAM = 'from'
 
 /** 기업 상세로 들어오는 곳 중 돌아갈 곳이 기업 탐색이 아닌 곳. 없으면 기업 탐색으로 돌아갑니다 */
-export type CompanyFrom = 'interests'
+const COMPANY_FROMS = ['interests'] as const
+export type CompanyFrom = (typeof COMPANY_FROMS)[number]
+
+/** 주소의 `from` 값이 아는 값인지. 값을 늘릴 때 `COMPANY_FROMS` 한 곳만 고치면 됩니다 (PR #196 리뷰) */
+export function isCompanyFrom(value: string | null): value is CompanyFrom {
+  return COMPANY_FROMS.some((from) => from === value)
+}
 
 export function toCompany(companyId: string, from?: CompanyFrom) {
   const path = `/companies/${encodeURIComponent(companyId)}`

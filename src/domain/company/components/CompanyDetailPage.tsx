@@ -1,7 +1,7 @@
 import { IconArrowLeft, IconPlayerPlay } from '@tabler/icons-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
-import { COMPANY_FROM_PARAM, ROUTES, toSessionSetup } from '@/app/routes'
+import { COMPANY_FROM_PARAM, ROUTES, isCompanyFrom, toSessionSetup, type CompanyFrom } from '@/app/routes'
 import { toUserMessage } from '@/shared/api/errorMessage'
 import { initialOf } from '@/shared/lib/initialOf'
 import Button from '@/shared/ui/Button'
@@ -27,16 +27,21 @@ type BackTarget = {
   label: string
 }
 
+/** 들어온 곳별 돌아갈 곳. `CompanyFrom` 에 값을 더하면 여기도 채우라고 타입이 알려줍니다 */
+const BACK_TARGETS: Record<CompanyFrom, BackTarget> = {
+  interests: { to: ROUTES.MYPAGE_INTERESTS, label: '관심 기업' },
+}
+
+const DEFAULT_BACK_TARGET: BackTarget = { to: ROUTES.COMPANIES, label: '기업 목록' }
+
 /**
  * 상세에서 돌아갈 곳. 관심 기업에서 들어왔으면(`?from=interests`) 관심 기업으로, 아니면 기업 탐색으로 갑니다 (이슈 #186).
  * 전에는 늘 기업 탐색으로 가서, 관심 기업에서 들어온 사람은 보던 화면을 잃었습니다. 모르는 값은 기업 탐색으로 떨어뜨립니다.
  */
 function useBackTarget(): BackTarget {
   const [searchParams] = useSearchParams()
-  if (searchParams.get(COMPANY_FROM_PARAM) === 'interests') {
-    return { to: ROUTES.MYPAGE_INTERESTS, label: '관심 기업' }
-  }
-  return { to: ROUTES.COMPANIES, label: '기업 목록' }
+  const from = searchParams.get(COMPANY_FROM_PARAM)
+  return isCompanyFrom(from) ? BACK_TARGETS[from] : DEFAULT_BACK_TARGET
 }
 
 function BackLink({ target }: { target: BackTarget }) {
