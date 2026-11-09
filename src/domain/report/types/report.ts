@@ -258,4 +258,27 @@ export type Report = {
   improvedAnswer: ImprovedAnswer | null
   /** 실패한 축을 다시 분석한 상태. 재시도한 적이 없거나 성공했으면 null 입니다 */
   retry: RetryState | null
+  /** 공유 링크. 공유하지 않았으면 null 입니다 (이슈 #199) */
+  share: ReportShare | null
 }
+
+/**
+ * 리포트 공유 링크입니다. (이슈 #199 · Cue-A/backend#137)
+ *
+ * 링크 주소는 서버가 아니라 프론트가 `shareId` 로 만듭니다(`toSharedReportUrl`). 서버는 프론트 주소를 모릅니다.
+ * 해제한 뒤 다시 공유하면 `shareId` 가 바뀌어서, 예전에 보낸 링크는 계속 막힙니다.
+ */
+export type ReportShare = {
+  /** `reportId` 와 다른 값입니다. 공개 리포트 조회(`GET /api/public/reports/{shareId}`)에 씁니다 */
+  shareId: string
+  /** 공유를 시작한 시각(ISO). 응답에 없으면 null */
+  sharedAt: string | null
+}
+
+/**
+ * 리포트 **내용**만 담은 모양입니다. 링크를 받은 사람이 보는 공개 리포트 화면(`SharedReportPage`)이 씁니다.
+ *
+ * 공개 리포트 응답에는 본인 API 를 부르는 값(`reportId` · `sessionId`)과 본인 화면의 버튼용 값(`retry` · `share`)이
+ * 없습니다. 회차 칩(`attempt` · `attempts`)도 남의 다른 회차로 가는 길이라 그리지 않습니다.
+ */
+export type ReportContent = Omit<Report, 'reportId' | 'sessionId' | 'attempt' | 'attempts' | 'retry' | 'share'>

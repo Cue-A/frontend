@@ -26,6 +26,8 @@ import type {
   OverviewFact,
   Report,
   RetryAxis,
+  ReportContent,
+  ReportShare,
   RetryState,
   ScoreMetric,
   SubMetric,
@@ -153,6 +155,13 @@ export type ReportRetryInfoResponse = {
   retryable: boolean | null
 }
 
+/** 공유 링크. 공유 생성 응답이자 상세 조회의 `share` 입니다 (Cue-A/backend#137 `ReportShareInfo`) */
+export type ReportShareResponse = {
+  shareId: string
+  /** ISO 8601 */
+  sharedAt: string | null
+}
+
 export type ReportDetailResponse = {
   reportId: string
   sessionId: string
@@ -176,7 +185,18 @@ export type ReportDetailResponse = {
    * 오면 쓰고, 없거나 생성에 실패(null)하면 총평 칸만 그리지 않습니다.
    */
   summary?: string | null
+  /**
+   * 공유 링크. 공유하지 않았으면 null 입니다 (Cue-A/backend#137).
+   * 공유 API 가 배포되기 전 서버는 이 칸을 보내지 않아서 없을 수도 있다고 둡니다 — 없으면 공유 안 함으로 봅니다.
+   */
+  share?: ReportShareResponse | null
 }
+
+/**
+ * 리포트 **내용**을 만드는 데 쓰는 칸만 남긴 모양입니다. 본인 상세 응답과 공개 리포트 응답(`PublicReportResponse`)이
+ * 둘 다 이 모양을 채웁니다. 공개 응답에는 `reportId` · `sessionId` · `retry` · `share` 가 없습니다 (Cue-A/backend#137).
+ */
+export type ReportContentResponse = Omit<ReportDetailResponse, 'reportId' | 'sessionId' | 'retry' | 'share'>
 
 /** 화면에 쓰는 축 이름입니다. */
 const AXIS_LABEL: Record<AxisKey, string> = {
@@ -233,7 +253,7 @@ const MISSING_AXIS: AxisResponse = {
   evidence: [],
 }
 
-function axisOf(detail: ReportDetailResponse, key: AxisKey): AxisResponse {
+function axisOf(detail: ReportContentResponse, key: AxisKey): AxisResponse {
   return detail.axes?.[key] ?? MISSING_AXIS
 }
 
@@ -305,7 +325,7 @@ export function toRetryState(retry: ReportRetryInfoResponse | null): RetryState 
 }
 
 /** 세부 점수 세 줄을 만듭니다. */
-function toScoreMetrics(detail: ReportDetailResponse): ScoreMetric[] {
+function toScoreMetrics(detail: ReportContentResponse): ScoreMetric[] {
   return AXIS_ORDER.map((key) => {
     const axis = axisOf(detail, key)
 
@@ -372,7 +392,7 @@ function toHesitationMetric(speech: AxisResponse): SubMetric | null {
 }
 
 /** 값이 있는 보조 지표만 모읍니다. 없는 지표는 자리도 만들지 않습니다. */
-function toSubMetrics(detail: ReportDetailResponse): SubMetric[] {
+function toSubMetrics(detail: ReportContentResponse): SubMetric[] {
   return [toResilienceMetric(detail.resilience), toHesitationMetric(axisOf(detail, 'speech'))].filter(
     (item): item is SubMetric => item !== null,
   )
@@ -394,15 +414,16 @@ function toScoreGateReason(overall: OverallResponse): string | null {
  * 실패한 축이 있으면 다시 분석할 곳도 알려줍니다. 버튼은 세부 점수의 그 줄에 있습니다 —
  * 안내만 보고 지나가면 다시 분석할 수 있다는 걸 모릅니다.
  */
-function toPartialNotices(detail: ReportDetailResponse): string[] {
+/** `canRetry` 가 false 면 "다시 분석할 수 있어요" 를 붙이지 않습니다 — 공유 링크로 연 화면은 남의 리포트라 다시 분석할 수 없습니다 */
+function toPartialNotices(detail: ReportContentResponse, { canRetry }: { canRetry: boolean }): string[] {
   if (!detail.overall.partial) return []
 
   const missing = AXIS_ORDER.filter((key) => toMetricStatus(axisOf(detail, key)) !== 'ok').map(
     (key) => `${AXIS_LABEL[key]}(${toUnavailableLabel(axisOf(detail, key))})`,
   )
 
-  const canRetry = AXIS_ORDER.some((key) => toRetryAxis(key, axisOf(detail, key)) !== null)
-  const retryHint = canRetry ? ' 아래 세부 점수에서 빠진 항목만 다시 분석할 수 있어요.' : ''
+  const retryable = canRetry && AXIS_ORDER.some((key) => toRetryAxis(key, axisOf(detail, key)) !== null)
+  const retryHint = retryable ? ' 아래 세부 점수에서 빠진 항목만 다시 분석할 수 있어요.' : ''
 
   return [
     `일부 항목이 빠진 결과예요. ${missing.join(' · ')} — 총점은 남은 항목으로만 계산됐습니다.${retryHint}`,
@@ -410,7 +431,7 @@ function toPartialNotices(detail: ReportDetailResponse): string[] {
 }
 
 /** 문항을 번호 순으로 둡니다. 응답 순서에 기대지 않습니다 */
-function sortedQuestions(detail: ReportDetailResponse): QuestionResultResponse[] {
+function sortedQuestions(detail: ReportContentResponse): QuestionResultResponse[] {
   return [...(detail.questions ?? [])].sort((a, b) => a.questionNumber - b.questionNumber)
 }
 
@@ -506,7 +527,7 @@ function toHighlightText(item: EvidenceResponse, numberOf: Map<string, number>):
  * 고른 뒤에는 축 순서대로 묶어 보여줍니다.
  */
 function toHighlights(
-  detail: ReportDetailResponse,
+  detail: ReportContentResponse,
   questions: QuestionResultResponse[],
   kind: 'strength' | 'weakness',
 ): Highlight[] {
@@ -545,7 +566,7 @@ function toHighlights(
  * 답변 개선 방향입니다. 화면은 한 문항만 보여주므로 첫 번째 것을 씁니다.
  * 백엔드는 내용 점수가 낮은 문항을 최대 2개 보내고, 없으면 빈 배열입니다 — 그때는 절이 사라집니다.
  */
-function toImprovedAnswer(detail: ReportDetailResponse, questions: QuestionResultResponse[]): ImprovedAnswer | null {
+function toImprovedAnswer(detail: ReportContentResponse, questions: QuestionResultResponse[]): ImprovedAnswer | null {
   const first = (detail.improvedAnswers ?? []).find(
     (item) => toText(item.originalExcerpt) !== null && toText(item.suggestion) !== null,
   )
@@ -571,27 +592,35 @@ function toInterviewDate(iso: string | null): string {
   return `${date.getFullYear()}.${mm}.${dd}`
 }
 
-/** 리포트 상세 응답을 화면용 리포트로 바꿉니다. 응답에 없는 값은 이 파일 맨 위 표대로 채웁니다 */
-export function toReport(detail: ReportDetailResponse): Report {
+/** 공유 링크. 칸이 없거나 `shareId` 가 비면 공유 안 함으로 봅니다 */
+export function toReportShare(share: ReportShareResponse | null | undefined): ReportShare | null {
+  if (!share || !share.shareId) return null
+  return { shareId: share.shareId, sharedAt: share.sharedAt ?? null }
+}
+
+/**
+ * 리포트 내용을 화면 모양으로 바꿉니다. 본인 리포트(`toReport`)와 공개 리포트(`toSharedReport`)가 같이 씁니다.
+ * 두 화면이 같은 응답 칸을 다르게 읽으면 같은 리포트가 링크로 열 때만 다르게 보입니다.
+ * 공개 리포트는 `canRetry: false` 로 부릅니다 — 안내 문구에서 "다시 분석할 수 있어요" 를 뺍니다.
+ */
+export function toReportContent(
+  detail: ReportContentResponse,
+  { canRetry }: { canRetry: boolean } = { canRetry: true },
+): ReportContent {
   const questions = sortedQuestions(detail)
 
   return {
-    reportId: detail.reportId,
-    sessionId: detail.sessionId,
     status: detail.status === 'PARTIAL' ? 'partial' : 'complete',
     companyName: null,
     jobRole: null,
     interviewDate: toInterviewDate(detail.createdAt),
     questionCount: questions.length,
 
-    attempt: 1,
-    attempts: [],
-
     totalScore: detail.overall.score,
     totalScoreDisplay: detail.overall.display,
     totalScoreDelta: null,
     scoreGateReason: toScoreGateReason(detail.overall),
-    notices: toPartialNotices(detail),
+    notices: toPartialNotices(detail, { canRetry }),
 
     summary: {
       verdict: toText(detail.summary),
@@ -608,6 +637,18 @@ export function toReport(detail: ReportDetailResponse): Report {
     metricsComment: null,
 
     improvedAnswer: toImprovedAnswer(detail, questions),
+  }
+}
+
+/** 리포트 상세 응답을 화면용 리포트로 바꿉니다. 응답에 없는 값은 이 파일 맨 위 표대로 채웁니다 */
+export function toReport(detail: ReportDetailResponse): Report {
+  return {
+    ...toReportContent(detail),
+    reportId: detail.reportId,
+    sessionId: detail.sessionId,
+    attempt: 1,
+    attempts: [],
     retry: toRetryState(detail.retry),
+    share: toReportShare(detail.share),
   }
 }

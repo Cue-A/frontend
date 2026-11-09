@@ -106,7 +106,7 @@ export default function ReportPage() {
   const reportFileName = data ? reportFileBaseName(data) : '큐앤에이_결과리포트'
   const fileBaseName = view === 'growth' ? `${reportFileName}_성장추이` : reportFileName
   const exporter = useReportExport(sheetRef, fileBaseName)
-  const share = useReportShare(sheetRef, fileBaseName, data ? data.reportId : null)
+  const share = useReportShare(sheetRef, fileBaseName, data ? { reportId: data.reportId, share: data.share } : null)
 
   // 성장 추이 탭은 회차 비교만 저장합니다. 아직 불러오는 중이거나 못 불러왔으면 제목만 남은 파일이 나와서 저장 · 공유를 잠급니다
   const exportBlockedReason =

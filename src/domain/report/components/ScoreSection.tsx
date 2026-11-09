@@ -14,12 +14,19 @@ type Props = {
   metrics: ScoreMetric[]
   subMetrics: SubMetric[]
   comment: string | null
-  /** 실패한 축을 다시 분석하는 상태와 동작 (`useAxisRetry`) */
-  retry: AxisRetry
+  /**
+   * 실패한 축을 다시 분석하는 상태와 동작 (`useAxisRetry`).
+   * 비우면 읽기 전용입니다 — 공유 링크로 연 리포트(`SharedReportPage`)는 남의 리포트라 다시 분석할 수 없어서
+   * "다시 분석" 칸을 그리지 않고, 실패한 줄은 "분석하지 못했어요" 만 적습니다 (이슈 #199)
+   */
+  retry?: AxisRetry
 }
 
+/** 다시 분석할 수 없는 화면에서 쓰는 빈 상태 */
+const READ_ONLY_RETRY: Pick<AxisRetry, 'running' | 'outcomes'> = { running: [], outcomes: {} }
+
 /** 다시 분석해서 점수를 받은 축 이름들. 방금 살아난 줄을 알려주는 데 씁니다 */
-function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
+function recoveredLabels(metrics: ScoreMetric[], retry: Pick<AxisRetry, 'outcomes'>) {
   const recoveredAxes = Object.entries(retry.outcomes)
     .filter(([, outcome]) => outcome?.kind === 'recovered')
     .map(([axis]) => axis)
@@ -63,7 +70,8 @@ function recoveredLabels(metrics: ScoreMetric[], retry: AxisRetry) {
  * 막대 너비는 계산값이라 인라인 style 을 씁니다.
  * (docs/01-conventions.md "스타일" 절)
  */
-export default function ScoreSection({ metrics, subMetrics, comment, retry }: Props) {
+export default function ScoreSection({ metrics, subMetrics, comment, retry: retryAction }: Props) {
+  const retry = retryAction ?? READ_ONLY_RETRY
   const recovered = recoveredLabels(metrics, retry)
   const failed: FailedAxis[] = metrics.flatMap((metric) =>
     metric.retryAxis ? [{ axis: metric.retryAxis, label: metric.label }] : [],
@@ -153,13 +161,15 @@ export default function ScoreSection({ metrics, subMetrics, comment, retry }: Pr
           })}
         </ul>
 
-        <RetryPanel
-          failed={failed}
-          running={retry.running}
-          outcomes={retry.outcomes}
-          onRetry={retry.retry}
-          focusFallbackRef={headingRef}
-        />
+        {retryAction && (
+          <RetryPanel
+            failed={failed}
+            running={retryAction.running}
+            outcomes={retryAction.outcomes}
+            onRetry={retryAction.retry}
+            focusFallbackRef={headingRef}
+          />
+        )}
 
         {subMetrics.length > 0 && (
           <div className="flex flex-wrap gap-3">

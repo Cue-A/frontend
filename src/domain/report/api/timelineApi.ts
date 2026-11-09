@@ -42,7 +42,8 @@ function toStatus(value: string | null | undefined): TimelineAxisStatus | null {
 const secondsOrNull = (value: number | null | undefined) =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 
-export function toReportTimeline(response: ReportTimelineResponse): ReportTimeline {
+/** 축 상태와 문항별 근거만 봅니다. 공개 리포트 응답(`sharedReportApi.ts`)도 이 둘을 채워 같은 변환을 씁니다 */
+export function toReportTimeline(response: Pick<ReportTimelineResponse, 'axes' | 'questions'>): ReportTimeline {
   const axes: ReportTimeline['axes'] = {}
   for (const axis of AXES) {
     const status = toStatus(response.axes?.[axis])

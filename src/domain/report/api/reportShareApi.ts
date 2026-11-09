@@ -1,20 +1,27 @@
 import { api } from '@/shared/api/apiClient'
 
+import type { ReportShareResponse } from './reportResponse'
+
 import './reportShareMock'
 
-/** 서버 응답 모양입니다. 아직 백엔드에 없는 API 라 프론트가 먼저 정한 임시 모양입니다 (이슈 #32) */
-export type ReportShareLinkResponse = {
-  shareUrl: string
-  /** 링크가 만료되는 시각(ISO). 만료가 없으면 null */
-  expiresAt: string | null
+/**
+ * 리포트 공유 링크 만들기. `POST /api/reports/{reportId}/share` — `reports` 도메인입니다 (Cue-A/backend#137).
+ *
+ * - 끝난 리포트(COMPLETED · PARTIAL)만 됩니다. 진행 중이면 202 `REPORT_NOT_READY`, 실패면 409 `REPORT_FAILED`
+ * - **이미 공유 중이면 같은 링크**를 돌려줍니다. 다시 눌러도 보낸 링크가 깨지지 않습니다
+ * - 유효기간은 없습니다. 해제할 때까지 열립니다
+ * - 1분에 30번
+ */
+export function createReportShare(reportId: string) {
+  return api.post<ReportShareResponse>(`/api/reports/${encodeURIComponent(reportId)}/share`)
 }
 
 /**
- * 리포트 공유 링크 발급. `POST /api/reports/{reportId}/share-link` — **백엔드에 아직 없습니다.**
+ * 리포트 공유 해제. `DELETE /api/reports/{reportId}/share` (Cue-A/backend#137).
  *
- * 지금은 목업(`reportShareMock.ts`)이 답합니다. `reports` 를 실제 서버에 붙여도 이 API 만은 목업입니다(`missingInBackend`).
- * 백엔드에 생기면 목업의 `missingInBackend` 를 지우고, 응답 모양이 다르면 여기서 맞춥니다.
+ * 해제하면 그 링크는 바로 막힙니다. 다시 공유하면 새 링크(새 `shareId`)가 나오고 예전 링크는 계속 막힙니다.
+ * 공유하지 않은 리포트를 해제해도 오류가 아닙니다. 1분에 30번.
  */
-export function createReportShareLink(reportId: string) {
-  return api.post<ReportShareLinkResponse>(`/api/reports/${encodeURIComponent(reportId)}/share-link`)
+export function deleteReportShare(reportId: string) {
+  return api.delete<void>(`/api/reports/${encodeURIComponent(reportId)}/share`)
 }

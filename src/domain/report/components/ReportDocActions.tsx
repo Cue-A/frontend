@@ -30,8 +30,8 @@ type Props = {
  *
  * 이 줄은 저장 대상이 아니라 판 바깥에 있고, 인쇄에서도 뺍니다.
  *
- * - `공유하기` — 창을 열어 이미지로 공유하거나 링크를 복사합니다(`ReportShareDialog`). 공유 링크 API 가 없어 링크는 목업이고,
- *   창 안에 "준비 중" 으로 적습니다 (이슈 #32)
+ * - `공유하기` — 창을 열어 이미지로 공유하거나, 로그인 없이 보는 공개 링크를 만들고 · 복사하고 · 해제합니다
+ *   (`ReportShareDialog` · 이슈 #199)
  */
 export default function ReportDocActions({ exporter, share, blockedReason = null }: Props) {
   const blocked = blockedReason !== null

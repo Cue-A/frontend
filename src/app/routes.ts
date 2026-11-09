@@ -17,6 +17,11 @@ export const ROUTES = {
   INTERVIEW: '/interviews/:sessionId',
   ANALYZING: '/interviews/:sessionId/analyzing',
   REPORT: '/reports/:reportId',
+  /**
+   * 공유 링크로 연 리포트 — 로그인 없이 보는 읽기 전용 화면입니다 (이슈 #199).
+   * 로그인 가드 · 사이드바 밖에 둡니다. `shareId` 는 `reportId` 와 다른 값이라, 이 주소로는 본인 리포트 API 를 부를 수 없습니다.
+   */
+  SHARED_REPORT: '/share/:shareId',
   /** C-02 내 보관함 > 자소서 · 포트폴리오 (이슈 #59) */
   LIBRARY_DOCUMENTS: '/library/documents',
   /** 내 보관함 > 연습 기록. 지난 모의면접을 폴더 · 상태로 거르고 리포트를 다시 봅니다 */
@@ -120,4 +125,13 @@ export const REPORT_VIEW_GROWTH = 'growth'
 export function toReport(reportId: string, view?: typeof REPORT_VIEW_GROWTH) {
   const path = `/reports/${reportId}`
   return view ? `${path}?${REPORT_VIEW_PARAM}=${view}` : path
+}
+
+export function toSharedReport(shareId: string) {
+  return `/share/${encodeURIComponent(shareId)}`
+}
+
+/** 남에게 보낼 공유 링크 전체 주소. 서버는 프론트 주소를 몰라서 `shareId` 로 여기서 만듭니다 (이슈 #199) */
+export function toSharedReportUrl(shareId: string) {
+  return `${window.location.origin}${toSharedReport(shareId)}`
 }
