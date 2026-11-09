@@ -19,10 +19,11 @@ export type Me = {
 export type CareerLevel = 'student' | 'entry' | 'junior' | 'experienced'
 
 /**
- * 내 프로필. `GET /api/users/me/profile` (API 명세서 "내정보 조회" — 백엔드 시작 전, 목업만 있음 · Q16)
+ * 내 프로필. `GET /api/users/me/profile` (Cue-A/backend#128)
  *
  * 프로필을 한 번도 저장하지 않았으면 `profileImageUrl` 아래 칸은 전부 null 입니다.
- * `userName` 은 화면 머리의 `Me.nickname` 과 같은 값으로 봅니다 (같은 users 테이블 값인지 백엔드 확인 중 · Q16).
+ * `userName` 은 화면 머리의 `Me.nickname` 과 같은 값입니다 — 백엔드가 users 의 nickname 을 그대로 줍니다.
+ * 글 칸이 빈 문자열(`''`)로 와도 `toProfile` 이 null 로 바꿉니다 — 지울 때 `''` 를 보내기 때문입니다.
  */
 export type Profile = {
   userId: string
@@ -40,47 +41,40 @@ export type Profile = {
 }
 
 /**
- * 프로필 수정 입력. `PATCH /api/users/me/profile` (API 명세서 "프로필 수정" — 백엔드 시작 전, 목업만 있음)
+ * 프로필 수정 입력. `PATCH /api/users/me/profile` (Cue-A/backend#128)
  *
- * **바꾼 칸만 싣습니다.** 서버는 보낸 칸만 고치고 나머지는 둡니다. 아무것도 없으면 `EMPTY_UPDATE_REQUEST`(400) 입니다.
- * 이메일 · 비밀번호는 여기서 바꾸지 않습니다 — 이메일 변경 · 비밀번호 변경 API 가 따로 있습니다(화면은 아직).
+ * **바꾼 칸만 싣습니다.** 서버는 보낸 칸만 고치고 나머지는 둡니다. 아무것도 없으면 400 `INVALID_REQUEST` 입니다.
+ *
+ * 서버는 `null` 을 "보내지 않음" 으로 봐서 **`null` 로는 칸을 지울 수 없습니다.** 글 칸(직무 · 자기소개 · 학교 · 전공)은
+ * 빈 문자열(`''`)을 보내 지웁니다(이슈 #201 — 프론트가 지우기로 정함). 조회에서 온 `''` 는 `toProfile` 이 null 로 바꿔 둡니다.
+ * 경력 단계 · 졸업연도는 지울 방법이 없습니다(허용값 · 숫자만 받음). 프로필 사진(`profileImageUrl`)은 이 API 로 바뀌지 않습니다.
+ * 이메일 · 비밀번호는 이메일 변경 · 비밀번호 변경 API 가 따로 있습니다.
  */
-export type ProfileUpdateInput = Partial<Omit<Profile, 'userId' | 'email'>>
+export type ProfileUpdateInput = {
+  userName?: string
+  introduction?: string
+  targetJobRole?: string
+  careerLevel?: CareerLevel
+  schoolName?: string
+  major?: string
+  graduationYear?: number
+}
 
 /** 로그인 수단 하나. `GET /api/users/me/account` 의 `auths` */
 export type AccountAuth = {
   provider: LoginProvider
   /** 비밀번호가 있는지. 카카오 전용이면 false 라 비밀번호를 바꿀 수 없습니다 */
   hasPassword: boolean
-  /** 이 수단을 연결한 때 (ISO 문자열) */
+  /** 이 수단을 연결한 때. 서버는 시간대 없는 시각(`2026-09-01T10:00:00`)을 줍니다 */
   linkedAt: string
 }
 
-/** 계정 정보. `GET /api/users/me/account` (API 명세서 "계정 정보 조회" — 백엔드 시작 전, 목업만 있음 · Q16) */
+/** 계정 정보. `GET /api/users/me/account` (Cue-A/backend#126) */
 export type AccountInfo = {
   email: string | null
-  /** 가입한 때 (ISO 문자열) */
+  /** 가입한 때. 서버는 시간대 없는 시각을 줍니다 — 날짜는 앞 10자리를 그대로 씁니다(시간대로 옮기면 하루 밀릴 수 있음) */
   createdAt: string
   auths: AccountAuth[]
-}
-
-/**
- * 탈퇴 이유. 탈퇴 요청에 같이 보냅니다 (백엔드 계약 미정 — docs/90-open-questions.md Q14).
- * 화면 문구는 `lib/withdrawReasons.ts` 에 있습니다.
- */
-export type WithdrawReason =
-  | 'FOUND_JOB'
-  | 'QUESTIONS_MISMATCH'
-  | 'REPORT_UNHELPFUL'
-  | 'DEVICE_TROUBLE'
-  | 'PRIVACY'
-  | 'NEW_ACCOUNT'
-  | 'OTHER'
-
-export type WithdrawRequest = {
-  reason: WithdrawReason
-  /** `OTHER` 일 때 직접 적은 이유. 비어 있으면 보내지 않습니다 */
-  detail?: string
 }
 
 /** 알림 설정. (API 명세서에 없는 임시 경로, 목업 전용 · Q16) */

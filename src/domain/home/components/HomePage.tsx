@@ -27,8 +27,9 @@ import WeeklyGoalCard from './WeeklyGoalCard'
  * 로그인 화면에 왔을 때가 모두 여기로 옵니다 (router.tsx · useLoginRedirect). 랜딩은 서비스 첫 화면이라 그대로 둡니다.
  *
  * 위쪽 숫자 카드 · 연습 기록 · 최근 리포트는 백엔드 홈 API(`/api/home/stats` · `/practice` · `/recent-reports`)로 받고,
- * 오른쪽 배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행은 백엔드에 아직 없어 목업(`/api/home`)이 답합니다
- * (api/homeMock.ts — `?mock=empty` 로 막 가입한 사람의 빈 화면을 볼 수 있습니다).
+ * 오른쪽 배지 · 다가오는 일정 · 인재상 · 질문은행은 백엔드에 아직 없어 목업(`/api/home`)이 답합니다
+ * (api/homeMock.ts — `?mock=empty` 로 막 가입한 사람의 빈 화면을 볼 수 있습니다). 이번 주 목표는 성장 관리와 같은
+ * `/api/growth` 로 따로 받습니다(이슈 #201) — 두 화면의 목표 숫자가 늘 같아야 합니다.
  *
  * 칸마다 따로 받아서 한 칸이 실패하면 그 칸에만 "다시 불러오기" 를 둡니다. 화면 전체를 막는 안내는 셋 다 실패했을 때만 띄웁니다.
  *
@@ -37,7 +38,7 @@ import WeeklyGoalCard from './WeeklyGoalCard'
  */
 export default function HomePage() {
   const me = useMe()
-  const { stats, recentReports, extras } = useHomeOverview()
+  const { stats, recentReports, extras, weeklyGoal } = useHomeOverview()
   const [period, setPeriod] = useState<PracticePeriod>(DEFAULT_PRACTICE_PERIOD)
   const practice = usePracticeRecord(period)
 
@@ -51,6 +52,7 @@ export default function HomePage() {
     stats.retry()
     recentReports.retry()
     extras.retry()
+    weeklyGoal.retry()
   }
 
   return (
@@ -88,26 +90,34 @@ export default function HomePage() {
               />
             </div>
 
-            {extras.status === 'error' ? (
-              <Card padding="lg">
-                <div className="flex flex-col items-center gap-2 py-4 text-center">
-                  <p className="text-body-lg text-neutral-900">배지 · 목표 · 일정을 불러오지 못했어요</p>
-                  <Button size="sm" onClick={extras.retry} className="mt-2">
-                    다시 불러오기
-                  </Button>
-                </div>
-              </Card>
-            ) : (
-              <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5">
+              {extras.status === 'error' ? (
+                <Card padding="lg">
+                  <div className="flex flex-col items-center gap-2 py-4 text-center">
+                    <p className="text-body-lg text-neutral-900">배지 · 일정을 불러오지 못했어요</p>
+                    <Button size="sm" onClick={extras.retry} className="mt-2">
+                      다시 불러오기
+                    </Button>
+                  </div>
+                </Card>
+              ) : (
                 <BadgeCard badges={extrasData?.badges ?? null} />
-                <WeeklyGoalCard goal={extrasData ? extrasData.weeklyGoal : undefined} />
-                <UpcomingEventsCard events={extrasData?.upcomingEvents ?? null} />
-                <DiscoverCard
-                  talentKeywords={extrasData?.talentKeywords ?? null}
-                  popularQuestions={extrasData?.popularQuestions ?? null}
-                />
-              </div>
-            )}
+              )}
+              {/* 이번 주 목표는 /api/growth 에서 따로 받아서, 배지 · 일정이 실패해도 보입니다 */}
+              <WeeklyGoalCard
+                goal={weeklyGoal.status === 'ready' ? weeklyGoal.data : undefined}
+                onRetry={weeklyGoal.status === 'error' ? weeklyGoal.retry : undefined}
+              />
+              {extras.status !== 'error' && (
+                <>
+                  <UpcomingEventsCard events={extrasData?.upcomingEvents ?? null} />
+                  <DiscoverCard
+                    talentKeywords={extrasData?.talentKeywords ?? null}
+                    popularQuestions={extrasData?.popularQuestions ?? null}
+                  />
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>

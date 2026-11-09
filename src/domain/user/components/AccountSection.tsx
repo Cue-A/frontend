@@ -39,10 +39,10 @@ type Props = {
  * 옛 주소(`/mypage/account`)와 홈의 톱니바퀴는 이 칸(`#account`)으로 바로 내려옵니다.
  *
  * - 이메일은 바로 위 프로필 칸에 있어서 여기서는 다시 적지 않습니다
- * - 로그인 방식 · 가입일은 계정 정보(`GET /api/users/me/account`)에서 읽습니다. 백엔드에 아직 없어 목업이 답하고(Q16),
+ * - 로그인 방식 · 가입일은 계정 정보(`GET /api/users/me/account`, Cue-A/backend#126)에서 읽습니다.
  *   못 불러오면 화면 머리와 같은 사용자 정보(`GET /api/users/me`)의 로그인 방식만 보여줍니다
  * - 로그아웃은 한 번 묻고(LogoutConfirmDialog) 합니다. 탈퇴 바로 옆이라 잘못 누르기 쉽습니다
- * - "계정 탈퇴하기" 는 판 맨 아래 가운데 빨간 글자이고, 누르면 탈퇴 화면(`WithdrawPage` — 이유 고르기 · 최종 확인)으로 갑니다.
+ * - "계정 탈퇴하기" 는 판 맨 아래 가운데 빨간 글자이고, 누르면 탈퇴 화면(`WithdrawPage` — 안내 · 최종 확인)으로 갑니다.
  *   아래에 알림 설정 칸이 이어져서, 판 밖에 두면 두 칸 사이에 떠 보여 판 안에 넣었습니다
  */
 export default function AccountSection({ me, account }: Props) {

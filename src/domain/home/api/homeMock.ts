@@ -16,7 +16,8 @@ import type {
  *
  * - `/api/home/stats` · `/api/home/recent-reports` · `/api/home/practice` 는 백엔드에 있습니다(Cue-A/backend#108 · #116).
  *   `home` 을 켜면 실제 서버로 갑니다. 목업도 그 응답 모양 그대로 돌려줍니다
- * - `/api/home`(배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행)은 백엔드에 없어서 `home` 을 켜도 목업이 답합니다
+ * - `/api/home`(배지 · 다가오는 일정 · 인재상 · 질문은행)은 백엔드에 없어서 `home` 을 켜도 목업이 답합니다
+ * - 이번 주 목표는 성장 관리와 같은 `/api/growth` 에서 받습니다. 그 목업은 `growth/api/growthMock.ts` 에 있습니다 (이슈 #201)
  *
  * ## 두 가지 상태
  *
@@ -206,7 +207,7 @@ function growthScenario(): string | undefined {
 }
 
 /* ---------------------------------------------------------------------------
- * GET /api/home — 배지 · 목표 · 일정 · 인재상 · 질문은행 (백엔드에 없음)
+ * GET /api/home — 배지 · 일정 · 인재상 · 질문은행 (백엔드에 없음)
  * ------------------------------------------------------------------------- */
 
 /**
@@ -341,7 +342,6 @@ function buildExtras(scenario: Scenario): HomeExtrasResponse {
       })),
       nextHint: isEmpty ? '첫 면접을 마치면 첫 뱃지를 받아요' : '압박 면접을 끝까지 마치면 압박 극복 뱃지를 받아요',
     },
-    weeklyGoal: isEmpty ? null : { title: '이번 주 안에 까다로운 실전 면접 3번 보기', targetValue: 3, currentValue: 2 },
     upcomingEvents: isEmpty
       ? []
       : [
@@ -414,7 +414,7 @@ function buildPracticeRecord(scenario: Scenario, period: PracticePeriod): Practi
   }
 }
 
-const MISSING = '홈 배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행 API 없음 — 경로 · 응답 모양 프론트 임시안'
+const MISSING = '홈 배지 · 다가오는 일정 · 인재상 · 질문은행 API 없음 — 경로 · 응답 모양 프론트 임시안'
 
 registerMock('GET', '/api/home', () => buildExtras(currentScenario()), { missingInBackend: MISSING })
 

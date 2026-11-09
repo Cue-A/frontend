@@ -2,12 +2,12 @@ import { api } from '@/shared/api/apiClient'
 
 import type {
   AccountInfo,
+  CareerLevel,
   LoginProvider,
   Me,
   NotificationSettings,
   Profile,
   ProfileUpdateInput,
-  WithdrawRequest,
 } from '../types/user'
 
 import './userMock'
@@ -36,31 +36,72 @@ export async function getMe(): Promise<Me> {
   }
 }
 
-/**
- * 내 프로필. `GET /api/users/me/profile` (API 명세서 "내정보 조회")
- *
- * **백엔드에 아직 없습니다**(명세서 "시작 전"). 목업(`missingInBackend`)이 답합니다. (docs/90-open-questions.md Q16)
- * 응답 모양이 화면 타입(`Profile`)과 같아서 그대로 씁니다.
- */
-export function getProfile() {
-  return api.get<Profile>('/api/users/me/profile')
+/** 프로필 응답 (Cue-A/backend#128 `ProfileResponse`). 화면 타입(`Profile`)과 칸은 같지만 빈 문자열을 정리하는 자리를 둡니다 */
+type ProfileResponse = {
+  userId: string
+  userName: string
+  email: string | null
+  profileImageUrl: string | null
+  introduction: string | null
+  targetJobRole: string | null
+  /** 서버는 문자열로 줍니다. 허용값(student · entry · junior · experienced)이 아니면 비어 있는 것으로 봅니다 */
+  careerLevel: string | null
+  schoolName: string | null
+  major: string | null
+  graduationYear: number | null
+}
+
+const CAREER_LEVELS: readonly CareerLevel[] = ['student', 'entry', 'junior', 'experienced']
+
+function toCareerLevel(value: string | null): CareerLevel | null {
+  return CAREER_LEVELS.find((level) => level === value) ?? null
+}
+
+/** 지울 때 빈 문자열을 보내서 조회에 `''` 가 남습니다. 화면은 비어 있는 칸을 null 하나로만 봅니다 */
+function emptyToNull(value: string | null) {
+  return value === null || value.trim() === '' ? null : value
+}
+
+function toProfile(response: ProfileResponse): Profile {
+  return {
+    userId: response.userId,
+    userName: response.userName,
+    email: response.email,
+    profileImageUrl: response.profileImageUrl,
+    introduction: emptyToNull(response.introduction),
+    targetJobRole: emptyToNull(response.targetJobRole),
+    schoolName: emptyToNull(response.schoolName),
+    major: emptyToNull(response.major),
+    careerLevel: toCareerLevel(response.careerLevel),
+    graduationYear: response.graduationYear,
+  }
 }
 
 /**
- * 프로필 수정. `PATCH /api/users/me/profile` (API 명세서 "프로필 수정")
+ * 내 프로필. `GET /api/users/me/profile` (Cue-A/backend#128)
  *
- * **바꾼 칸만 보냅니다.** 빈 본문은 `EMPTY_UPDATE_REQUEST`(400) 라, 화면이 바뀐 게 없으면 부르지 않습니다.
- * 고친 뒤의 프로필 전체를 돌려받습니다. 백엔드에 아직 없어 목업이 답합니다. (Q16)
+ * 프로필을 한 번도 저장하지 않은 사용자는 이름 · 이메일 말고 전부 null 입니다.
  */
-export function updateProfile(input: ProfileUpdateInput) {
-  return api.patch<Profile>('/api/users/me/profile', input)
+export async function getProfile() {
+  return toProfile(await api.get<ProfileResponse>('/api/users/me/profile'))
 }
 
 /**
- * 계정 정보. `GET /api/users/me/account` (API 명세서 "계정 정보 조회")
+ * 프로필 수정. `PATCH /api/users/me/profile` (Cue-A/backend#128)
+ *
+ * **바꾼 칸만 보냅니다.** 빈 본문은 400 `INVALID_REQUEST` 라, 화면이 바뀐 게 없으면 부르지 않습니다.
+ * 서버는 `null` 을 "안 보냄" 으로 봐서, 칸을 지울 때는 빈 문자열을 보냅니다(`ProfileUpdateInput`).
+ * 고친 뒤의 프로필 전체를 돌려받습니다.
+ */
+export async function updateProfile(input: ProfileUpdateInput) {
+  return toProfile(await api.patch<ProfileResponse>('/api/users/me/profile', input))
+}
+
+/**
+ * 계정 정보. `GET /api/users/me/account` (Cue-A/backend#126)
  *
  * 이메일 · 가입일 · 로그인 수단별 연결일과 비밀번호 유무입니다. 비밀번호 원문 · 카카오 회원번호는 오지 않습니다.
- * 백엔드에 아직 없어 목업이 답합니다. (Q16)
+ * 시각은 시간대 없는 값(`2026-09-01T10:00:00`)으로 옵니다.
  */
 export function getAccount() {
   return api.get<AccountInfo>('/api/users/me/account')
@@ -80,16 +121,11 @@ export function updateNotificationSettings(input: Partial<NotificationSettings>)
 }
 
 /**
- * 회원 탈퇴. `POST /api/users/me/withdrawal` — **백엔드에 아직 없습니다.** 경로와 본문은 임시로 정한 것이라
- * 목업(`missingInBackend`)이 답합니다. 백엔드에 생기면 계약을 대조하고 목업 표시를 지웁니다.
- * (docs/90-open-questions.md Q14)
+ * 회원 탈퇴. `DELETE /api/users/me` (Cue-A/backend#64)
  *
- * `DELETE /api/users/me` 가 아니라 POST 로 둔 이유는 탈퇴 이유를 본문에 실어야 해서입니다. DELETE 본문은
- * 서버 · 프록시에 따라 버려질 수 있습니다.
- *
- * 성공하면 서버가 이 사용자의 refresh token 을 모두 끊는다고 가정합니다. 화면은 응답을 받자마자
- * 이 브라우저의 토큰을 지웁니다 (`useWithdraw`).
+ * 계정과 모든 연관 데이터(문서 · 면접 기록 · 리포트 등)를 영구 삭제하고, **로그인된 모든 기기의 refresh token 을 폐기**합니다.
+ * 본문이 없습니다 — 탈퇴 이유는 받지 않기로 했습니다(이슈 #201). 화면은 응답을 받자마자 이 브라우저의 토큰을 지웁니다 (`useWithdraw`).
  */
-export function withdraw(body: WithdrawRequest) {
-  return api.post<void>('/api/users/me/withdrawal', body)
+export function withdraw() {
+  return api.delete<void>('/api/users/me')
 }
