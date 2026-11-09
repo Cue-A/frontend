@@ -43,7 +43,7 @@ export type Profile = {
  * 프로필 수정 입력. `PATCH /api/users/me/profile` (API 명세서 "프로필 수정" — 백엔드 시작 전, 목업만 있음)
  *
  * **바꾼 칸만 싣습니다.** 서버는 보낸 칸만 고치고 나머지는 둡니다. 아무것도 없으면 `EMPTY_UPDATE_REQUEST`(400) 입니다.
- * 이메일 · 비밀번호는 여기서 바꾸지 않습니다 — 계정 설정의 이메일 변경 · 비밀번호 변경이 따로 있습니다.
+ * 이메일 · 비밀번호는 여기서 바꾸지 않습니다 — 이메일 변경 · 비밀번호 변경 API 가 따로 있습니다(화면은 아직).
  */
 export type ProfileUpdateInput = Partial<Omit<Profile, 'userId' | 'email'>>
 
@@ -87,26 +87,4 @@ export type WithdrawRequest = {
 export type NotificationSettings = {
   emailAlerts: boolean
   pushAlerts: boolean
-}
-
-/** 명함 색상. 시안의 5가지입니다 (B-03 마이페이지/디지털 명함) */
-export type BusinessCardColor = 'purple' | 'blue' | 'green' | 'orange' | 'black'
-
-export type BusinessCard = {
-  companyName: string
-  name: string
-  jobTitle: string
-  email: string
-  phone: string
-  color: BusinessCardColor
-  updatedAt: string
-}
-
-export type BusinessCardInput = {
-  companyName: string
-  name: string
-  jobTitle: string
-  email: string
-  phone: string
-  color: BusinessCardColor
 }

@@ -161,14 +161,24 @@ function savedOptionsOf(session: CreatedSession): InterviewSessionOptions | null
  *
  * 재연습은 `sourceSessionId` 를 같이 넘깁니다. 고정 옵션은 재연습 조건 조회(`getReplayOptions`) 값 그대로여야 합니다.
  */
-export async function createSession(setup: SessionSetup, { sourceSessionId }: { sourceSessionId?: string } = {}) {
+export async function createSession(
+  setup: SessionSetup,
+  { sourceSessionId, companies = [] }: { sourceSessionId?: string; companies?: Company[] } = {},
+) {
   const body: InterviewStartRequest = sourceSessionId ? { ...toCreateBody(setup), sourceSessionId } : toCreateBody(setup)
   const session = await api.post<CreatedSession>('/api/interviews', body)
   // 면접 화면이 쓸 옵션을 세션별로 남겨 둡니다. 서버가 저장한 값이 응답에 있으면 그 값을, 없으면 요청값을 남깁니다
   // (`getInterviewOptions` · sessionOptionsDraft.ts)
   rememberSessionOptions(session.sessionId, savedOptionsOf(session) ?? toSessionOptions(setup))
-  // 장치 테스트의 면접 요약이 보여줄 직무 · 질문 수 — 조회 API 에 없어서 만들 때의 값을 남깁니다 (이슈 #132)
-  rememberSessionSummary(session.sessionId, { jobRole: body.jobRole, questionCount: session.questionTotal ?? body.questionCount })
+  // 직무 · 기업명 · 질문 수는 조회 API 에 없어서 만들 때의 값을 남깁니다. 장치 테스트의 면접 요약(이슈 #132)과 면접 화면
+  // 상단 "기업 · 직무" 표시가 같이 읽는다. 기업명은 요청한 기업 id 로 목록에서 찾는다.
+  const companyId = toCompanyId(setup)
+  const companyName = companyId === null ? null : (companies.find((company) => company.companyId === String(companyId))?.name ?? null)
+  rememberSessionSummary(session.sessionId, {
+    jobRole: body.jobRole,
+    companyName,
+    questionCount: session.questionTotal ?? body.questionCount,
+  })
   return session
 }
 
@@ -226,4 +236,22 @@ export function submitAnswer(sessionId: string, submission: AnswerSubmission) {
  */
 export function abortSession(sessionId: string) {
   return api.post<void>(`/api/interviews/${sessionId}/abort`)
+}
+
+/**
+ * 면접 중 질문 북마크. `PUT /api/interviews/{sessionId}/questions/{questionId}/bookmark`
+ *
+ * 버튼은 누를 때마다 바뀌는 토글이지만 서버에는 **바뀔 상태**를 보냅니다. 이미 그 상태면 아무것도 바꾸지 않고 성공입니다.
+ * `false` 로 빼면 그 질문에 쓴 메모도 함께 지워집니다. 되묻기(`REASK`) 질문도 담을 수 있습니다.
+ * 끝난 세션은 `SESSION_ENDED` · 중단된 세션은 `SESSION_ABORTED`(409) 입니다.
+ *
+ * 백엔드(Cue-A/backend#118)에 배포되어 있고 경로 · 본문 · 응답 · 에러 코드가 이 함수와 같습니다. `interviews` 를 `VITE_REAL_APIS` 로 켜면
+ * 실제 서버로 갑니다.
+ * 질문 push 에 북마크 여부가 없어서 면접 중 새로고침하면 아이콘이 비어 보이는 건 서버도 같은 한계로 알고 있습니다(backend#118).
+ */
+export function setQuestionBookmark(sessionId: string, questionId: string, bookmarked: boolean) {
+  return api.put<{ bookmarked: boolean }>(
+    `/api/interviews/${encodeURIComponent(sessionId)}/questions/${encodeURIComponent(questionId)}/bookmark`,
+    { bookmarked },
+  )
 }

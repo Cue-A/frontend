@@ -2,6 +2,10 @@ import type { InterviewerStyle } from '../types/interview'
 
 type Props = {
   interviewerStyle: InterviewerStyle
+  /** 설정한 직무. 없으면 보조 줄에서 뺀다. */
+  jobRole?: string | null
+  /** 설정한 기업. 기업 없이 시작한 면접(연습 모드)이면 null. */
+  companyName?: string | null
 }
 
 const LABEL: Record<InterviewerStyle, string> = {
@@ -9,19 +13,19 @@ const LABEL: Record<InterviewerStyle, string> = {
   pressure: '압박 면접관 모드',
 }
 
-// 배지 색: Figma(847:704 mode-pill)는 §2.4 배지 팔레트가 아니라 primary-100/primary-500
-// (원색) 조합을 직접 쓴다. pressure는 해당 프레임에 없어 danger 계열(§2.4)을 그대로 유지한다.
-const COLOR_CLASS: Record<InterviewerStyle, string> = {
-  friendly: 'bg-primary-100 text-primary-500',
-  pressure: 'bg-badge-danger-bg text-badge-danger-text',
-}
+/**
+ * 상단 중앙 면접관 모드 제목과 그 아래 보조 줄입니다. 시안은 알약 배지가 아니라 글씨 제목이다.
+ * 보조 줄은 "기업 · 직무" 순서이고, 기업을 설정하지 않은 면접이면 직무만 보인다. 둘 다 없으면 줄 자체를 숨긴다.
+ */
+export default function InterviewerStyleBadge({ interviewerStyle, jobRole = null, companyName = null }: Props) {
+  const subtitle = [companyName, jobRole].filter(Boolean).join(' · ')
 
-export default function InterviewerStyleBadge({ interviewerStyle }: Props) {
   return (
-    // TODO(design-token): design-system.md에 없는 값. 임시로 text-body-md(14px Regular) 사용 중.
-    // 필요한 값: "면접관 모드 pill" 텍스트 스타일 SemiBold 14px (Figma 847:705, 문서 미정의)
-    <span className={`w-fit rounded-full px-4 py-2 text-body-md ${COLOR_CLASS[interviewerStyle]}`}>
-      {LABEL[interviewerStyle]}
-    </span>
+    <div className="flex max-w-md flex-col items-center gap-0.5">
+      <span className={`text-body-lg ${interviewerStyle === 'pressure' ? 'text-semantic-danger' : 'text-stage-text'}`}>
+        {LABEL[interviewerStyle]}
+      </span>
+      {subtitle && <span className="max-w-full truncate text-body-sm text-stage-sub">{subtitle}</span>}
+    </div>
   )
 }

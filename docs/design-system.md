@@ -140,6 +140,22 @@
 <div className="rounded-md bg-surface-muted p-4">
 ```
 
+### 2.7 면접 진행 화면 배경 (Stage)
+
+*출처: 면접 진행 화면 리디자인 — **Figma 노드 미확정**, 값은 임시값*
+
+| 토큰 | HEX | 쓰는 자리 |
+|---|---|---|
+| `stage-bg` | `#F1EFFE` | 화면 가장자리 배경 (primary-100 보다 훨씬 옅은 연보라) |
+| `stage-glow` | `#FFFFFF` | 아바타 뒤 중심 빛 (방사형 그라디언트 시작) |
+| `stage-surface` | `#FFFFFF` | 상단바 알약 · 하단 조작부 원형 버튼 배경 |
+| `stage-surface-hover` | `#F5F4FF` | 위 요소의 hover |
+| `stage-border` | `#E0DDF6` | 진행 막대 빈 칸 · 구분선 |
+
+**면접 진행 화면(`InterviewSessionPage`) 안에서만 쓴다.** 흰색에 가까운 중심에서 가장자리 연보라로 번지는 방사형 그라디언트를 깐다. Figma 가 확정되면 값과 출처를 맞춘다.
+
+글자 · 버튼 색도 같은 계열 토큰으로 둔다: `stage-card`(질문 카드), `stage-text` · `stage-soft` · `stage-sub` · `stage-muted`(글자 4단계), `stage-cta-disabled`(답변 완료 비활성). 답변 완료 버튼은 북마크 버튼과 같은 `primary-100` / `primary-500`. 값은 `styles/tokens.css` 참고.
+
 ---
 
 ## 3. Typography Tokens

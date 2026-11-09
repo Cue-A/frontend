@@ -13,7 +13,8 @@ import type {
 } from './growthResponse'
 
 /**
- * 성장 관리 목업입니다. **백엔드에 컨트롤러가 없어서** `growth` · `calendar` 를 `VITE_REAL_APIS` 에 넣어도 목업이 답합니다.
+ * 성장 관리 목업입니다. **백엔드 컨트롤러가 아직 배포되지 않아서** `growth` · `calendar` 를 `VITE_REAL_APIS` 에 넣어도 목업이
+ * 답합니다. 둘 다 백엔드 PR 로 나와 있습니다 — 목표 · 배지 Cue-A/backend#132, 캘린더 Cue-A/backend#133.
  *
  * ## 시나리오
  *
@@ -26,7 +27,8 @@ import type {
  * - `empty` — 막 가입해서 아무 기록이 없는 사용자
  *
  * 점수 추이 · 이전 회차 대비 변화는 리포트 도메인의 회차 비교 목업(`report/api/reportComparisonMock.ts`)이 답합니다.
- * 여기서는 시나리오마다 그 목업이 알아보는 "가장 최근 리포트" id 를 내려줍니다 (`LATEST_REPORT_ID`).
+ * 그 기준이 되는 가장 최근 리포트는 홈 목업(`home/api/homeMock.ts` 의 `/api/home/recent-reports?limit=1`)이 이 시나리오를
+ * 읽어서 시나리오마다 회차 비교 목업이 알아보는 id 를 내려줍니다.
  *
  * 주소 뒤에 `?mock=first` 처럼 붙여 바꿉니다. 고른 값은 이 탭(sessionStorage)에 남습니다 (홈 목업과 같은 방식).
  *
@@ -34,7 +36,7 @@ import type {
  *
  * 시안의 8월을 그대로 박지 않고 **오늘 기준으로** 만듭니다. 연습한 날 · 면접 일정은 이번 달과 다음 달에 찍힙니다.
  *
- * 목표 수정 · 일정 등록은 메모리에만 남습니다. 새로고침하면 처음으로 돌아갑니다.
+ * 목표 수정 · 일정 등록 · 수정 · 삭제는 메모리에만 남습니다. 새로고침하면 처음으로 돌아갑니다.
  */
 
 const SCENARIO_KEY = 'cue-a:mock:growth'
@@ -60,27 +62,25 @@ function currentScenario(): Scenario {
   }
 }
 
-const MISSING = '성장 관리 API 없음 — growth · calendar 컨트롤러가 백엔드에 없음 (경로 · 응답 모양 프론트 임시안)'
+const MISSING = '성장 관리 API 미배포 — /api/growth 는 Cue-A/backend#132 (리뷰 중)'
 
+/**
+ * 캘린더 API 는 백엔드 PR(Cue-A/backend#133)로 나와 있고 경로 · 본문 · 응답이 이 목업과 같습니다. 머지 · 배포되면 캘린더
+ * 목업의 `missingInBackend` 를 지우고 `VITE_REAL_APIS` 에 `calendar` 를 넣으면 실서버로 갑니다.
+ */
+const CALENDAR_MISSING = '면접 캘린더 API 미배포 — Cue-A/backend#133 (리뷰 중)'
+
+/**
+ * 배지 목록. **홈 목업(`home/api/homeMock.ts` 의 `BADGES`)과 같은 다섯 개 · 같은 획득 상태입니다** — 도메인끼리 api 를
+ * 가져다 쓰지 않는 규칙이라 여기 다시 적습니다. 바꾸면 같이 바꿔 주세요. 전에는 네 개라 홈(다섯 개)과 수가 달랐습니다 (PR #184 리뷰).
+ */
 const BADGES: GrowthOverviewResponse['badges'] = [
   { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', tone: 'brand', earnedAt: '2026-07-01T10:00:00+09:00' },
   { badgeCode: 'STREAK_3', badgeName: '3일 연속', tone: 'warning', earnedAt: '2026-07-03T10:00:00+09:00' },
-  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', tone: 'danger', earnedAt: '2026-07-10T10:00:00+09:00' },
-  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', tone: 'success', earnedAt: null },
+  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', tone: 'danger', earnedAt: null },
+  { badgeCode: 'RISING', badgeName: '우상향', tone: 'info', earnedAt: '2026-07-20T10:00:00+09:00' },
+  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', tone: 'success', earnedAt: '2026-08-01T10:00:00+09:00' },
 ]
-
-/**
- * 시나리오별 가장 최근 리포트. 회차 비교 목업(`report/api/reportComparisonMock.ts` 의 `MOCK_COMPARISON_REPORT_IDS`)과
- * 같은 글자여야 그 경우의 응답이 옵니다. 도메인끼리 api 를 가져다 쓰지 않는 규칙이라 여기 다시 적습니다.
- */
-const LATEST_REPORT_ID: Record<Exclude<Scenario, 'empty'>, string> = {
-  sample: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa005',
-  first: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa001',
-  partial: 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa104',
-  'compare-error': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa503',
-  'compare-loose': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa777',
-  'compare-empty': 'c4e0b1a2-6d3f-4e8a-9b7c-2f1d0e3aa000',
-}
 
 /** 목표 수정은 시나리오마다 따로 기억합니다. 시나리오를 바꿔도 앞서 고친 값이 섞이지 않게 */
 const goalOverride = new Map<Scenario, number>()
@@ -94,14 +94,12 @@ function weeklyGoalOf(scenario: Scenario): WeeklyGoalResponse | null {
 function buildOverview(scenario: Scenario): GrowthOverviewResponse {
   if (scenario === 'empty') {
     return {
-      latestReport: null,
       weeklyGoal: weeklyGoalOf(scenario),
       badges: BADGES.map((badge) => ({ ...badge, earnedAt: null })),
     }
   }
 
   return {
-    latestReport: { reportId: LATEST_REPORT_ID[scenario], companyName: '네이버', jobRole: '기획 직무' },
     weeklyGoal: weeklyGoalOf(scenario),
     badges: scenario === 'first' ? BADGES.map((badge, index) => (index === 0 ? badge : { ...badge, earnedAt: null })) : BADGES,
   }
@@ -210,37 +208,66 @@ registerMock(
 
     return { month, events, practicedDates }
   },
-  { missingInBackend: MISSING },
+  { missingInBackend: CALENDAR_MISSING },
 )
+
+/** 등록 · 수정 본문을 읽고 규칙을 봅니다. 맞지 않으면 `INVALID_REQUEST` 로 던집니다 */
+function readEventRequest(body: unknown) {
+  const request = (typeof body === 'object' && body !== null ? body : {}) as Partial<CalendarEventCreateRequest>
+  const title = typeof request.title === 'string' ? request.title.trim() : ''
+  const memo = typeof request.memo === 'string' ? request.memo.trim() : null
+  const scheduledAt = typeof request.scheduledAt === 'string' ? request.scheduledAt : ''
+
+  if (!title || title.length > MAX_EVENT_TITLE_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `일정 제목은 1~${MAX_EVENT_TITLE_LENGTH}자입니다`)
+  }
+  if (memo && memo.length > MAX_EVENT_MEMO_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `메모는 ${MAX_EVENT_MEMO_LENGTH}자까지입니다`)
+  }
+  if (Number.isNaN(new Date(scheduledAt).getTime())) {
+    throw new ApiError('INVALID_REQUEST', '날짜를 읽을 수 없습니다')
+  }
+
+  return { title, scheduledAt, timeSpecified: request.timeSpecified === true, memo: memo || null }
+}
+
+/** 이 시나리오의 일정 목록에서 그 일정의 자리. 없으면 `CALENDAR_EVENT_NOT_FOUND` 로 던집니다 */
+function indexOfEvent(calendarEventId: string) {
+  const index = eventsOf(currentScenario()).findIndex((event) => event.calendarEventId === calendarEventId)
+  if (index < 0) throw new ApiError('CALENDAR_EVENT_NOT_FOUND', '일정을 찾을 수 없습니다')
+  return index
+}
 
 registerMock(
   'POST',
   '/api/calendar/events',
   (_params, body): CalendarEventResponse => {
-    const request = (typeof body === 'object' && body !== null ? body : {}) as Partial<CalendarEventCreateRequest>
-    const title = typeof request.title === 'string' ? request.title.trim() : ''
-    const memo = typeof request.memo === 'string' ? request.memo.trim() : null
-    const scheduledAt = typeof request.scheduledAt === 'string' ? request.scheduledAt : ''
-
-    if (!title || title.length > MAX_EVENT_TITLE_LENGTH) {
-      throw new ApiError('INVALID_REQUEST', `일정 제목은 1~${MAX_EVENT_TITLE_LENGTH}자입니다`)
-    }
-    if (memo && memo.length > MAX_EVENT_MEMO_LENGTH) {
-      throw new ApiError('INVALID_REQUEST', `메모는 ${MAX_EVENT_MEMO_LENGTH}자까지입니다`)
-    }
-    if (Number.isNaN(new Date(scheduledAt).getTime())) {
-      throw new ApiError('INVALID_REQUEST', '날짜를 읽을 수 없습니다')
-    }
-
-    const event: CalendarEventResponse = {
-      calendarEventId: crypto.randomUUID(),
-      title,
-      scheduledAt,
-      timeSpecified: request.timeSpecified === true,
-      memo: memo || null,
-    }
+    const event: CalendarEventResponse = { calendarEventId: crypto.randomUUID(), ...readEventRequest(body) }
     eventsOf(currentScenario()).push(event)
     return event
   },
-  { missingInBackend: MISSING },
+  { missingInBackend: CALENDAR_MISSING },
+)
+
+/** 일정 수정 (이슈 #190). 등록과 같은 네 칸을 받아 통째로 바꿉니다(PUT) */
+registerMock(
+  'PUT',
+  '/api/calendar/events/:calendarEventId',
+  ({ calendarEventId }, body): CalendarEventResponse => {
+    const index = indexOfEvent(calendarEventId)
+    const event: CalendarEventResponse = { calendarEventId, ...readEventRequest(body) }
+    eventsOf(currentScenario())[index] = event
+    return event
+  },
+  { missingInBackend: CALENDAR_MISSING },
+)
+
+/** 일정 삭제 (이슈 #190). 없는 일정은 404 — 서버처럼 다시 지워도 404 입니다 */
+registerMock(
+  'DELETE',
+  '/api/calendar/events/:calendarEventId',
+  ({ calendarEventId }) => {
+    eventsOf(currentScenario()).splice(indexOfEvent(calendarEventId), 1)
+  },
+  { missingInBackend: CALENDAR_MISSING },
 )

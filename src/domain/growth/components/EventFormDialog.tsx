@@ -3,14 +3,19 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 
 import Button from '@/shared/ui/Button'
 
-import { useCreateCalendarEvent } from '../hooks/useCreateCalendarEvent'
+import { useSaveCalendarEvent } from '../hooks/useSaveCalendarEvent'
 import { MAX_EVENT_MEMO_LENGTH, MAX_EVENT_TITLE_LENGTH } from '../lib/growthDisplay'
 import type { CalendarEvent } from '../types/growth'
 
 type Props = {
-  /** 날짜 칸에 처음 넣어 둘 날 (YYYY-MM-DD) */
+  /** 고칠 일정. 없으면 새로 등록합니다 (이슈 #190) */
+  event?: CalendarEvent | null
+  /** 새로 등록할 때 날짜 칸에 처음 넣어 둘 날 (YYYY-MM-DD). 고칠 때는 그 일정의 날짜를 씁니다 */
   defaultDate: string
-  onCreated: (event: CalendarEvent) => void
+  /** 등록하거나 고친 일정 */
+  onSaved: (event: CalendarEvent) => void
+  /** 고치려던 일정이 이미 없었을 때(다른 탭에서 지움). 캘린더에서 빼고 알리는 건 화면이 합니다 */
+  onGone?: (event: CalendarEvent) => void
   /** 창이 닫힌 뒤. 어떤 경로로 닫혀도 여기로 한 번 옵니다 */
   onClose: () => void
 }
@@ -37,7 +42,10 @@ function blockComposingEnter(event: KeyboardEvent<HTMLInputElement>) {
 }
 
 /**
- * 면접 일정 등록 창 (시안 Modal-일정등록).
+ * 면접 일정 등록 · 수정 창 (시안 Modal-일정등록).
+ *
+ * `event` 를 주면 그 일정 값을 채워 열고 "일정 수정" 으로 고칩니다(이슈 #190). 수정 시안이 없어서 등록 창을 그대로 씁니다 —
+ * 칸 · 규칙이 같아서 따로 그리면 두 창이 어긋납니다.
  *
  * 시안의 "일정 유형(면접 일정 / 연습 완료)" 은 뺐습니다. 연습 기록은 면접을 보면 자동으로 쌓이는 값이라 손으로 넣으면
  * 실제 기록과 어긋납니다 — 이 창은 면접 일정만 넣고, 캘린더의 "연습 완료" 는 연습한 날에서 자동으로 찍힙니다.
@@ -45,17 +53,19 @@ function blockComposingEnter(event: KeyboardEvent<HTMLInputElement>) {
  * 제목 · 날짜는 꼭 적고, 시간 · 메모는 비워도 됩니다. 동작은 보관함의 창들(문서 제목 수정 · 새 폴더)과 같습니다 —
  * Enter 로 등록, 한글 조합 중 Enter 무시, 등록하는 동안 닫기 · 입력 잠금, 실패하면 창을 두고 이유를 보여주기.
  */
-export default function EventCreateDialog({ defaultDate, onCreated, onClose }: Props) {
+export default function EventFormDialog({ event: target = null, defaultDate, onSaved, onGone, onClose }: Props) {
+  // 아래 이벤트 처리 함수의 `event` 와 헷갈리지 않게 고칠 일정은 `target` 으로 부릅니다
+  const editing = target !== null
   const dialogRef = useRef<HTMLDialogElement | null>(null)
   const titleRef = useRef<HTMLInputElement | null>(null)
   const headingId = useId()
   const descriptionId = useId()
   const hintId = useId()
-  const [title, setTitle] = useState('')
-  const [date, setDate] = useState(defaultDate)
-  const [time, setTime] = useState('')
-  const [memo, setMemo] = useState('')
-  const { create, creating, error, clearError } = useCreateCalendarEvent()
+  const [title, setTitle] = useState(target?.title ?? '')
+  const [date, setDate] = useState(target?.date ?? defaultDate)
+  const [time, setTime] = useState(target?.time ?? '')
+  const [memo, setMemo] = useState(target?.memo ?? '')
+  const { save, saving, error, clearError } = useSaveCalendarEvent(target?.eventId ?? null)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -64,17 +74,17 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
   }, [])
 
   useEffect(() => {
-    if (!creating) return
+    if (!saving) return
 
     const blockEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key === 'Escape') event.preventDefault()
     }
     window.addEventListener('keydown', blockEscape, true)
     return () => window.removeEventListener('keydown', blockEscape, true)
-  }, [creating])
+  }, [saving])
 
   const close = () => {
-    if (!creating) dialogRef.current?.close()
+    if (!saving) dialogRef.current?.close()
   }
 
   const trimmedTitle = title.trim()
@@ -83,13 +93,20 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
   // 처음 연 빈 칸은 틀린 게 아니라서 빨간 글씨로 쓰지 않습니다.
   const invalidDate = date !== '' && !isValidDate(date)
   const blockReason = !trimmedTitle
-    ? '일정 제목을 적으면 등록할 수 있어요.'
+    ? `일정 제목을 적으면 ${editing ? '저장' : '등록'}할 수 있어요.`
     : !date
       ? '날짜를 골라 주세요.'
       : invalidDate
         ? '날짜를 다시 확인해 주세요. 2000년부터 2099년까지 고를 수 있어요.'
         : null
-  const canSubmit = blockReason === null && !creating
+  // 고칠 때 아무것도 바꾸지 않았으면 저장을 잠급니다. 이유는 글로 적지 않습니다 — 바꾸면 바로 풀립니다
+  const unchanged =
+    target !== null &&
+    trimmedTitle === target.title &&
+    date === target.date &&
+    (time || null) === target.time &&
+    (trimmedMemo || null) === (target.memo ?? null)
+  const canSubmit = blockReason === null && !saving && !unchanged
 
   const edit = (apply: () => void) => {
     clearError()
@@ -100,13 +117,17 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
     event.preventDefault()
     if (!canSubmit) return
 
-    const created = await create({ title: trimmedTitle, date, time: time || null, memo: trimmedMemo || null })
-    if (!created) {
+    const saved = await save({ title: trimmedTitle, date, time: time || null, memo: trimmedMemo || null })
+    if (!saved) {
       titleRef.current?.focus()
       return
     }
 
-    onCreated(created)
+    if (saved === 'gone') {
+      if (target) onGone?.(target)
+    } else {
+      onSaved(saved)
+    }
     dialogRef.current?.close()
   }
 
@@ -115,7 +136,7 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
       ref={dialogRef}
       onClose={onClose}
       onCancel={(event) => {
-        if (creating) event.preventDefault()
+        if (saving) event.preventDefault()
       }}
       aria-labelledby={headingId}
       aria-describedby={descriptionId}
@@ -125,16 +146,16 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <p id={headingId} className="text-h2 font-bold text-neutral-900">
-              일정 등록
+              {editing ? '일정 수정' : '일정 등록'}
             </p>
             <p id={descriptionId} className="text-body-md text-neutral-500">
-              새로운 면접 일정을 캘린더에 추가해요
+              {editing ? '등록한 면접 일정을 고쳐요' : '새로운 면접 일정을 캘린더에 추가해요'}
             </p>
           </div>
           <button
             type="button"
             onClick={close}
-            disabled={creating}
+            disabled={saving}
             className="rounded-xs p-1 text-neutral-500 transition-colors hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary-500"
           >
             <IconX size={20} stroke={2} aria-hidden />
@@ -152,7 +173,7 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
             onChange={(event) => edit(() => setTitle(event.target.value))}
             onKeyDown={blockComposingEnter}
             maxLength={MAX_EVENT_TITLE_LENGTH}
-            readOnly={creating}
+            readOnly={saving}
             aria-describedby={hintId}
             className={`${FIELD_CLASS} h-12`}
           />
@@ -165,7 +186,7 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
               type="date"
               value={date}
               onChange={(event) => edit(() => setDate(event.target.value))}
-              readOnly={creating}
+              readOnly={saving}
               required
               min={DATE_MIN}
               max={DATE_MAX}
@@ -182,7 +203,7 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
               type="time"
               value={time}
               onChange={(event) => edit(() => setTime(event.target.value))}
-              readOnly={creating}
+              readOnly={saving}
               className={`${FIELD_CLASS} h-12`}
             />
           </label>
@@ -200,7 +221,7 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
             placeholder="면접 준비 시 참고할 메모를 남겨보세요"
             onChange={(event) => edit(() => setMemo(event.target.value))}
             maxLength={MAX_EVENT_MEMO_LENGTH}
-            readOnly={creating}
+            readOnly={saving}
             rows={3}
             className={`${FIELD_CLASS} h-20 resize-none py-3`}
           />
@@ -223,11 +244,11 @@ export default function EventCreateDialog({ defaultDate, onCreated, onClose }: P
         </div>
 
         <div className="flex gap-3">
-          <Button onClick={close} disabled={creating} className="flex-1">
+          <Button onClick={close} disabled={saving} className="flex-1">
             취소
           </Button>
           <Button variant="primary" type="submit" disabled={!canSubmit} className="flex-1">
-            {creating ? '등록하는 중…' : '등록하기'}
+            {editing ? (saving ? '저장하는 중…' : '저장하기') : saving ? '등록하는 중…' : '등록하기'}
           </Button>
         </div>
       </form>

@@ -6,7 +6,6 @@ import {
   IconLogout,
   IconMicrophone,
   IconUser,
-  IconUsers,
 } from '@tabler/icons-react'
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
@@ -19,6 +18,8 @@ type NavChild = {
   label: string
   /** 비어 있으면 아직 화면이 없는 "준비 중" 항목입니다 */
   to?: string
+  /** 주소는 다르지만 이 항목 안쪽 화면이라 이 항목을 켤 곳. 프로필 > 회원 탈퇴(`/mypage/account/withdraw`)가 그렇습니다 */
+  activeOn?: string[]
 }
 
 type NavItem = {
@@ -36,8 +37,8 @@ type NavItem = {
 }
 
 /**
- * 사이드바 메뉴입니다. 시안(A-05)의 6개를 그대로 두되, 아직 화면이 없는 곳은 `to` 를 비워둡니다.
- * 갈 곳 없는 링크를 눌러 404 로 떨어지는 것보다 준비 중이라고 보이는 편이 낫습니다.
+ * 사이드바 메뉴입니다. 시안(A-05)의 6개 중 커뮤니티는 MVP 범위 밖이라 뺐습니다 (이슈 #185).
+ * 아직 화면이 없는 곳은 `to` 를 비워 "준비 중" 으로 그립니다. 갈 곳 없는 링크를 눌러 404 로 떨어지는 것보다 낫습니다.
  *
  * "내 보관함" 의 하위 항목은 전에 보관함 화면 안의 두 번째 패널(LibraryPanel)에 있던 것입니다. 패널을 없애고
  * 사이드바로 옮겼습니다 — 하위 항목 셋 중 둘이 준비 중이라 패널이 화면 폭만 차지했습니다. 연습 기록 시안에도 같은
@@ -64,19 +65,16 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: '마이페이지',
     Icon: IconUser,
-    // 내 보관함과 같은 여닫기 줄입니다. 메뉴 목록 화면(/mypage)은 상단 프로필 메뉴의 "마이페이지" 로 갑니다.
-    to: ROUTES.MYPAGE,
+    // 내 보관함과 같은 여닫기 줄입니다. 상단 프로필 메뉴의 "마이페이지" 는 프로필로 갑니다.
+    to: ROUTES.MYPAGE_PROFILE,
     matchPrefix: ROUTES.MYPAGE,
-    // 마이페이지 메뉴입니다. 시안의 "관심 질문" 은 질문 은행 북마크와 같은 기능이라 뺐습니다 (MyPage.tsx).
+    // 시안의 "관심 질문" 은 질문 은행 북마크와 같은 기능이라 뺐습니다. 계정 설정 · 알림 설정은 프로필에 합쳤고,
+    // 명함은 MVP 범위 밖이라 지웠습니다 (이슈 #185)
     children: [
-      { label: '프로필', to: ROUTES.MYPAGE_PROFILE },
-      { label: '나만의 명함 생성', to: ROUTES.MYPAGE_BUSINESS_CARD },
+      { label: '프로필', to: ROUTES.MYPAGE_PROFILE, activeOn: [ROUTES.MYPAGE_WITHDRAW] },
       { label: '관심 기업', to: ROUTES.MYPAGE_INTERESTS },
-      { label: '계정 설정', to: ROUTES.MYPAGE_ACCOUNT },
-      { label: '알림 설정', to: ROUTES.MYPAGE_NOTIFICATIONS },
     ],
   },
-  { label: '커뮤니티', Icon: IconUsers },
 ]
 
 function isActive(item: NavItem, pathname: string) {
@@ -318,8 +316,13 @@ function NavRow({ item, pathname, expanded, open, onToggle }: NavRowProps) {
       {showChildren && (
         <ul id={childrenId} data-nav-children aria-label={`${label} 하위 메뉴`} className="mt-1 flex flex-col gap-1 pl-9">
           {children.map((child) => {
-            // 계정 설정 > 회원 탈퇴(/mypage/account/withdraw)처럼 하위 항목 안쪽 화면에서도 그 항목을 켭니다.
-            const childActive = child.to !== undefined && (pathname === child.to || pathname.startsWith(`${child.to}/`))
+            // 하위 항목 안쪽 화면에서도 그 항목을 켭니다. 주소가 그 아래가 아닌 안쪽 화면은 `activeOn` 으로 적습니다
+            // (프로필 > 회원 탈퇴 — 계정 설정을 프로필에 합치기 전 주소를 그대로 씁니다, 이슈 #185)
+            const childActive =
+              child.to !== undefined &&
+              (pathname === child.to ||
+                pathname.startsWith(`${child.to}/`) ||
+                (child.activeOn ?? []).includes(pathname))
             return (
               <li key={child.label}>
                 {child.to ? (

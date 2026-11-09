@@ -19,6 +19,13 @@ const PROGRESS_STAGE_LABEL: Record<ProgressPush['stage'], string> = {
  */
 const FIRST_QUESTION_TIMEOUT_MS = 90_000
 
+/**
+ * 답변 처리 타임아웃(60초, docs/01-conventions.md "AI 대기 · 진행 상태")이다. 답변을 제출한
+ * 뒤 이 안에 다음 질문 · 에러 · 종료 push 가 안 오면 화면이 지연 안내를 보여준다.
+ * 임시 값 — PR 에서 기준 시간(1차 안내를 더 일찍 둘지)을 논의한다.
+ */
+const ANSWER_PROCESSING_TIMEOUT_MS = 60_000
+
 export type SubmitErrorState = {
   message: string
   retryable: boolean
@@ -60,6 +67,12 @@ export type UseInterviewSessionResult = {
    * 과 마찬가지로 첫 질문 이후에는 다시 false 로 돌아가지 않는다.
    */
   firstQuestionError: boolean
+  /**
+   * 답변 제출 뒤 60초 넘게 다음 질문이 오지 않았다는 신호. 화면이 진행 문구 대신 지연
+   * 안내(재시도 불가 · 종료 경로)를 보여준다. 새 질문 · 에러 · 종료 등으로
+   * waitingNextQuestion 을 벗어나면 다시 false 로 돌아가고, 다음 제출에서 새로 센다.
+   */
+  answerProcessingTimedOut: boolean
   /** 질문당 남은 시간(초). answerTimeLimitSec 이 null 이면 제한 없음이라 항상 null. */
   remainingSec: number | null
   /**
@@ -128,6 +141,7 @@ export function useInterviewSession(
   const [remainingSec, setRemainingSec] = useState<number | null>(answerTimeLimitSec)
   const [firstQuestionTimedOut, setFirstQuestionTimedOut] = useState(false)
   const [firstQuestionError, setFirstQuestionError] = useState(false)
+  const [answerProcessingTimedOut, setAnswerProcessingTimedOut] = useState(false)
   const [isAborting, setIsAborting] = useState(false)
   const [abortError, setAbortError] = useState<SubmitErrorState | null>(null)
 
@@ -244,6 +258,19 @@ export function useInterviewSession(
     const timer = setTimeout(() => setFirstQuestionTimedOut(true), FIRST_QUESTION_TIMEOUT_MS)
     return () => clearTimeout(timer)
   }, [question])
+
+  // 답변 처리 대기 타임아웃. 서버 처리 구간(waitingNextQuestion)만 센다 — submitting 은
+  // 업로드 시간이라 섞지 않는다. 이 phase 를 벗어나면 cleanup 이 신호를 내려, 다음 제출에서
+  // 처음부터 다시 센다.
+  useEffect(() => {
+    if (phase !== 'waitingNextQuestion') return
+
+    const timer = setTimeout(() => setAnswerProcessingTimedOut(true), ANSWER_PROCESSING_TIMEOUT_MS)
+    return () => {
+      clearTimeout(timer)
+      setAnswerProcessingTimedOut(false)
+    }
+  }, [phase])
 
   // 질문당 제한 시간 카운트다운. answerTimeLimitSec 이 null 이면 제한 없음이라 돌리지 않는다.
   useEffect(() => {
@@ -385,6 +412,7 @@ export function useInterviewSession(
     sessionStartedAt,
     sessionEnd,
     remainingSec,
+    answerProcessingTimedOut,
     firstQuestionTimedOut,
     firstQuestionError,
     beginSubmit,

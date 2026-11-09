@@ -1,69 +1,95 @@
-import type { Question, QuestionPage } from '../types/question'
+import type { BookmarkedQuestion, BookmarkType, CommonQuestion } from '../types/question'
 
 /**
- * 질문 은행 서버 응답 모양입니다. **백엔드에 아직 없는 API 라 프론트가 정한 임시안입니다.** (이슈 #138)
+ * 질문 은행 서버 응답 모양입니다.
  *
- * 백엔드에는 `question` · `bookmarked_question` 테이블(ERD)만 있고 컨트롤러가 없습니다. 이 모양을 백엔드에 요청하고,
- * 바뀌면 **이 파일과 변환 함수, 목업(`questionMock.ts`)만** 고칩니다. 화면은 `types/question.ts` 만 봅니다.
+ * - 북마크(`/api/bookmarks`)는 백엔드에 있습니다(Cue-A/backend#118). 응답 모양은 그 `BookmarkResponse` 와 같습니다
+ * - 공통 질문(`/api/common-questions`)은 **명세가 없어서 프론트가 정한 임시안**입니다
  *
- * ERD 와 어긋나서 백엔드에 같이 적어 보낼 것
- * - TODO(백엔드): 기본 공통 질문을 담는 테이블이 ERD 에 없습니다. `question` 은 면접 세션에 속합니다
- * - TODO(백엔드): `bookmarked_question` 이 `(question_id, session_id)` 로 질문을 가리킵니다. **프론트 제안: 북마크는
- *   질문 하나(`questionId`)로 식별합니다.** 등록 · 해제 · 목록의 `bookmarked` 모두 `questionId` 하나만 씁니다
- *   (공통 질문에는 세션이 없습니다). 세션별로 따로 북마크해야 한다면 알려 주세요 — 화면 규칙이 달라집니다
- * - TODO(백엔드): `question.is_bookmarked` 와 `bookmarked_question` 이 둘 다 있습니다. 어느 쪽이 기준인지
- * - TODO(백엔드): `companyName` 은 `session → company` 를 거쳐야 합니다
- * - TODO(백엔드): `practiceCount` 에 해당하는 값은 ERD 에 없습니다. 화면에는 "연습 N회" 로 보이는 값이라 **무엇을
- *   세는지 백엔드가 기준을 정해 주세요.** 프론트 제안은 "그 질문이 나온 면접 세션 수" 입니다 (같은 세션에서 꼬리질문 ·
- *   재질문으로 여러 번 답해도 1회). "답변 수" 로 세면 재질문만큼 부풀어서 "연습 횟수" 로 읽기 어렵습니다. 아직 세지 못하면
- *   null 로 내려 주세요 (화면은 그 줄을 숨깁니다)
- * - TODO(백엔드): `category` 는 화면에 그대로 보여 줄 한글 이름으로 가정했습니다. `question.category` 가 코드
- *   값(PERSONALITY 등)이면 이 파일에 이름표(변환표)를 더해야 합니다
- * - TODO(백엔드): 목록은 **본 질문만** 내려줘야 합니다. 꼬리질문 · 재질문(`question.type` · `is_replay`)은
- *   서버가 걸러 주세요. 화면은 거르지 않습니다
+ * 응답이 바뀌면 이 파일의 변환 함수와 목업(`questionMock.ts`)만 고칩니다. 화면은 `types/question.ts` 만 봅니다.
  */
 
-/** `GET /api/questions` 목록 한 줄 */
-export type QuestionResponse = {
+/** `GET /api/bookmarks` 한 줄 */
+export type BookmarkResponse = {
+  sessionId: string
   questionId: string
-  text: string
-  origin: 'COMMON' | 'COMPANY'
-  category: string
-  /** 공통 질문이면 null */
+  type: BookmarkType
+  questionText: string
+  category: string | null
+  difficulty: string | null
+  originalQuestionText: string | null
+  memo: string | null
   companyName: string | null
-  /** 모르면 null */
-  practiceCount: number | null
-  bookmarked: boolean
-  createdAt: string
+  jobRole: string
+  bookmarkedAt: string
 }
 
-export type QuestionListResponse = {
-  questions: QuestionResponse[]
+export type BookmarkListResponse = {
+  bookmarks: BookmarkResponse[]
   page: number
   size: number
   totalElements: number
   totalPages: number
 }
 
-export function toQuestion(response: QuestionResponse): Question {
+/** `PATCH /api/bookmarks/{sessionId}/{questionId}` — 저장된 메모. 지웠으면 null */
+export type BookmarkMemoResponse = {
+  memo: string | null
+}
+
+/**
+ * TODO(백엔드): 공통 질문 API 가 없습니다. 기본 공통 질문을 담는 테이블도 ERD 에 없습니다. **프론트 임시안**입니다.
+ * - `GET /api/common-questions` — `{ questions: [...] }`. **정렬하지 않은 기본 순서 그대로** `favorite` · `favoritedAt` 만
+ *   붙여 내려 주세요. 즐겨찾기를 위로 올리는 정렬은 프론트(`orderCommon`)가 합니다. 그래야 즐겨찾기를 푼 질문이
+ *   새로고침 직후에도 원래 자리로 돌아갑니다
+ * - `PUT /api/common-questions/{questionId}/favorite` — 본문 `{ favorite: true | false }`. 바뀔 상태를 보내고, 이미 그
+ *   상태면 아무것도 바꾸지 않고 성공합니다 (북마크 `PUT .../bookmark` 와 같은 방식)
+ * - `PATCH /api/common-questions/{questionId}/memo` — 본문 `{ memo }`. 공통 질문은 모두가 같이 보고 메모 · 즐겨찾기는
+ *   내 것이라, 경로로 구분했습니다(질문 자체를 고치는 API 로 읽히지 않게). 북마크 메모와 같은 규칙입니다(처음 쓰기 · 수정 · 삭제가
+ *   한 API, 비우면 삭제, 최대 500자). 응답 `{ memo }`
+ * - 공통 질문은 면접 세션이 없어서 북마크 API 의 키(`sessionId + questionId`)를 쓸 수 없습니다. 즐겨찾기를 풀어도
+ *   메모는 남기는 것으로 가정했습니다(다시 담을 수 있어서). 다르게 하려면 알려 주세요
+ */
+export type CommonQuestionResponse = {
+  questionId: string
+  text: string
+  category: string
+  favorite: boolean
+  favoritedAt: string | null
+  memo: string | null
+}
+
+export type CommonQuestionListResponse = {
+  questions: CommonQuestionResponse[]
+}
+
+/** `PUT /api/common-questions/{questionId}/favorite` */
+export type CommonFavoriteResponse = {
+  favorite: boolean
+}
+
+export function toBookmarkedQuestion(response: BookmarkResponse): BookmarkedQuestion {
   return {
+    sessionId: response.sessionId,
     questionId: response.questionId,
-    text: response.text,
-    origin: response.origin,
+    type: response.type,
+    text: response.questionText,
     category: response.category,
+    originalText: response.originalQuestionText,
+    memo: response.memo,
     companyName: response.companyName,
-    practiceCount: response.practiceCount,
-    bookmarked: response.bookmarked,
-    createdAt: response.createdAt,
+    jobRole: response.jobRole,
+    bookmarkedAt: response.bookmarkedAt,
   }
 }
 
-export function toQuestionPage(response: QuestionListResponse): QuestionPage {
+export function toCommonQuestion(response: CommonQuestionResponse): CommonQuestion {
   return {
-    questions: response.questions.map(toQuestion),
-    page: response.page,
-    size: response.size,
-    totalElements: response.totalElements,
-    totalPages: response.totalPages,
+    questionId: response.questionId,
+    text: response.text,
+    category: response.category,
+    favorite: response.favorite,
+    favoritedAt: response.favoritedAt,
+    memo: response.memo,
   }
 }

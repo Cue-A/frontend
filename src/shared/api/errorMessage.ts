@@ -71,6 +71,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   // ── 기업 — 관심 기업 등록 · 기업 상세 (Cue-A/backend#101). 없는 기업과 검증되지 않은 기업이 같은 코드입니다
   COMPANY_NOT_FOUND: '기업 정보를 찾을 수 없어요.',
 
+  // ── 면접 캘린더 일정 (Cue-A/backend#133). 다른 탭에서 지운 일정을 고치거나 지울 때입니다
+  CALENDAR_EVENT_NOT_FOUND: '일정을 찾을 수 없어요. 이미 지워졌을 수 있어요.',
+
   // ── 연습 기록 폴더 (Cue-A/backend#97 · #98). 같은 이름은 화면이 먼저 막고, 다른 탭에서 만든 이름만 서버에서 걸립니다
   FOLDER_NOT_FOUND: '폴더를 찾을 수 없어요. 새로고침한 뒤 다시 시도해 주세요.',
   FOLDER_NAME_DUPLICATED: '같은 이름의 폴더가 이미 있어요.',
@@ -82,6 +85,8 @@ const ERROR_MESSAGE: Record<string, string> = {
   SESSION_ENDED: '이미 끝난 면접이에요. 새 면접을 시작해 주세요.',
   SESSION_ABORTED: '중단된 면접이에요. 새 면접을 시작해 주세요.',
   QUESTION_NOT_FOUND: '질문을 찾을 수 없어요.',
+  // 질문 은행(북마크)의 메모 · 해제. 다른 탭에서 이미 뺐거나 내 북마크가 아닌 경우입니다.
+  BOOKMARK_NOT_FOUND: '질문 은행에 없는 질문이에요. 새로고침한 뒤 다시 시도해 주세요.',
   // A-05 가 3 · 6 · 9 만 고르게 해서 화면에서는 나지 않습니다. 서버가 다시 보는 값입니다.
   INVALID_QUESTION_COUNT: '질문 수는 3개 · 6개 · 9개 중에서 골라주세요.',
   INVALID_CATEGORY: '고를 수 없는 질문 분야예요.',

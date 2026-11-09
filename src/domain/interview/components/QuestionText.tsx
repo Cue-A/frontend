@@ -17,9 +17,9 @@ export default function QuestionText({ questionType, text, hideQuestionText }: P
     return (
       // TODO(design-token): design-system.md에 없는 값. 임시로 text-h1(24px Bold) 사용 중.
       // 필요한 값: 질문 본문 24px SemiBold 텍스트 스타일 (Figma 848:9는 SemiBold, 문서엔 Bold만 정의됨)
-      <p className="text-center text-h1 text-neutral-900">{text}</p>
+      <p className="text-h1 text-neutral-900">{text}</p>
     )
   }
 
-  return <p className="text-center text-h2 text-neutral-500">{QUESTION_GUIDANCE_TEXT[questionType]}</p>
+  return <p className="text-h2 text-neutral-500">{QUESTION_GUIDANCE_TEXT[questionType]}</p>
 }

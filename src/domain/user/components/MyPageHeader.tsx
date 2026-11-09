@@ -21,7 +21,7 @@ export default function MyPageHeader({ title, me }: Props) {
   return (
     <header className="flex flex-col gap-3">
       <div className="flex justify-end">
-        <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE} onLogout={logout} />
+        <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
       </div>
       <h1 className="text-h1 text-neutral-900">{title}</h1>
     </header>

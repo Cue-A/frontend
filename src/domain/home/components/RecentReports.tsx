@@ -4,48 +4,44 @@ import { Link } from 'react-router-dom'
 import { ROUTES, toReport } from '@/app/routes'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
+import { initialOf } from '@/shared/lib/initialOf'
 import Card from '@/shared/ui/Card'
 
 import { formatDotDate } from '../lib/homeDate'
-import { INTERVIEW_KIND_DISPLAY, scoreTone } from '../lib/homeDisplay'
+import { scoreTone } from '../lib/homeDisplay'
 import type { RecentReport } from '../types/home'
 
 import CardLink from './CardLink'
 import SkeletonBlock from './SkeletonBlock'
 
-/** 왼쪽 네모 아이콘 색. 배지 토큰의 배경 · 글자 짝을 그대로 씁니다 (docs/design-system.md §2.4) */
-const KIND_CLASS = {
-  brand: 'bg-badge-brand-bg text-badge-brand-text',
-  info: 'bg-badge-info-bg text-badge-info-text',
-  warning: 'bg-badge-warning-bg text-badge-warning-text',
-  success: 'bg-badge-success-bg text-badge-success-text',
-  danger: 'bg-badge-danger-bg text-badge-danger-text',
-  neutral: 'bg-neutral-50 text-neutral-700',
-} as const
-
 const ROW_CLASS = 'flex items-center gap-4 rounded-lg bg-neutral-0/80 px-5 py-4'
 
+/**
+ * 한 줄. 서버가 면접 종류 · 걸린 시간을 주지 않아서 왼쪽 네모에는 제목(기업, 없으면 직무) 첫 글자를 쓰고,
+ * 아랫줄은 날짜 · 문항 수만 적습니다.
+ */
 function ReportRow({ report }: { report: RecentReport }) {
-  const kind = INTERVIEW_KIND_DISPLAY[report.kind]
-  const minutes = Math.max(1, Math.round(report.durationSec / 60))
-
   return (
     <Link to={toReport(report.reportId)} className={`${ROW_CLASS} transition-colors hover:bg-neutral-0`}>
       <span
         aria-hidden
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm text-body-sm font-bold ${KIND_CLASS[kind.tone]}`}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-badge-brand-bg text-body-sm font-bold text-badge-brand-text"
       >
-        {kind.short}
+        {initialOf(report.title)}
       </span>
 
       <span className="min-w-0 flex-1">
         <span className="block truncate text-body-lg text-neutral-900">{report.title}</span>
         <span className="block text-body-sm text-neutral-500">
-          {formatDotDate(report.practicedOn)} · 질문 {report.questionCount}개 · {minutes}분
+          {formatDotDate(report.practicedOn)} · 질문 {report.questionCount}개{report.partial && ' · 일부 항목 빠짐'}
         </span>
       </span>
 
-      <Badge tone={scoreTone(report.score)}>{report.score}점</Badge>
+      {report.score === null ? (
+        <Badge>점수 없음</Badge>
+      ) : (
+        <Badge tone={scoreTone(report.score)}>{report.score}점</Badge>
+      )}
       <IconChevronRight size={18} stroke={2} aria-hidden className="shrink-0 text-neutral-400" />
     </Link>
   )
@@ -54,13 +50,15 @@ function ReportRow({ report }: { report: RecentReport }) {
 type Props = {
   /** null 이면 불러오는 중 */
   reports: RecentReport[] | null
+  /** 이 칸만 못 불러왔을 때 다시 받기. 있으면 목록 대신 안내를 그립니다 */
+  onRetry?: () => void
 }
 
 /**
  * 최근 리포트 요약. 시안대로 카드 하나가 아니라 줄마다 판이 따로 있습니다.
  * 줄을 누르면 그 리포트(C-01)로 갑니다. "전체보기" 는 보관함 > 연습 기록으로 갑니다 (이슈 #142).
  */
-export default function RecentReports({ reports }: Props) {
+export default function RecentReports({ reports, onRetry }: Props) {
   return (
     <section aria-labelledby="home-recent-reports" className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
@@ -70,7 +68,16 @@ export default function RecentReports({ reports }: Props) {
         <CardLink label="전체보기" to={ROUTES.LIBRARY_PRACTICE} />
       </div>
 
-      {reports === null ? (
+      {onRetry ? (
+        <Card padding="lg">
+          <div className="flex flex-col items-center gap-2 py-4 text-center">
+            <p className="text-body-lg text-neutral-900">최근 리포트를 불러오지 못했어요</p>
+            <Button size="sm" onClick={onRetry} className="mt-2">
+              다시 불러오기
+            </Button>
+          </div>
+        </Card>
+      ) : reports === null ? (
         <ul aria-busy className="flex flex-col gap-3">
           {[0, 1, 2].map((index) => (
             <li key={index} className={ROW_CLASS}>

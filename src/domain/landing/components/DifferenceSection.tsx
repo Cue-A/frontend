@@ -17,7 +17,8 @@ export default function DifferenceSection() {
           {DIFFERENCE.title}
         </h2>
 
-        <p className="text-h2 leading-relaxed text-neutral-900">{DIFFERENCE.body}</p>
+        {/* 낱말 중간에서 끊기지 않게(`break-keep`), 줄 길이가 고르게(`text-balance`) 줄바꿈합니다 (이슈 #187) */}
+        <p className="break-keep text-balance text-h2 leading-relaxed text-neutral-900">{DIFFERENCE.body}</p>
       </Card>
     </section>
   )

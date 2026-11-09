@@ -1,17 +1,19 @@
 /**
  * 홈 대시보드(A-04)에서 쓰는 화면 타입입니다.
  *
- * ⚠️ **백엔드에 홈용 API 가 없습니다.** growth 도메인에 엔티티(Badge · UserBadge · Streak · Goal)만 있고
- * 컨트롤러가 없어서(Cue-A/backend dev, 2026-10-01 확인) 이 타입은 시안을 보고 프론트가 먼저 정한 모양입니다.
+ * 백엔드 홈 API 는 셋입니다(Cue-A/backend#108 · #116). 이번 달 · 연속 학습은 `/api/home/stats`, 최근 리포트는
+ * `/api/home/recent-reports`, 기간 탭에 따라 바뀌는 연습 기록은 `/api/home/practice` 입니다. 배지 · 이번 주 목표 ·
+ * 다가오는 일정 · 인재상 · 질문은행은 백엔드에 아직 없어서 프론트 임시안(`/api/home`)을 목업이 답합니다.
+ *
  * 서버 응답 모양은 `api/homeResponse.ts` 에 따로 두고 `api/homeApi.ts` 에서 옮겨 담습니다 —
- * 계약이 정해져서 서버 필드가 바뀌어도 화면이 같이 흔들리지 않게 하려는 것입니다 (docs/01-conventions.md "타입").
+ * 서버 필드가 바뀌어도 화면이 같이 흔들리지 않게 하려는 것입니다 (docs/01-conventions.md "타입").
  */
 
 /** 연습 기록 카드의 기간 탭. 4주 · 10주 · 6개월 · 1년 (시안 mode-chips `1247:1709`) */
 export type PracticePeriod = '4w' | '10w' | '6m' | '1y'
 
 /* ---------------------------------------------------------------------------
- * 기간과 상관없는 묶음 — `GET /api/home`
+ * 이번 달 · 연속 학습 — `GET /api/home/stats`
  * ------------------------------------------------------------------------- */
 
 export type MonthlyActivity = {
@@ -33,18 +35,31 @@ export type Streak = {
   best: number
 }
 
-/** 최근 리포트 행 왼쪽의 네모 아이콘(BE · FE · 인성)을 고르는 값입니다 */
-export type InterviewKind = 'BACKEND' | 'FRONTEND' | 'PERSONALITY' | 'OTHER'
+export type HomeStats = {
+  thisMonth: MonthlyActivity
+  streak: Streak
+}
 
+/* ---------------------------------------------------------------------------
+ * 최근 리포트 — `GET /api/home/recent-reports`
+ * ------------------------------------------------------------------------- */
+
+/**
+ * 최근 리포트 한 줄입니다. 볼 수 있는 리포트(완료 · 부분)만 옵니다.
+ * 서버가 면접 종류 · 걸린 시간을 주지 않아서 시안의 "BE · FE · 인성" 아이콘과 "12분" 은 그리지 않습니다.
+ */
 export type RecentReport = {
   reportId: string
+  /** 기업 · 직무. 기업을 고르지 않은 면접이면 직무만. 행 왼쪽 동그라미에는 이 첫 글자를 씁니다 */
   title: string
-  kind: InterviewKind
-  /** 면접 본 날 (YYYY-MM-DD) */
+  /** 면접 본 날 (YYYY-MM-DD, 보는 사람 기준) */
   practicedOn: string
+  /** 고른 문항 수. 되묻기는 세지 않습니다 */
   questionCount: number
-  durationSec: number
-  score: number
+  /** 종합 점수. 점수가 없는 리포트면 null */
+  score: number | null
+  /** 일부 항목이 빠진 리포트(PARTIAL)인지 */
+  partial: boolean
 }
 
 /** 배지 색. 토큰의 badge 의미 5종과 같습니다 (docs/design-system.md §2.4) */
@@ -64,7 +79,7 @@ export type HomeBadge = {
 export type BadgeSummary = {
   earnedCount: number
   totalCount: number
-  /** 홈에 보여줄 배지. 아직 못 딴 것도 들어 있습니다(`earned: false`) */
+  /** 배지 전부. 아직 못 딴 것도 들어 있고(`earned: false`), 화면은 받은 것만 그립니다 */
   featured: HomeBadge[]
   /** "다음 뱃지까지 연습 2회 남았어요" 같은 안내. 줄 게 없으면 null */
   nextHint: string | null
@@ -85,11 +100,11 @@ export type UpcomingEvent = {
   time: string | null
 }
 
-export type HomeOverview = {
-  thisMonth: MonthlyActivity
-  streak: Streak
-  /** 최근 것부터 */
-  recentReports: RecentReport[]
+/* ---------------------------------------------------------------------------
+ * 백엔드에 아직 없는 것 — `GET /api/home` (프론트 임시안 · 목업)
+ * ------------------------------------------------------------------------- */
+
+export type HomeExtras = {
   badges: BadgeSummary
   /** 이번 주 목표를 안 정했으면 null */
   weeklyGoal: WeeklyGoal | null
@@ -118,6 +133,8 @@ export type ActivityDay = {
  * 4주 · 10주는 **회차 하나**가 한 점이고, 6개월 · 1년은 회차가 너무 많아서 **한 달 평균**이 한 점입니다.
  */
 export type ScorePoint = {
+  /** 회차면 YYYY-MM-DD, 달이면 YYYY-MM */
+  date: string
   /** 점 위에 올렸을 때 보여줄 이름. "9월 28일" · "2026년 9월" */
   label: string
   score: number

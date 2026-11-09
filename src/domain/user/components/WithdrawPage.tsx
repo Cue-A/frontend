@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import { ROUTES } from '@/app/routes'
+import { MYPAGE_ACCOUNT_ID, ROUTES, toMyPageProfile } from '@/app/routes'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
@@ -12,8 +12,11 @@ import type { WithdrawReason, WithdrawRequest } from '../types/user'
 import MyPageHeader from './MyPageHeader'
 import WithdrawConfirmDialog from './WithdrawConfirmDialog'
 
+/** 탈퇴를 그만두면 돌아가는 곳 — 프로필의 계정 칸 */
+const ACCOUNT_SECTION = toMyPageProfile(MYPAGE_ACCOUNT_ID)
+
 /**
- * 회원 탈퇴 — 이유 고르기 → 최종 확인(창) → 완료. (마이페이지 > 계정 설정 > 계정 탈퇴하기)
+ * 회원 탈퇴 — 이유 고르기 → 최종 확인(창) → 완료. (마이페이지 > 프로필 > 계정 탈퇴하기)
  *
  * 프레시코드 탈퇴 화면을 참고한 임시 흐름입니다(시안 없음). 한 화면에서 **이유를 왜 묻는지** 먼저 적고 이유를
  * 고르게 한 뒤, "탈퇴하기" 를 누르면 확인 창(WithdrawConfirmDialog)에서 한 번 더 묻습니다.
@@ -38,14 +41,12 @@ export default function WithdrawPage() {
     setConfirming({ reason, ...(reason === 'OTHER' && trimmed ? { detail: trimmed } : {}) })
   }
 
+  // 계정 설정은 프로필에 합쳤습니다(이슈 #185). 돌아가는 곳은 프로필의 계정 칸입니다
   const title = (
     <>
-      <Link to={ROUTES.MYPAGE} className="transition-colors hover:text-primary-600">
-        마이페이지
-      </Link>{' '}
-      ·{' '}
-      <Link to={ROUTES.MYPAGE_ACCOUNT} className="transition-colors hover:text-primary-600">
-        계정 설정
+      마이페이지 ·{' '}
+      <Link to={ACCOUNT_SECTION} className="transition-colors hover:text-primary-600">
+        프로필
       </Link>{' '}
       · 회원 탈퇴
     </>
@@ -110,7 +111,7 @@ export default function WithdrawPage() {
         </fieldset>
 
         <div className="mt-5 flex items-center justify-between gap-3">
-          <Button to={ROUTES.MYPAGE_ACCOUNT}>이전</Button>
+          <Button to={ACCOUNT_SECTION}>이전</Button>
           <div className="flex items-center gap-3">
             {!reason && (
               <p id={hintId} className="text-body-sm text-neutral-500">

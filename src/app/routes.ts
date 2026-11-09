@@ -29,19 +29,20 @@ export const ROUTES = {
   COMPANIES: '/companies',
   /** 기업 상세 — 업종 · 핵심 가치 · 행동지표, 이 기업으로 면접 연습하기 */
   COMPANY: '/companies/:companyId',
-  /** 마이페이지 메뉴 목록 */
+  /**
+   * 마이페이지의 앞부분. 사이드바가 "마이페이지" 칸을 켤지 정할 때 씁니다.
+   * 메뉴 목록 화면은 지웠고(이슈 #185), 이 주소로 들어오면 프로필로 보냅니다.
+   */
   MYPAGE: '/mypage',
-  /** 마이페이지 > 프로필 — 이름 · 직무 수정, 이메일은 보기만 */
+  /** 마이페이지 > 프로필 — 이름 · 직무 수정, 계정(로그인 방식 · 로그아웃 · 탈퇴), 알림 설정 (이슈 #185 에서 합침) */
   MYPAGE_PROFILE: '/mypage/profile',
   /** 마이페이지 > 관심 기업 */
   MYPAGE_INTERESTS: '/mypage/interests',
-  /** 마이페이지 > 알림 설정 */
+  /** 옛 알림 설정 주소. 프로필에 합쳐서 프로필의 알림 칸으로 보냅니다 (이슈 #185) */
   MYPAGE_NOTIFICATIONS: '/mypage/notifications',
-  /** 마이페이지 > 나만의 명함 생성 */
-  MYPAGE_BUSINESS_CARD: '/mypage/business-card',
-  /** 마이페이지 > 계정 설정 — 로그아웃 · 회원 탈퇴 */
+  /** 옛 계정 설정 주소. 프로필에 합쳐서 프로필의 계정 칸으로 보냅니다 (이슈 #185) */
   MYPAGE_ACCOUNT: '/mypage/account',
-  /** 계정 설정 > 계정 탈퇴하기 — 이유 고르기 · 최종 확인 */
+  /** 프로필 > 계정 탈퇴하기 — 이유 고르기 · 최종 확인 */
   MYPAGE_WITHDRAW: '/mypage/account/withdraw',
   /** B-01 확인용 정적 프리뷰. 리뷰 끝나면 지워도 되는 임시 라우트입니다. */
   DEV_INTERVIEW_PREVIEW: '/dev/interview-preview',
@@ -52,6 +53,15 @@ export const ROUTES = {
  * 자소서 · 포트폴리오 · 연습 기록 · 질문 은행이 이 아래에 있습니다.
  */
 export const LIBRARY_PREFIX = '/library'
+
+/** 프로필 화면 안의 칸. `/mypage/profile#account` 로 들어오면 그 칸으로 내려갑니다 (이슈 #185) */
+export const MYPAGE_ACCOUNT_ID = 'account'
+export const MYPAGE_NOTIFICATIONS_ID = 'notifications'
+
+/** 프로필로 가는 주소입니다. 칸을 주면 그 칸으로 내려갑니다 — 계정(로그아웃 · 탈퇴) · 알림 설정 */
+export function toMyPageProfile(section?: typeof MYPAGE_ACCOUNT_ID | typeof MYPAGE_NOTIFICATIONS_ID) {
+  return section ? `${ROUTES.MYPAGE_PROFILE}#${section}` : ROUTES.MYPAGE_PROFILE
+}
 
 /** 성장 관리 주소에 붙여 이번 주 목표 창을 바로 엽니다. `/growth?open=goal` (이슈 #142) */
 export const GROWTH_OPEN_PARAM = 'open'
@@ -99,6 +109,15 @@ export function toAnalyzing(sessionId: string) {
   return `/interviews/${sessionId}/analyzing`
 }
 
-export function toReport(reportId: string) {
-  return `/reports/${reportId}`
+/**
+ * 리포트 화면의 탭. `/reports/{id}?view=growth` 면 "성장 추이 보기" 탭으로 엽니다. 없으면 "이번 회차 리포트" 입니다.
+ * 주소에 두어서 새로고침 · 뒤로 가기에도 고른 탭이 남습니다 (이슈 #183).
+ */
+export const REPORT_VIEW_PARAM = 'view'
+export const REPORT_VIEW_GROWTH = 'growth'
+
+/** 리포트로 갑니다. `view` 를 주면 그 탭으로 엽니다 — 성장 추이 탭에서 회차를 바꿀 때 탭을 그대로 둡니다 */
+export function toReport(reportId: string, view?: typeof REPORT_VIEW_GROWTH) {
+  const path = `/reports/${reportId}`
+  return view ? `${path}?${REPORT_VIEW_PARAM}=${view}` : path
 }

@@ -36,9 +36,6 @@ export type InterviewerStyle = InterviewOptions['interviewerStyle']
 
 export type SessionPhase = 'presenting' | 'answering' | 'submitting' | 'waitingNextQuestion' | 'finished'
 
-/** DeviceStatusChip 전용 상태. 장치 테스트(B파트 진입 전) 화면의 3단계(DeviceCheckState)와는 별개다. */
-export type DeviceStatus = 'ok' | 'warning'
-
 /**
  * WS push 페이로드입니다. 공통 봉투는 `{ type, payload }` 이고 `type` 은
  * 'question' | 'progress' | 'error' | 'session_end' 다 (docs/90-open-questions.md Q6a).

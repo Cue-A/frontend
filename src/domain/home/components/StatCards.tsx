@@ -1,6 +1,6 @@
 import { monthlyDiffText } from '../lib/homeDisplay'
 import { practicePeriodOf } from '../lib/practicePeriod'
-import type { HomeOverview, PracticeRecord } from '../types/home'
+import type { HomeStats, PracticeRecord } from '../types/home'
 
 import SkeletonBlock from './SkeletonBlock'
 
@@ -50,8 +50,9 @@ function StatCard({ label, value, unit, caption, highlight = false, stale = fals
 }
 
 type Props = {
-  /** null 이면 불러오는 중 */
-  overview: HomeOverview | null
+  /** null 이면 불러오는 중이거나 못 불러옴 (`statsFailed`) */
+  stats: HomeStats | null
+  statsFailed: boolean
   /** null 이면 불러오는 중이거나 못 불러옴 (`recordFailed`) */
   record: PracticeRecord | null
   recordStale: boolean
@@ -63,12 +64,17 @@ type Props = {
 /**
  * 맨 위 숫자 카드 네 개.
  *
- * 앞의 둘(이번 달 · 연속 학습)은 기간과 상관없고, 뒤의 둘(기간 평균 · 총 연습)은 기간 탭을 따릅니다.
- * 시안의 "기간 평균" · "10주 누적" 이 그 뜻입니다.
+ * 앞의 둘(이번 달 · 연속 학습)은 기간과 상관없고(`/api/home/stats`), 뒤의 둘(기간 평균 · 총 연습)은 기간 탭을
+ * 따릅니다(`/api/home/practice`). 시안의 "기간 평균" · "10주 누적" 이 그 뜻입니다. 둘은 따로 받아서 한쪽이 실패하면
+ * 그쪽 카드만 "–" 로 둡니다.
  */
-export default function StatCards({ overview, record, recordStale, recordFailed, periodLabel }: Props) {
+export default function StatCards({ stats, statsFailed, record, recordStale, recordFailed, periodLabel }: Props) {
   const recordValue = <T,>(pick: (value: PracticeRecord) => T) =>
     record ? pick(record) : recordFailed ? null : undefined
+
+  const statsValue = <T,>(pick: (value: HomeStats) => T) => (stats ? pick(stats) : statsFailed ? null : undefined)
+  const statsCaption = (text: (value: HomeStats) => string) =>
+    stats ? text(stats) : statsFailed ? '불러오지 못했어요' : ''
 
   const average = recordValue((value) => value.averageScore)
   const best = record?.bestScore ?? null
@@ -79,17 +85,19 @@ export default function StatCards({ overview, record, recordStale, recordFailed,
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <StatCard
-        label={overview ? `이번 달 (${overview.thisMonth.month}월)` : '이번 달'}
-        value={overview?.thisMonth.activeDays}
+        label={stats ? `이번 달 (${stats.thisMonth.month}월)` : '이번 달'}
+        value={statsValue((value) => value.thisMonth.activeDays)}
         unit="일"
-        caption={overview ? monthlyDiffText(overview.thisMonth) : ''}
+        caption={statsCaption((value) => monthlyDiffText(value.thisMonth))}
       />
       <StatCard
         highlight
         label="연속 학습"
-        value={overview?.streak.current}
+        value={statsValue((value) => value.streak.current)}
         unit="일째"
-        caption={overview ? (overview.streak.best > 0 ? `최고 ${overview.streak.best}일` : '오늘 첫 연습으로 시작해요') : ''}
+        caption={statsCaption((value) =>
+          value.streak.best > 0 ? `최고 ${value.streak.best}일` : '오늘 첫 연습으로 시작해요',
+        )}
       />
       <StatCard
         label="기간 평균"

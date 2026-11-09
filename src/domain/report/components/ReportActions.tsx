@@ -11,7 +11,8 @@ import type { ReportExport } from '../hooks/useReportExport'
 /** `Button` 의 secondary · md 와 같은 모양입니다. 메뉴를 여는 버튼이라 `aria-expanded` 를 달려고 직접 그립니다 */
 const TRIGGER_CLASS =
   'inline-flex w-full items-center justify-center gap-2 rounded-sm border border-neutral-300 px-4 py-3 ' +
-  'text-center text-body-md font-semibold text-neutral-900 transition-colors hover:bg-neutral-50'
+  'text-center text-body-md font-semibold text-neutral-900 transition-colors hover:bg-neutral-50 ' +
+  'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent'
 
 const MENU_ITEM_CLASS =
   'flex w-full items-center gap-2 px-4 py-2 text-left text-body-md text-neutral-900 transition-colors ' +
@@ -28,7 +29,7 @@ const MENU_ITEM_CLASS =
  * 항목을 고르거나 Esc 로 닫으면 포커스를 "리포트 저장하기" 버튼으로 돌려줍니다. 누른 항목이 메뉴와 함께 사라지면
  * 포커스가 `body` 로 빠져서 키보드 사용자가 위치를 잃습니다. (PR #144 리뷰)
  */
-function SaveMenu({ exporter }: { exporter: ReportExport }) {
+function SaveMenu({ exporter, blocked }: { exporter: ReportExport; blocked: boolean }) {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const popover = usePopover(rootRef)
@@ -52,6 +53,7 @@ function SaveMenu({ exporter }: { exporter: ReportExport }) {
         ref={triggerRef}
         type="button"
         onClick={popover.toggle}
+        disabled={blocked}
         aria-expanded={popover.open}
         aria-controls={menuId}
         className={TRIGGER_CLASS}
@@ -61,7 +63,7 @@ function SaveMenu({ exporter }: { exporter: ReportExport }) {
         <IconChevronDown size={16} stroke={2} aria-hidden className="text-neutral-500" />
       </button>
 
-      {popover.open && (
+      {popover.open && !blocked && (
         <ul
           id={menuId}
           aria-label="저장 형식"
@@ -103,6 +105,8 @@ type Props = {
    * 바뀌어서, 먼저 누르면 재연습 대신 새 면접 설정으로 가게 됩니다 (PR #153 리뷰)
    */
   checking?: boolean
+  /** 지금 저장할 수 없는 이유. 있으면 "리포트 저장하기" 를 잠그고 이 글을 아래에 적습니다 (`ReportDocActions` 와 같음) */
+  saveBlockedReason?: string | null
 }
 
 /**
@@ -121,7 +125,7 @@ type Props = {
  * 버튼 위 안내 문구("다시 연습하기를 누르면 …")는 디자인 피드백으로 뺐습니다. 대신 홈 · 다시 연습하기에 아이콘을 붙였습니다.
  * 실패한 리포트의 면접을 찾는 동안에는 "다시 연습하기" 가 잠기는데, 이유가 안 보이면 고장으로 읽혀서 버튼 글자로 알립니다.
  */
-export default function ReportActions({ exporter, sessionId, checking = false }: Props) {
+export default function ReportActions({ exporter, sessionId, checking = false, saveBlockedReason = null }: Props) {
   return (
     <Card label="다음 단계" padding="lg">
       <div className="flex flex-col gap-4">
@@ -131,7 +135,7 @@ export default function ReportActions({ exporter, sessionId, checking = false }:
             홈으로 이동
           </Button>
 
-          {exporter && <SaveMenu exporter={exporter} />}
+          {exporter && <SaveMenu exporter={exporter} blocked={saveBlockedReason !== null} />}
 
           <Button
             variant="primary"
@@ -144,6 +148,7 @@ export default function ReportActions({ exporter, sessionId, checking = false }:
           </Button>
         </nav>
 
+        {exporter && saveBlockedReason && <p className="text-body-sm text-neutral-500">{saveBlockedReason}</p>}
         {exporter?.error && <p className="text-body-sm text-semantic-danger">{exporter.error}</p>}
       </div>
     </Card>

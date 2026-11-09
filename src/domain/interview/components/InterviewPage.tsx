@@ -12,7 +12,7 @@ import { useLiveCaption } from '../hooks/useLiveCaption'
 import { useMediaStream } from '../hooks/useMediaStream'
 import { useQuestionAudio } from '../hooks/useQuestionAudio'
 import type { InterviewSessionOptions } from '../api/sessionApi'
-import type { DeviceStatus } from '../types/interview'
+import { recallSessionSummary } from '../api/sessionOptionsDraft'
 import type { MediaTrackFailureReason, MediaTrackState } from '../types/media'
 
 import ExitConfirmModal from './ExitConfirmModal'
@@ -32,17 +32,6 @@ const CAMERA_FAILURE_MESSAGE: Record<MediaTrackFailureReason, string> = {
   'not-found': '카메라를 찾을 수 없어요',
   'device-ended': '카메라 연결이 끊겼어요',
   unknown: '카메라를 확인할 수 없어요',
-}
-
-/** DeviceStatusChip 은 상단 오버레이용 요약 한 줄이라, 실패 이유별 문구는 SelfCameraPreview 쪽에 따로 둔다. */
-function buildDeviceStatus(camera: MediaTrackState, mic: MediaTrackState): { status: DeviceStatus; message: string } {
-  const cameraOk = camera.status === 'available'
-  const micOk = mic.status === 'available'
-
-  if (cameraOk && micOk) return { status: 'ok', message: '카메라 · 마이크 정상' }
-  if (!micOk && !cameraOk) return { status: 'warning', message: '카메라 · 마이크를 확인해주세요' }
-  if (!micOk) return { status: 'warning', message: '마이크 입력이 없어요' }
-  return { status: 'warning', message: '카메라 화면이 안 보여요' }
 }
 
 /**
@@ -81,6 +70,8 @@ type ConnectedProps = {
 function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const location = useLocation()
   const navigate = useNavigate()
+  // 상단 "기업 · 직무" 표시용. 이 탭에서 시작한 면접만 값이 있고(서버 조회 응답에 없음), 없으면 그 줄을 숨긴다.
+  const [summary] = useState(() => recallSessionSummary(sessionId))
   const initialDeviceStatus = readInitialDeviceStatus(location.state)
   const initialDeviceIds = readInitialDeviceIds(location.state)
   const [isExitRequested, setIsExitRequested] = useState(false)
@@ -222,7 +213,6 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
     return <InterviewStatusScreen message="첫 질문을 준비하는 중이에요..." />
   }
 
-  const deviceStatus = buildDeviceStatus(camera, mic)
 
   // X 버튼(isExitRequested)과 뒤로가기 등 인앱 이동 시도(blocker.state==='blocked')
   // 둘 다 같은 모달로 확인받는다.
@@ -293,14 +283,15 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         onExit={() => setIsExitRequested(true)}
         recordingStartedAt={recordingStartedAt}
         interviewerStyle={options.interviewerStyle}
+        jobRole={summary?.jobRole}
+        companyName={summary?.companyName}
         sessionStartedAt={session.sessionStartedAt}
         isSessionFinished={session.isFinished}
         // 면접 전체 제한 시간은 없다 — 경과 시간만 표시한다.
         sessionLimitSec={null}
-        deviceStatus={deviceStatus.status}
-        deviceStatusMessage={deviceStatus.message}
         speakingIntensity={amplitude}
         hasCameraStream={camera.status === 'available'}
+        isMicAvailable={mic.status === 'available'}
         cameraFailureMessage={camera.status === 'failed' && camera.failureReason ? CAMERA_FAILURE_MESSAGE[camera.failureReason] : null}
         onAudioElement={setAudioElement}
         caption={caption}
@@ -311,6 +302,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         sessionId={sessionId}
         onSubmitAnswer={handleSubmitAnswer}
         progressLabel={session.progressLabel}
+        answerDelayed={session.answerProcessingTimedOut}
         needsRerecord={session.needsRerecord}
         submitError={session.submitError}
         remainingSec={session.remainingSec}

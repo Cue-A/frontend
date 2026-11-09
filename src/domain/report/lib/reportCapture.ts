@@ -5,7 +5,7 @@ import { EXPORT_EXCLUDE_ATTR } from './exportExclude'
 /**
  * 리포트 본문을 PNG 로 찍는 부분입니다. (이슈 #143)
  *
- * 찍는 일 자체(폰트 넣기 · 해상도)는 명함 저장과 같이 쓰는 `shared/lib/captureImage.ts` 가 합니다. 여기서는 리포트에만
+ * 찍는 일 자체(폰트 넣기 · 해상도)는 `shared/lib/captureImage.ts` 가 합니다. 여기서는 리포트에만
  * 있는 것 — 저장에서 뺄 요소, 바탕색, 여백 — 만 정합니다. 이 파일은 **"이미지로 저장" 을 처음 누를 때 불러옵니다**
  * (`useReportExport` 의 `import()`). 리포트를 보기만 하는 사람의 번들에는 라이브러리가 들어가지 않습니다. (PR #144 리뷰)
  */

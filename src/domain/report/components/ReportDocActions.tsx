@@ -12,6 +12,11 @@ type Props = {
   exporter: ReportExport
   /** 공유하기 창. `ReportPage` 가 `useReportShare` 로 만들어 넘깁니다 */
   share: ReportShare
+  /**
+   * 지금 저장 · 공유할 수 없는 이유. 있으면 세 버튼을 잠그고 이 글을 아래에 적습니다.
+   * 성장 추이 탭에서 회차 비교를 아직 못 받았을 때입니다 — 그대로 찍으면 제목만 남은 파일이 나옵니다 (이슈 #183)
+   */
+  blockedReason?: string | null
 }
 
 /**
@@ -28,25 +33,29 @@ type Props = {
  * - `공유하기` — 창을 열어 이미지로 공유하거나 링크를 복사합니다(`ReportShareDialog`). 공유 링크 API 가 없어 링크는 목업이고,
  *   창 안에 "준비 중" 으로 적습니다 (이슈 #32)
  */
-export default function ReportDocActions({ exporter, share }: Props) {
+export default function ReportDocActions({ exporter, share, blockedReason = null }: Props) {
+  const blocked = blockedReason !== null
+
   return (
     <div className="flex flex-col items-end gap-2 print:hidden">
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <Button size="sm" onClick={exporter.saveImage} disabled={exporter.savingImage}>
+        <Button size="sm" onClick={exporter.saveImage} disabled={blocked || exporter.savingImage}>
           <IconPhoto size={16} stroke={2} aria-hidden />
           {exporter.savingImage ? '이미지 만드는 중…' : '이미지로 저장'}
         </Button>
 
-        <Button size="sm" onClick={exporter.printPdf}>
+        <Button size="sm" onClick={exporter.printPdf} disabled={blocked}>
           <IconFileTypePdf size={16} stroke={2} aria-hidden />
           PDF 내보내기
         </Button>
 
-        <Button size="sm" onClick={share.open}>
+        <Button size="sm" onClick={share.open} disabled={blocked}>
           <IconShare size={16} stroke={2} aria-hidden />
           공유하기
         </Button>
       </div>
+
+      {blockedReason && <p className="text-body-sm text-neutral-500">{blockedReason}</p>}
 
       {exporter.error && (
         <p role="alert" className="text-body-sm text-semantic-danger">
