@@ -1,6 +1,7 @@
 import { registerMock } from '@/shared/api/mock'
 
 import { mockReportDetail } from './reportMock'
+import type { ReportDetailResponse } from './reportResponse'
 import type { ReportTimelineResponse } from './timelineApi'
 
 /**
@@ -10,12 +11,12 @@ import type { ReportTimelineResponse } from './timelineApi'
 
 const AXES = ['content', 'speech', 'gaze'] as const
 
-registerMock('GET', '/api/reports/:reportId/timeline', ({ reportId }): ReportTimelineResponse => {
-  const detail = mockReportDetail(reportId)
+/** 상세 응답의 축별 근거를 원 질문별로 묶습니다. 공개 리포트 목업(`reportShareMock.ts`)도 같은 걸 씁니다 */
+export function mockTimelineOf(detail: ReportDetailResponse): ReportTimelineResponse {
   const questions = [...detail.questions].sort((a, b) => a.questionNumber - b.questionNumber)
 
   return {
-    reportId,
+    reportId: detail.reportId,
     status: detail.status === 'PARTIAL' ? 'PARTIAL' : 'COMPLETED',
     axes: {
       content: detail.axes.content?.status ?? null,
@@ -44,4 +45,8 @@ registerMock('GET', '/api/reports/:reportId/timeline', ({ reportId }): ReportTim
       ).sort((a, b) => (a.tStart ?? 0) - (b.tStart ?? 0)),
     })),
   }
-})
+}
+
+registerMock('GET', '/api/reports/:reportId/timeline', ({ reportId }): ReportTimelineResponse =>
+  mockTimelineOf(mockReportDetail(reportId)),
+)

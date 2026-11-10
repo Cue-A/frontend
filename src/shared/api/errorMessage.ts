@@ -129,6 +129,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   // 답변이 2문항 미만이면 리포트를 만들지 않습니다. 재시도해도 결과가 같습니다.
   REPORT_TOO_SHORT: '답변이 너무 적어 리포트를 만들지 못했어요. 두 문항 이상 답해 주세요.',
   MEDIA_FETCH_FAILED: '녹화 파일을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+  // 공유 링크로 연 리포트(Cue-A/backend#137). 없는 · 해제된 · 형식이 틀린 링크가 모두 이 코드입니다.
+  // 다시 열어도 같아서 "다시 시도" 를 붙이지 않습니다.
+  SHARED_REPORT_NOT_FOUND: '공유가 해제됐거나 없는 링크예요.',
 
   // ── 서버가 아니라 프론트가 만드는 코드 ─────────────────────
   // presigned URL 로 녹화를 올리다 실패했습니다 (domain/interview/api/mediaApi.ts).
