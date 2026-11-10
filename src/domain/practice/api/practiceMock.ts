@@ -5,6 +5,7 @@ import type { PracticeReportStatus } from '../types/practice'
 
 import type {
   FolderListResponse,
+  FolderMoveResponse,
   FolderResponse,
   PracticeRecordListResponse,
   PracticeRecordResponse,
@@ -19,16 +20,22 @@ import type {
  * 옵션 설정과 이름이 어긋나 보입니다. 중단한 세션 하나를 넣어 두었지만 서버처럼 목록 · 개수에서 뺍니다.
  * 날짜는 홈 목업처럼 **오늘 기준**으로 만듭니다 — 날짜를 박아 두면 "진행 중" 세션이 몇 달 전 것으로 보입니다.
  *
- * 저장은 메모리에만 합니다. 새로 만든 폴더는 새로고침하면 사라집니다.
+ * 저장은 메모리에만 합니다. 새로 만든 폴더 · 이름 바꾸기 · 삭제 · 폴더 이동은 새로고침하면 사라집니다.
+ *
+ * 폴더 이동은 서버처럼 **면접 단위**로 움직입니다. 같은 면접의 회차끼리 `interviewId` 를 같게 두었습니다
+ * (프론트엔드 개발자 1 · 2회차, 카카오모빌리티 백엔드 개발자 1 · 2회차).
  */
 
 const MAX_FOLDER_NAME_LENGTH = 50
 const MAX_FOLDER_COUNT = 20
 const DEFAULT_PAGE_SIZE = 10
 const MAX_PAGE_SIZE = 100
+const MAX_MOVE_SESSIONS = 100
 
 type StoredFolder = { folderId: string; folderName: string; createdAt: string }
 type StoredSession = Omit<PracticeRecordResponse, 'createdAt' | 'folder' | 'report'> & {
+  /** 같은 면접의 회차끼리 같습니다. 서버는 응답에 싣지 않지만 폴더 이동을 이 단위로 합니다 */
+  interviewId: string
   daysAgo: number
   folderId: string | null
   /** 리포트를 맡겼으면 그 상태. 맡기지 않았으면 null */
@@ -46,23 +53,31 @@ const folders: StoredFolder[] = [
   { folderId: FOLDER_NAVER, folderName: '네이버', createdAt: '2026-07-03T10:00:00+09:00' },
 ]
 
+const INTERVIEW_SAMSUNG_FRONTEND = 'mock-interview-samsung-frontend'
+const INTERVIEW_KAKAO_BACKEND = 'mock-interview-kakao-backend'
+
 function session(
   index: number,
-  fields: Omit<StoredSession, 'sessionId' | 'reportStatus'> & { reportStatus?: PracticeReportStatus | null },
+  fields: Omit<StoredSession, 'sessionId' | 'reportStatus' | 'interviewId'> & {
+    reportStatus?: PracticeReportStatus | null
+    /** 재면접이면 1회차와 같은 값. 없으면 혼자인 면접입니다 */
+    interviewId?: string
+  },
 ): StoredSession {
-  const { reportStatus = fields.status === 'COMPLETED' ? 'COMPLETED' : null, ...rest } = fields
-  return { ...rest, reportStatus, sessionId: `mock-practice-${String(index).padStart(2, '0')}` }
+  const sessionId = `mock-practice-${String(index).padStart(2, '0')}`
+  const { reportStatus = fields.status === 'COMPLETED' ? 'COMPLETED' : null, interviewId = sessionId, ...rest } = fields
+  return { ...rest, reportStatus, interviewId, sessionId }
 }
 
 /** 최신순으로 적었습니다. `daysAgo` 는 오늘로부터 며칠 전에 시작했는지입니다 */
 const sessions: StoredSession[] = [
   session(1, { companyName: '삼성바이오로직스', jobRole: '마케팅 직무', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 84, folderId: FOLDER_SAMSUNG, daysAgo: 1 }),
   session(2, { companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 76, folderId: FOLDER_KAKAO, daysAgo: 3 }),
-  session(3, { companyName: '삼성바이오로직스', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 2, status: 'IN_PROGRESS', questionCount: 6, totalScore: null, folderId: FOLDER_SAMSUNG, daysAgo: 4 }),
+  session(3, { interviewId: INTERVIEW_SAMSUNG_FRONTEND, companyName: '삼성바이오로직스', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 2, status: 'IN_PROGRESS', questionCount: 6, totalScore: null, folderId: FOLDER_SAMSUNG, daysAgo: 4 }),
   session(4, { companyName: '네이버', jobRole: '데이터 분석가', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 88, folderId: FOLDER_NAVER, daysAgo: 6 }),
   // 끝냈지만 분석 화면에서 나가 리포트를 맡기지 않은 세션입니다. "분석하기" 를 확인할 때 씁니다
-  session(5, { companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'PRESSURE', round: 2, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 8, reportStatus: null }),
-  session(6, { companyName: '삼성바이오로직스', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 71, folderId: FOLDER_SAMSUNG, daysAgo: 11 }),
+  session(5, { interviewId: INTERVIEW_KAKAO_BACKEND, companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'PRESSURE', round: 2, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_KAKAO, daysAgo: 8, reportStatus: null }),
+  session(6, { interviewId: INTERVIEW_SAMSUNG_FRONTEND, companyName: '삼성바이오로직스', jobRole: '프론트엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 71, folderId: FOLDER_SAMSUNG, daysAgo: 11 }),
   // 중간에 그만둔 세션입니다. 서버처럼 목록 · 개수에서 뺍니다
   session(7, { companyName: '네이버', jobRole: '서비스 기획자', persona: 'PRESSURE', round: 1, status: 'ABORTED', questionCount: 6, totalScore: null, folderId: FOLDER_NAVER, daysAgo: 13 }),
   // 분석 중인 리포트는 버튼 없이 "분석 중" 만 보입니다
@@ -71,7 +86,7 @@ const sessions: StoredSession[] = [
   session(9, { companyName: '삼성바이오로직스', jobRole: '마케팅 직무', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: 79, folderId: FOLDER_SAMSUNG, daysAgo: 20, reportStatus: 'PARTIAL' }),
   // 분석이 실패한 리포트는 점수 없이 분석 중 화면으로 갑니다
   session(10, { companyName: '네이버', jobRole: '데이터 분석가', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 6, totalScore: null, folderId: FOLDER_NAVER, daysAgo: 24, reportStatus: 'FAILED' }),
-  session(11, { companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'FRIENDLY', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 81, folderId: FOLDER_KAKAO, daysAgo: 29 }),
+  session(11, { interviewId: INTERVIEW_KAKAO_BACKEND, companyName: '카카오모빌리티', jobRole: '백엔드 개발자', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 81, folderId: FOLDER_KAKAO, daysAgo: 29 }),
   session(12, { companyName: '삼성바이오로직스', jobRole: '프론트엔드 개발자', persona: 'PRESSURE', round: 1, status: 'COMPLETED', questionCount: 9, totalScore: 66, folderId: FOLDER_SAMSUNG, daysAgo: 35 }),
 ]
 
@@ -83,15 +98,22 @@ function startedAt(daysAgo: number): string {
   return date.toISOString()
 }
 
-function toResponse({ daysAgo, folderId, reportStatus, totalScore, ...stored }: StoredSession): PracticeRecordResponse {
-  const folder = folders.find((item) => item.folderId === folderId)
+function toResponse(stored: StoredSession): PracticeRecordResponse {
+  const { sessionId, companyName, jobRole, persona, questionCount, status, round, reportStatus, totalScore } = stored
+  const folder = folders.find((item) => item.folderId === stored.folderId)
   const scored = reportStatus === 'COMPLETED' || reportStatus === 'PARTIAL'
   return {
-    ...stored,
-    createdAt: startedAt(daysAgo),
+    sessionId,
+    companyName,
+    jobRole,
+    persona,
+    questionCount,
+    status,
+    round,
+    createdAt: startedAt(stored.daysAgo),
     folder: folder ? { folderId: folder.folderId, folderName: folder.folderName } : null,
     report: reportStatus
-      ? { reportId: `${stored.sessionId}-report`, status: reportStatus, scoreTotal: scored ? totalScore : null }
+      ? { reportId: `${sessionId}-report`, status: reportStatus, scoreTotal: scored ? totalScore : null }
       : null,
   }
 }
@@ -164,19 +186,30 @@ registerMock(
   }),
 )
 
+/** 서버의 이름 규칙(FolderName.normalize)입니다. 앞뒤 공백을 자르고, 자른 이름 그대로 다른 폴더와 견줍니다 */
+function parseFolderName(body: unknown, exceptFolderId?: string): string {
+  const raw = typeof body === 'object' && body !== null ? (body as { folderName?: unknown }).folderName : undefined
+  const folderName = typeof raw === 'string' ? raw.trim() : ''
+  if (!folderName || folderName.length > MAX_FOLDER_NAME_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `폴더 이름은 1~${MAX_FOLDER_NAME_LENGTH}자입니다`)
+  }
+  if (folders.some((item) => item.folderId !== exceptFolderId && item.folderName === folderName)) {
+    throw new ApiError('FOLDER_NAME_DUPLICATED', '같은 이름의 폴더가 이미 있습니다')
+  }
+  return folderName
+}
+
+function findFolder(folderId: string): StoredFolder {
+  const folder = folders.find((item) => item.folderId === folderId)
+  if (!folder) throw new ApiError('FOLDER_NOT_FOUND', '폴더를 찾을 수 없습니다')
+  return folder
+}
+
 registerMock(
   'POST',
   '/api/folders',
   (_params, body): FolderResponse => {
-    const raw = typeof body === 'object' && body !== null ? (body as { folderName?: unknown }).folderName : undefined
-    const folderName = typeof raw === 'string' ? raw.trim() : ''
-    if (!folderName || folderName.length > MAX_FOLDER_NAME_LENGTH) {
-      throw new ApiError('INVALID_REQUEST', `폴더 이름은 1~${MAX_FOLDER_NAME_LENGTH}자입니다`)
-    }
-    // 서버는 자른 이름 그대로 견줍니다 (FolderName.normalize)
-    if (folders.some((item) => item.folderName === folderName)) {
-      throw new ApiError('FOLDER_NAME_DUPLICATED', '같은 이름의 폴더가 이미 있습니다')
-    }
+    const folderName = parseFolderName(body)
     if (folders.length >= MAX_FOLDER_COUNT) {
       throw new ApiError('FOLDER_LIMIT_EXCEEDED', `폴더는 ${MAX_FOLDER_COUNT}개까지 만들 수 있습니다`)
     }
@@ -186,3 +219,52 @@ registerMock(
     return toFolderResponse(folder)
   },
 )
+
+/** 이름 바꾸기. 지금 이름과 같으면 그대로 성공합니다 */
+registerMock('PATCH', '/api/folders/:folderId', ({ folderId }, body): FolderResponse => {
+  const folder = findFolder(folderId)
+  folder.folderName = parseFolderName(body, folderId)
+  return toFolderResponse(folder)
+})
+
+/** 삭제. 안의 세션은 지우지 않고 폴더에서만 뺍니다 */
+registerMock('DELETE', '/api/folders/:folderId', ({ folderId }) => {
+  const folder = findFolder(folderId)
+  folders.splice(folders.indexOf(folder), 1)
+  for (const stored of sessions) {
+    if (stored.folderId === folderId) stored.folderId = null
+  }
+  return null
+})
+
+/**
+ * 폴더 옮기기 · 빼기. 서버처럼 보낸 회차가 속한 면접의 회차를 전부 옮기고, 하나라도 문제가 있으면 아무것도 옮기지 않습니다.
+ * 중단한 세션은 옮기지 않습니다(목록에 없는 세션이라 `SESSION_NOT_FOUND`).
+ */
+registerMock('PATCH', '/api/practice-records/folder', (_params, body): FolderMoveResponse => {
+  const request = typeof body === 'object' && body !== null ? (body as { sessionIds?: unknown; folderId?: unknown }) : {}
+  const { sessionIds, folderId = null } = request
+  if (
+    !Array.isArray(sessionIds) ||
+    sessionIds.length === 0 ||
+    sessionIds.length > MAX_MOVE_SESSIONS ||
+    sessionIds.some((id) => typeof id !== 'string')
+  ) {
+    throw new ApiError('INVALID_REQUEST', `sessionIds 는 1~${MAX_MOVE_SESSIONS}개입니다`)
+  }
+  if (folderId !== null && typeof folderId !== 'string') {
+    throw new ApiError('INVALID_REQUEST', 'folderId 는 폴더 id 이거나 null 입니다')
+  }
+
+  const picked = [...new Set(sessionIds as string[])].map((id) => listed().find((stored) => stored.sessionId === id))
+  if (picked.some((stored) => stored === undefined)) {
+    throw new ApiError('SESSION_NOT_FOUND', '세션을 찾을 수 없습니다')
+  }
+  if (folderId !== null) findFolder(folderId)
+
+  const interviewIds = new Set(picked.map((stored) => stored?.interviewId))
+  const moved = listed().filter((stored) => interviewIds.has(stored.interviewId))
+  for (const stored of moved) stored.folderId = folderId
+
+  return { folderId, movedSessionIds: moved.map((stored) => stored.sessionId) }
+})

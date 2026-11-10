@@ -1,4 +1,4 @@
-import { IconPlayerPlay, IconVideo } from '@tabler/icons-react'
+import { IconFolder, IconFolderSymlink, IconPlayerPlay, IconVideo } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -7,7 +7,7 @@ import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import ListCard from '@/shared/ui/ListCard'
 
-import { metaOf, titleOf } from '../lib/practiceDisplay'
+import { metaOf, rowNameOf, titleOf } from '../lib/practiceDisplay'
 import type { PracticeSession } from '../types/practice'
 
 /** 목록 자리에 들어갈 것. 행이 아니면 한 줄짜리 안내입니다 */
@@ -29,7 +29,13 @@ type Props = {
   pagination?: { page: number; totalPages: number; onChange: (page: number) => void }
   /** 새 조건의 목록을 받는 중이면 true. 이전 목록을 흐리게 둡니다 */
   updating: boolean
+  /** 행의 "폴더" 버튼. 폴더를 아직 못 불러왔으면 비워서 버튼을 잠급니다 (이슈 #205) */
+  onMove?: (session: PracticeSession) => void
+  /** 행에 들어 있는 폴더 이름을 붙일지. "전체" 를 볼 때만 붙입니다 — 폴더를 고른 중이면 다 같은 이름이라 겹칩니다 */
+  showFolder: boolean
 }
+
+type RowOptions = Pick<Props, 'onMove' | 'showFolder'>
 
 const ACTION_BASE =
   'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm px-3 py-2 text-body-sm font-semibold transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-primary-500'
@@ -57,7 +63,7 @@ function Notice({ children }: { children: ReactNode }) {
  * 만료 여부 필드 없음) 화면이 만료를 알 수 없습니다. 정해지면 이 자리에 상태를 하나 더합니다.
  */
 function RowAction({ session }: { session: PracticeSession }) {
-  const title = titleOf(session)
+  const title = rowNameOf(session)
 
   if (session.status === 'COMPLETED' && session.reportStatus !== 'PROCESSING') {
     const to = session.reportId ? toReport(session.reportId) : toAnalyzing(session.sessionId)
@@ -73,7 +79,26 @@ function RowAction({ session }: { session: PracticeSession }) {
   return null
 }
 
-function renderBody(body: PracticeListBody) {
+/**
+ * 행 끝의 "폴더" 버튼. 폴더로 옮기거나 폴더에서 빼는 창을 엽니다 (이슈 #205).
+ * 진행 중인 세션도 옮길 수 있습니다 — 서버는 중단된 세션만 막고, 중단된 세션은 목록에 오지 않습니다.
+ */
+function MoveAction({ session, onMove }: { session: PracticeSession; onMove?: (session: PracticeSession) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onMove?.(session)}
+      disabled={!onMove}
+      className={`${ACTION_BASE} text-neutral-500 hover:text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50`}
+    >
+      <IconFolderSymlink size={16} stroke={2} aria-hidden />
+      폴더
+      <span className="sr-only"> 옮기기 — {rowNameOf(session)}</span>
+    </button>
+  )
+}
+
+function renderBody(body: PracticeListBody, { onMove, showFolder }: RowOptions) {
   switch (body.kind) {
     case 'loading':
       return (
@@ -131,11 +156,22 @@ function renderBody(body: PracticeListBody) {
               <span className="shrink-0">
                 <Badge tone="brand">{session.round}회차</Badge>
               </span>
+              {showFolder && session.folder && (
+                <span className="flex min-w-0 max-w-48 shrink items-center gap-1 text-body-sm text-neutral-500">
+                  <IconFolder size={14} stroke={2} aria-hidden className="shrink-0" />
+                  <span className="sr-only">폴더</span>
+                  <span className="truncate">{session.folder.name}</span>
+                </span>
+              )}
             </div>
             <p className="mt-0.5 truncate text-body-sm text-neutral-500">{metaOf(session)}</p>
           </div>
 
-          <RowAction session={session} />
+          {/* "폴더" 를 맨 끝에 둡니다. 다시보기 · 분석하기가 없는 줄(진행 중 · 분석 중)도 같은 자리에 맞춰 보입니다 */}
+          <div className="flex shrink-0 items-center gap-1">
+            <RowAction session={session} />
+            <MoveAction session={session} onMove={onMove} />
+          </div>
         </li>
       ))
   }
@@ -145,14 +181,14 @@ function renderBody(body: PracticeListBody) {
  * 연습 기록 목록입니다. 판과 아래 줄("n개 항목" · 페이지 넘김)은 자소서 · 포트폴리오와 같은 `ListCard` 이고,
  * 행은 시안대로 머리줄 없는 한 줄씩입니다.
  */
-export default function PracticeList({ body, count, pagination, updating }: Props) {
+export default function PracticeList({ body, count, pagination, updating, onMove, showFolder }: Props) {
   return (
     <ListCard label="연습 기록 목록" count={count} pagination={pagination}>
       <ul
         aria-busy={updating || undefined}
         className={`divide-y divide-neutral-200 transition-opacity ${updating ? 'opacity-60' : ''}`}
       >
-        {renderBody(body)}
+        {renderBody(body, { onMove, showFolder })}
       </ul>
     </ListCard>
   )

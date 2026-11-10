@@ -1,4 +1,11 @@
-import type { PracticeFolder, PracticeFolders, PracticePage, PracticeReportStatus, PracticeSession } from '../types/practice'
+import type {
+  PracticeFolder,
+  PracticeFolders,
+  PracticeMoveResult,
+  PracticePage,
+  PracticeReportStatus,
+  PracticeSession,
+} from '../types/practice'
 
 /**
  * 연습 기록 서버 응답 모양입니다. (Cue-A/backend #92 `PracticeRecordListResponse` · #97 `FolderListResponse`)
@@ -52,6 +59,20 @@ export type FolderListResponse = {
   folders: FolderResponse[]
 }
 
+/** `PATCH /api/practice-records/folder` 본문. `folderId` 가 null 이면 폴더에서 뺍니다 */
+export type PracticeRecordFolderRequest = {
+  sessionIds: string[]
+  folderId: string | null
+}
+
+/** `PATCH /api/practice-records/folder` 응답 */
+export type FolderMoveResponse = {
+  /** 옮긴 폴더. 폴더에서 뺐으면 null */
+  folderId: string | null
+  /** 실제로 옮긴 세션들. 같은 면접의 다른 회차까지 들어 있어서 보낸 것보다 많을 수 있습니다 */
+  movedSessionIds: string[]
+}
+
 /** 리포트 화면이 그릴 수 있는 상태입니다. 분석 중 · 실패한 리포트는 분석 중 화면이 맡습니다 */
 function isReadyReport(status: PracticeReportStatus) {
   return status === 'COMPLETED' || status === 'PARTIAL'
@@ -72,6 +93,7 @@ export function toPracticeSession(response: PracticeRecordResponse): PracticeSes
     reportStatus: report?.status ?? null,
     reportId: ready ? report.reportId : null,
     totalScore: ready ? (report.scoreTotal ?? null) : null,
+    folder: response.folder ? { folderId: response.folder.folderId, name: response.folder.folderName } : null,
   }
 }
 
@@ -94,4 +116,8 @@ export function toPracticeFolders(response: FolderListResponse): PracticeFolders
     totalCount: response.totalCount,
     folders: response.folders.map(toPracticeFolder),
   }
+}
+
+export function toPracticeMoveResult(response: FolderMoveResponse): PracticeMoveResult {
+  return { folderId: response.folderId, movedCount: response.movedSessionIds.length }
 }
