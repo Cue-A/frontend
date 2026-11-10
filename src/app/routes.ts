@@ -110,6 +110,16 @@ export function isCompanyFrom(value: string | null): value is CompanyFrom {
   return COMPANY_FROMS.some((from) => from === value)
 }
 
+/**
+ * 기업 상세 주소(`/companies/{id}?from=…`)면 어디서 들어왔는지(`CompanyFrom`), 아니면 null 입니다. 기업 탐색 목록
+ * (`/companies`) · 모르는 `from` 도 null 입니다. 사이드바가 관심 기업에서 들어온 상세에서 "관심 기업" 을 켤 때 씁니다 (이슈 #203)
+ */
+export function companyFromOf(pathname: string, search: string): CompanyFrom | null {
+  if (!pathname.startsWith(`${ROUTES.COMPANIES}/`)) return null
+  const from = new URLSearchParams(search).get(COMPANY_FROM_PARAM)
+  return isCompanyFrom(from) ? from : null
+}
+
 export function toCompany(companyId: string, from?: CompanyFrom) {
   const path = `/companies/${encodeURIComponent(companyId)}`
   return from ? `${path}?${COMPANY_FROM_PARAM}=${from}` : path

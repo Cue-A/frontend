@@ -12,7 +12,7 @@ import { Link, useLocation } from 'react-router-dom'
 
 import Logo from '@/shared/ui/Logo'
 
-import { LIBRARY_PREFIX, ROUTES } from '../routes'
+import { companyFromOf, LIBRARY_PREFIX, ROUTES } from '../routes'
 
 type NavChild = {
   label: string
@@ -20,6 +20,11 @@ type NavChild = {
   to?: string
   /** 주소는 다르지만 이 항목 안쪽 화면이라 이 항목을 켤 곳. 프로필 > 회원 탈퇴(`/mypage/account/withdraw`)가 그렇습니다 */
   activeOn?: string[]
+  /**
+   * 주소 경로만으로는 가릴 수 없어 쿼리까지 봐야 켜는 곳. 관심 기업에서 들어온 기업 상세(`/companies/{id}?from=interests`)가
+   * 그렇습니다 — 같은 기업 상세라도 기업 탐색에서 들어왔으면 켜지 않습니다 (이슈 #203)
+   */
+  activeWhen?: (pathname: string, search: string) => boolean
 }
 
 type NavItem = {
@@ -72,13 +77,30 @@ const NAV_ITEMS: NavItem[] = [
     // 명함은 MVP 범위 밖이라 지웠습니다 (이슈 #185)
     children: [
       { label: '프로필', to: ROUTES.MYPAGE_PROFILE, activeOn: [ROUTES.MYPAGE_WITHDRAW] },
-      { label: '관심 기업', to: ROUTES.MYPAGE_INTERESTS },
+      {
+        label: '관심 기업',
+        to: ROUTES.MYPAGE_INTERESTS,
+        activeWhen: (pathname, search) => companyFromOf(pathname, search) === 'interests',
+      },
     ],
   },
 ]
 
-function isActive(item: NavItem, pathname: string) {
+/** 하위 항목을 켤지. 그 주소이거나 그 아래 · `activeOn` 에 적은 곳 · `activeWhen` 이 맞는 곳입니다 */
+function isChildActive(child: NavChild, pathname: string, search: string) {
+  if (child.to === undefined) return false
+  return (
+    pathname === child.to ||
+    pathname.startsWith(`${child.to}/`) ||
+    (child.activeOn ?? []).includes(pathname) ||
+    (child.activeWhen?.(pathname, search) ?? false)
+  )
+}
+
+function isActive(item: NavItem, pathname: string, search: string) {
   if (!item.to) return false
+  // 하위 항목이 켜지면 그 메뉴도 켭니다. 관심 기업에서 들어온 기업 상세는 주소가 /mypage 밖이라 앞부분으로는 못 가립니다
+  if (item.children?.some((child) => isChildActive(child, pathname, search))) return true
   if (item.matchPrefix) return pathname === item.matchPrefix || pathname.startsWith(`${item.matchPrefix}/`)
   return pathname === item.to
 }
@@ -132,7 +154,7 @@ type Props = {
  * 포커스에도 걸려서, 누르고 마우스를 치워도 펼친 메뉴가 본문을 가린 채 남았습니다. Esc 로도 접힙니다.
  */
 export default function SideNav({ onLogout }: Props) {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const [mouseInside, setMouseInside] = useState(false)
   const [keyboardInside, setKeyboardInside] = useState(false)
   /** 눌러서 열어 둔 하위 메뉴들(메뉴 이름). 다시 누르면 빠집니다 */
@@ -222,6 +244,7 @@ export default function SideNav({ onLogout }: Props) {
                 key={item.label}
                 item={item}
                 pathname={pathname}
+                search={search}
                 expanded={expanded}
                 open={openGroups.includes(item.label)}
                 onToggle={() => toggleGroup(item.label)}
@@ -249,16 +272,18 @@ export default function SideNav({ onLogout }: Props) {
 type NavRowProps = {
   item: NavItem
   pathname: string
+  /** 주소의 쿼리(`?from=…`). `activeWhen` 이 씁니다 */
+  search: string
   expanded: boolean
   /** 하위 항목을 눌러서 열어 뒀는지 */
   open: boolean
   onToggle: () => void
 }
 
-function NavRow({ item, pathname, expanded, open, onToggle }: NavRowProps) {
+function NavRow({ item, pathname, search, expanded, open, onToggle }: NavRowProps) {
   const { label, Icon, to, children } = item
   const childrenId = useId()
-  const active = isActive(item, pathname)
+  const active = isActive(item, pathname, search)
   // 접힌 레일에는 하위 항목을 그리지 않습니다. 열어 둔 상태는 기억했다가 다시 펼치면 보여줍니다.
   const showChildren = expanded && open && children !== undefined
 
@@ -319,11 +344,8 @@ function NavRow({ item, pathname, expanded, open, onToggle }: NavRowProps) {
           {children.map((child) => {
             // 하위 항목 안쪽 화면에서도 그 항목을 켭니다. 주소가 그 아래가 아닌 안쪽 화면은 `activeOn` 으로 적습니다
             // (프로필 > 회원 탈퇴 — 계정 설정을 프로필에 합치기 전 주소를 그대로 씁니다, 이슈 #185)
-            const childActive =
-              child.to !== undefined &&
-              (pathname === child.to ||
-                pathname.startsWith(`${child.to}/`) ||
-                (child.activeOn ?? []).includes(pathname))
+            // 쿼리까지 봐야 하는 곳은 `activeWhen` 입니다 (관심 기업에서 들어온 기업 상세, 이슈 #203)
+            const childActive = isChildActive(child, pathname, search)
             return (
               <li key={child.label}>
                 {child.to ? (
