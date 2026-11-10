@@ -85,7 +85,9 @@ export type BadgeSummary = {
   nextHint: string | null
 }
 
+/** 이번 주 목표. 성장 관리와 같은 `GET /api/growth` 에서 받습니다 (이슈 #201) */
 export type WeeklyGoal = {
+  /** 목표 횟수로 만든 한 줄. 서버 목표에는 제목이 없습니다 */
   title: string
   target: number
   done: number
@@ -106,8 +108,6 @@ export type UpcomingEvent = {
 
 export type HomeExtras = {
   badges: BadgeSummary
-  /** 이번 주 목표를 안 정했으면 null */
-  weeklyGoal: WeeklyGoal | null
   /** 가까운 것부터. 지난 일정은 빠져 있습니다 */
   upcomingEvents: UpcomingEvent[]
   /** 기업별 인재상 키워드 */

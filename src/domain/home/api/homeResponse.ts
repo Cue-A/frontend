@@ -61,7 +61,6 @@ export type HomeExtrasResponse = {
     }>
     nextHint: string | null
   }
-  weeklyGoal: { title: string; targetValue: number; currentValue: number } | null
   upcomingEvents: Array<{ eventId: string; title: string; date: string; time: string | null }>
   talentKeywords: string[]
   popularQuestions: string[]
@@ -80,4 +79,13 @@ export type PracticeRecordResponse = {
   bestScore: number | null
   /** 4w · 10w 는 회차별(최근 8개), 6m · 1y 는 월 평균. 점수 없는 날 · 달은 점으로 넣지 않습니다 */
   trend: { unit: 'session' | 'month'; points: Array<{ date: string; label: string; score: number }> }
+}
+
+/**
+ * `GET /api/growth` 에서 홈이 쓰는 칸만 (Cue-A/backend#132). 성장 관리 도메인의 api 를 가져다 쓰지 않는 규칙이라
+ * (docs/01-conventions.md) 여기 따로 적습니다. 전체 모양은 `growth/api/growthResponse.ts` 의 `GrowthOverviewResponse` 입니다.
+ */
+export type HomeWeeklyGoalResponse = {
+  /** 이번 주 목표를 안 정했으면 null */
+  weeklyGoal: { targetValue: number; doneCount: number } | null
 }

@@ -19,12 +19,16 @@ import {
 import './growthMock'
 
 /*
- * 성장 관리 API 입니다. 가장 최근 리포트(`/api/home/recent-reports`)만 백엔드에 있고, **나머지는 백엔드에 없는 API 입니다.**
- * 경로 · 본문 · 응답 모양 모두 프론트 임시안이고 목업(`missingInBackend`)이 답합니다. 엔티티는 있습니다 —
- * growth(Goal · Badge · UserBadge · Streak) · calendar(CalendarEvent).
+ * 성장 관리 API 입니다.
+ * - 가장 최근 리포트(`/api/home/recent-reports`) · 이번 주 목표(`/api/growth` · `/api/growth/weekly-goal`, Cue-A/backend#132)는 백엔드에 있습니다
+ * - 배지는 `/api/growth` 응답 안에 자리만 있고 실서버는 빈 배열을 줍니다(배지 API 는 따로 나올 예정)
+ * - 면접 캘린더(`/api/calendar`)는 백엔드 PR(Cue-A/backend#133) 배포 전이라 목업(`missingInBackend`)이 답합니다
  */
 
-/** 이번 주 목표 · 배지. `GET /api/growth` (백엔드에 없어 목업이 답합니다) */
+/**
+ * 이번 주 목표 · 배지. `GET /api/growth` (Cue-A/backend#132). 목표를 안 정했으면 `weeklyGoal` 이 null 입니다.
+ * 실서버의 배지는 아직 빈 배열이라 배지 카드는 "받은 배지 없음" 으로 보입니다 (이슈 #201 — 빈 카드를 받아들이기로 정함)
+ */
 export async function getGrowthOverview() {
   const response = await api.get<GrowthOverviewResponse>('/api/growth')
   return toGrowthOverview(response)

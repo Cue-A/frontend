@@ -42,7 +42,7 @@ export const ROUTES = {
   MYPAGE_NOTIFICATIONS: '/mypage/notifications',
   /** 옛 계정 설정 주소. 프로필에 합쳐서 프로필의 계정 칸으로 보냅니다 (이슈 #185) */
   MYPAGE_ACCOUNT: '/mypage/account',
-  /** 프로필 > 계정 탈퇴하기 — 이유 고르기 · 최종 확인 */
+  /** 프로필 > 계정 탈퇴하기 — 안내 · 최종 확인 */
   MYPAGE_WITHDRAW: '/mypage/account/withdraw',
   /** B-01 확인용 정적 프리뷰. 리뷰 끝나면 지워도 되는 임시 라우트입니다. */
   DEV_INTERVIEW_PREVIEW: '/dev/interview-preview',

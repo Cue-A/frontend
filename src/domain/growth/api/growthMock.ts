@@ -62,8 +62,6 @@ function currentScenario(): Scenario {
   }
 }
 
-const MISSING = '성장 관리 API 미배포 — /api/growth 는 Cue-A/backend#132 (리뷰 중)'
-
 /**
  * 캘린더 API 는 백엔드 PR(Cue-A/backend#133)로 나와 있고 경로 · 본문 · 응답이 이 목업과 같습니다. 머지 · 배포되면 캘린더
  * 목업의 `missingInBackend` 를 지우고 `VITE_REAL_APIS` 에 `calendar` 를 넣으면 실서버로 갑니다.
@@ -105,7 +103,12 @@ function buildOverview(scenario: Scenario): GrowthOverviewResponse {
   }
 }
 
-registerMock('GET', '/api/growth', () => buildOverview(currentScenario()), { missingInBackend: MISSING })
+/**
+ * 이번 주 목표 · 배지. 백엔드(Cue-A/backend#132)에 들어와서 `growth` 를 켜면 실제 서버로 갑니다.
+ * 실서버는 **이번 주 목표만** 채우고 배지는 빈 배열입니다(배지 API 는 따로 나올 예정). 목업은 배지 카드를 볼 수 있게 배지를 채워 둡니다.
+ * 홈의 이번 주 목표 칸도 이 응답을 씁니다 (이슈 #201).
+ */
+registerMock('GET', '/api/growth', () => buildOverview(currentScenario()))
 
 registerMock(
   'PATCH',
@@ -122,7 +125,6 @@ registerMock(
     if (!goal) throw new ApiError('UNKNOWN', '목업 목표를 만들지 못했습니다')
     return goal
   },
-  { missingInBackend: MISSING },
 )
 
 /* ---------------------------------------------------------------------------

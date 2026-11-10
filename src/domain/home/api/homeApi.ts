@@ -1,11 +1,12 @@
 import { api } from '@/shared/api/apiClient'
 
 import { toIsoDate } from '../lib/homeDate'
-import type { HomeExtras, HomeStats, PracticePeriod, PracticeRecord, RecentReport } from '../types/home'
+import type { HomeExtras, HomeStats, PracticePeriod, PracticeRecord, RecentReport, WeeklyGoal } from '../types/home'
 
 import type {
   HomeExtrasResponse,
   HomeStatsResponse,
+  HomeWeeklyGoalResponse,
   PracticeRecordResponse,
   RecentReportListResponse,
   RecentReportResponse,
@@ -54,10 +55,10 @@ export async function getRecentReports(limit = RECENT_REPORT_COUNT): Promise<Rec
 }
 
 /**
- * 배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행. `GET /api/home`
+ * 배지 · 다가오는 일정 · 인재상 · 질문은행. `GET /api/home`
  *
  * **백엔드에 없는 API 입니다.** 경로도 프론트가 임시로 정했고 목업(`missingInBackend`)이 답합니다. 배지 지급 기준 ·
- * 목표 설정 · 일정 관리는 백엔드 기획이 정해진 뒤 따로 붙입니다.
+ * 일정 관리는 백엔드 기획이 정해진 뒤 따로 붙입니다. 이번 주 목표는 성장 관리와 같은 `GET /api/growth` 로 따로 받습니다(`getWeeklyGoal`).
  */
 export async function getHomeExtras(): Promise<HomeExtras> {
   const response = await api.get<HomeExtrasResponse>('/api/home')
@@ -74,11 +75,6 @@ export async function getHomeExtras(): Promise<HomeExtras> {
         earned: badge.earnedAt !== null,
       })),
       nextHint: response.badges.nextHint,
-    },
-    weeklyGoal: response.weeklyGoal && {
-      title: response.weeklyGoal.title,
-      target: response.weeklyGoal.targetValue,
-      done: response.weeklyGoal.currentValue,
     },
     upcomingEvents: response.upcomingEvents,
     talentKeywords: response.talentKeywords,
@@ -107,4 +103,20 @@ export async function getPracticeRecord(period: PracticePeriod): Promise<Practic
     bestScore: response.bestScore,
     trend: response.trend,
   }
+}
+
+/**
+ * 이번 주 목표. `GET /api/growth` 의 `weeklyGoal` (Cue-A/backend#132) — `VITE_REAL_APIS` 이름은 `growth` 입니다.
+ *
+ * 전에는 `GET /api/home`(목업)에서 받았는데, 성장 관리가 실서버 목표를 쓰게 되면서 두 화면의 숫자가 달라졌습니다. 같은 곳에서
+ * 받도록 바꿨습니다 (이슈 #201 — 홈도 /api/growth 로 받기로 정함). 목표를 고치는 창은 성장 관리에 있습니다.
+ *
+ * 서버 목표에는 제목이 없어서, 목표 횟수로 한 줄을 만듭니다. 목업 모드에서는 성장 관리 목업(`growth/api/growthMock.ts`)이
+ * 답합니다 — 라우터가 모든 화면을 처음에 불러와서 홈에서도 그 목업이 등록돼 있습니다.
+ */
+export async function getWeeklyGoal(): Promise<WeeklyGoal | null> {
+  const response = await api.get<HomeWeeklyGoalResponse>('/api/growth')
+  const goal = response.weeklyGoal
+  if (!goal) return null
+  return { title: `이번 주 연습 ${goal.targetValue}번 하기`, target: goal.targetValue, done: goal.doneCount }
 }

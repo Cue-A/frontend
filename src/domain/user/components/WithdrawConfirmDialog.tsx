@@ -3,11 +3,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import Button from '@/shared/ui/Button'
 
 import { useWithdraw } from '../hooks/useWithdraw'
-import { WITHDRAW_DELETED_ITEMS } from '../lib/withdrawReasons'
-import type { WithdrawRequest } from '../types/user'
+import { WITHDRAW_DELETED_ITEMS } from '../lib/withdrawal'
 
 type Props = {
-  request: WithdrawRequest
   /** 탈퇴가 끝나고 창이 닫힌 뒤. 토큰은 이미 지워져 있습니다 — 첫 화면으로 보냅니다 */
   onWithdrawn: () => void
   /** 탈퇴하지 않고 창이 닫힌 뒤 */
@@ -15,7 +13,7 @@ type Props = {
 }
 
 /**
- * 회원 탈퇴 최종 확인입니다. 이유를 고른 뒤 "탈퇴하기" 를 누르면 뜹니다. (WithdrawPage)
+ * 회원 탈퇴 최종 확인입니다. 탈퇴 화면에서 "탈퇴하기" 를 누르면 뜹니다. (WithdrawPage)
  *
  * - 무엇이 지워지는지와 되돌릴 수 없다는 것을 한 번 더 적습니다
  * - 창을 열면 포커스가 "취소" 에 있습니다. Enter 한 번으로 탈퇴되지 않게 합니다
@@ -25,7 +23,7 @@ type Props = {
  * - 끝나면 같은 창에서 "탈퇴가 끝났어요" 를 보여주고, 닫으면 첫 화면으로 갑니다. 말없이 첫 화면으로 보내면
  *   탈퇴가 된 건지 튕긴 건지 알 수 없습니다
  */
-export default function WithdrawConfirmDialog({ request, onWithdrawn, onClose }: Props) {
+export default function WithdrawConfirmDialog({ onWithdrawn, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
   const headingId = useId()
   const { submit, withdrawing, error } = useWithdraw()
@@ -56,7 +54,7 @@ export default function WithdrawConfirmDialog({ request, onWithdrawn, onClose }:
   }
 
   const handleWithdraw = async () => {
-    if (await submit(request)) setDone(true)
+    if (await submit()) setDone(true)
   }
 
   return (
@@ -78,7 +76,7 @@ export default function WithdrawConfirmDialog({ request, onWithdrawn, onClose }:
         ) : (
           <p className="break-keep text-body-md text-neutral-700">
             탈퇴하면 <span className="font-semibold text-neutral-900">{WITHDRAW_DELETED_ITEMS}</span>가 모두
-            지워지고, 되돌릴 수 없어요.
+            지워지고, 되돌릴 수 없어요. 로그인된 다른 기기에서도 모두 로그아웃돼요.
           </p>
         )}
 
