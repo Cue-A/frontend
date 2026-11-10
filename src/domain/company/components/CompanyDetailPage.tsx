@@ -1,7 +1,7 @@
 import { IconArrowLeft, IconPlayerPlay } from '@tabler/icons-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 
-import { ROUTES, toSessionSetup } from '@/app/routes'
+import { COMPANY_FROM_PARAM, ROUTES, isCompanyFrom, toSessionSetup, type CompanyFrom } from '@/app/routes'
 import { toUserMessage } from '@/shared/api/errorMessage'
 import { initialOf } from '@/shared/lib/initialOf'
 import Button from '@/shared/ui/Button'
@@ -21,14 +21,37 @@ const VALUES_FORMAT_LABEL: Record<ValuesFormat, string> = {
   MIXED: '가치 이름과 행동 원칙을 함께 정리했어요',
 }
 
-function BackLink() {
+type BackTarget = {
+  to: string
+  /** 돌아가기 링크 글자. 없는 기업 안내 버튼은 뒤에 "으로" 를 붙여 씁니다 */
+  label: string
+}
+
+/** 들어온 곳별 돌아갈 곳. `CompanyFrom` 에 값을 더하면 여기도 채우라고 타입이 알려줍니다 */
+const BACK_TARGETS: Record<CompanyFrom, BackTarget> = {
+  interests: { to: ROUTES.MYPAGE_INTERESTS, label: '관심 기업' },
+}
+
+const DEFAULT_BACK_TARGET: BackTarget = { to: ROUTES.COMPANIES, label: '기업 목록' }
+
+/**
+ * 상세에서 돌아갈 곳. 관심 기업에서 들어왔으면(`?from=interests`) 관심 기업으로, 아니면 기업 탐색으로 갑니다 (이슈 #186).
+ * 전에는 늘 기업 탐색으로 가서, 관심 기업에서 들어온 사람은 보던 화면을 잃었습니다. 모르는 값은 기업 탐색으로 떨어뜨립니다.
+ */
+function useBackTarget(): BackTarget {
+  const [searchParams] = useSearchParams()
+  const from = searchParams.get(COMPANY_FROM_PARAM)
+  return isCompanyFrom(from) ? BACK_TARGETS[from] : DEFAULT_BACK_TARGET
+}
+
+function BackLink({ target }: { target: BackTarget }) {
   return (
     <Link
-      to={ROUTES.COMPANIES}
+      to={target.to}
       className="inline-flex items-center gap-1 self-start rounded-xs text-body-sm font-semibold text-neutral-500 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-primary-500"
     >
       <IconArrowLeft size={16} stroke={2} aria-hidden />
-      기업 목록
+      {target.label}
     </Link>
   )
 }
@@ -133,12 +156,13 @@ export default function CompanyDetailPage() {
   const { companyId = '' } = useParams()
   const detail = useCompanyDetail(companyId)
 
+  const backTarget = useBackTarget()
   const name = detail.status === 'ready' ? detail.company.name : '기업 상세'
 
   return (
     <div className="mx-auto flex w-full max-w-312 flex-col gap-6">
       <CompanyTopBar items={['기업 탐색', name]} />
-      <BackLink />
+      <BackLink target={backTarget} />
 
       {detail.status === 'loading' && <p className="text-body-md text-neutral-500">기업 정보를 불러오는 중이에요…</p>}
 
@@ -151,8 +175,8 @@ export default function CompanyDetailPage() {
                 : `기업 정보를 불러오지 못했어요. ${toUserMessage(detail.error.code)}`}
             </p>
             {detail.error.code === 'COMPANY_NOT_FOUND' ? (
-              <Button size="sm" to={ROUTES.COMPANIES}>
-                기업 목록으로
+              <Button size="sm" to={backTarget.to}>
+                {backTarget.label}으로
               </Button>
             ) : (
               <Button size="sm" onClick={detail.reload}>
