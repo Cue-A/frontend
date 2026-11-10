@@ -32,6 +32,8 @@ type Props = {
   cameraFailureMessage?: string | null
   caption: string | null
   captionSupported?: boolean
+  /** false 면 자막이 선택한 마이크가 아닌 시스템 기본 마이크로 인식되는 중 — 빈 자막 자리에 안내를 보여준다(이슈 #169). */
+  captionUsesSelectedMic?: boolean
 
   /** 질문 음성 <audio> 에 물릴 콜백 ref. useQuestionAudio 가 준다. */
   onAudioElement?: (element: HTMLAudioElement | null) => void
@@ -74,6 +76,7 @@ export default function InterviewSessionPage({
   cameraFailureMessage = null,
   caption,
   captionSupported,
+  captionUsesSelectedMic,
   onAudioElement,
   question,
   hideQuestionText,
@@ -144,6 +147,7 @@ export default function InterviewSessionPage({
           bookmarkHintEligible={(phase === 'presenting' || phase === 'answering') && question.questionNumber === 1}
           caption={caption}
           captionSupported={captionSupported}
+          captionUsesSelectedMic={captionUsesSelectedMic}
         />
 
         <AnswerControlBar

@@ -20,7 +20,8 @@ type SpeechRecognitionLike = {
   onresult: ((event: SpeechRecognitionEventLike) => void) | null
   onend: (() => void) | null
   onerror: ((event: { error: string }) => void) | null
-  start: () => void
+  /** `track` 인자는 Chrome 133+ 에서만 의미가 있다. 낡은 브라우저는 인자를 조용히 무시한다. */
+  start: (track?: MediaStreamTrack) => void
   stop: () => void
   abort: () => void
 }
@@ -36,6 +37,48 @@ function getSpeechRecognition(): SpeechRecognitionConstructor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
+let trackStartSupport: boolean | undefined
+
+/**
+ * `recognition.start(track)` 을 브라우저가 지원하는지. 이 오버로드는 기능 감지용 API 가 없어서(스펙 논의
+ * web-speech-api#126 에서 "나중에 isSourceSupported 를 추가할 수 있다" 로 종결) 알려진 우회로 확인한다:
+ * 일부러 잘못된 인자(0)로 start() 를 불러, 지원하는 브라우저는 TypeError 를 던지고 낡은 브라우저는 인자를
+ * 무시하고 그냥 시작한다. 마이크 권한 프롬프트가 뜨지 않도록 분리(detached)된 iframe 의 인식기로 시험한다.
+ * 이름이 TypeError 인지로 판정하는 휴리스틱이라 Chrome 이 검증 방식을 바꾸면 틀릴 수 있다. 결과는 캐시한다.
+ */
+function supportsTrackStart(): boolean {
+  if (trackStartSupport !== undefined) return trackStartSupport
+  trackStartSupport = false
+  if (typeof document === 'undefined' || !document.body) {
+    trackStartSupport = undefined // body 가 아직 없다 — 결과를 캐시하지 않고 다음에 다시 시도한다.
+    return false
+  }
+
+  const frame = document.body.appendChild(document.createElement('iframe'))
+  try {
+    const frameWindow = frame.contentWindow as unknown as {
+      SpeechRecognition?: SpeechRecognitionConstructor
+      webkitSpeechRecognition?: SpeechRecognitionConstructor
+    } | null
+    const Recognition = frameWindow?.SpeechRecognition ?? frameWindow?.webkitSpeechRecognition
+    if (!Recognition) return false
+    const recognition = new Recognition()
+    frame.remove() // start() 전에 분리해야 낡은 브라우저에서도 실제로 시작되지 않는다.
+    try {
+      recognition.start(0 as unknown as MediaStreamTrack)
+      recognition.stop()
+      trackStartSupport = false
+    } catch (error) {
+      trackStartSupport = error instanceof Error && error.name === 'TypeError'
+    }
+  } catch {
+    trackStartSupport = false
+  } finally {
+    frame.remove()
+  }
+  return trackStartSupport
+}
+
 /** 재시작해도 소용없는 에러 — 권한 거부·서비스 불가·네트워크 단절·미지원 언어. 이때는 조용히 자막만 포기한다. */
 const FATAL_ERRORS = new Set(['not-allowed', 'service-not-allowed', 'audio-capture', 'network', 'language-not-supported'])
 
@@ -47,6 +90,11 @@ export type UseLiveCaptionResult = {
   caption: string | null
   /** 브라우저가 Web Speech API 를 지원하는지. false 면 자막 없이 면접만 진행된다. */
   isSupported: boolean
+  /**
+   * 넘겨준 마이크 트랙이 자막 인식에 실제로 쓰이는지. 트랙을 넘겼는데 false 면 브라우저가 `start(track)` 을
+   * 지원하지 않아 시스템 기본 마이크로 인식하는 중이다(선택한 마이크와 다를 수 있다). 트랙이 없으면 true(비교 대상 없음).
+   */
+  usesSelectedMic: boolean
 }
 
 /**
@@ -55,12 +103,22 @@ export type UseLiveCaptionResult = {
  *
  * `enabled` 가 true 인 동안만 인식하고, `resetKey`(질문 id)가 바뀌면 자막을 비운다.
  * Chrome 은 침묵이 이어지면 인식을 스스로 끝내(onend) 버려서, 아직 enabled 면 다시 시작한다.
+ *
+ * `micTrack`(장치 테스트에서 고른 마이크의 오디오 트랙, 이슈 #169)을 주고 브라우저가 `start(track)` 을
+ * 지원하면 그 트랙으로 인식한다. 지원하지 않으면 지금까지처럼 시스템 기본 마이크로 인식한다(`usesSelectedMic` false).
+ * 트랙이 바뀌거나(끊김 포함) 사라지면 인식을 새 트랙으로 다시 시작한다. 녹음과 같은 트랙을 읽기만 하며 멈추지 않는다.
  */
-export function useLiveCaption(enabled: boolean, resetKey: string | null | undefined): UseLiveCaptionResult {
+export function useLiveCaption(
+  enabled: boolean,
+  resetKey: string | null | undefined,
+  micTrack: MediaStreamTrack | null = null,
+): UseLiveCaptionResult {
   const [caption, setCaption] = useState<string | null>(null)
   const [prevResetKey, setPrevResetKey] = useState(resetKey)
   const [prevEnabled, setPrevEnabled] = useState(enabled)
   const isSupported = getSpeechRecognition() !== null
+  const trackStartSupported = isSupported && micTrack !== null && supportsTrackStart()
+  const usesSelectedMic = micTrack === null || trackStartSupported
 
   // 렌더 중 상태 보정(React 권장 패턴) — 질문이 바뀌거나, 같은 질문에서 답변을 다시 시작하면
   // (업로드 실패 후 재답변 등 질문 id 가 그대로인 경우) 이전 답변의 자막을 버린다.
@@ -75,6 +133,7 @@ export function useLiveCaption(enabled: boolean, resetKey: string | null | undef
     if (!enabled || !Recognition) return
 
     const recognition = new Recognition()
+    const startRecognition = () => (trackStartSupported && micTrack ? recognition.start(micTrack) : recognition.start())
     recognition.lang = 'ko-KR'
     recognition.continuous = true
     recognition.interimResults = true
@@ -109,7 +168,7 @@ export function useLiveCaption(enabled: boolean, resetKey: string | null | undef
       restartTimer = setTimeout(() => {
         if (!active) return
         try {
-          recognition.start()
+          startRecognition()
         } catch {
           // 이미 시작된 상태 등 — 자막은 보조 기능이라 면접 진행을 막지 않는다.
           active = false
@@ -118,7 +177,7 @@ export function useLiveCaption(enabled: boolean, resetKey: string | null | undef
     }
 
     try {
-      recognition.start()
+      startRecognition()
     } catch {
       active = false
     }
@@ -131,7 +190,7 @@ export function useLiveCaption(enabled: boolean, resetKey: string | null | undef
       recognition.onerror = null
       recognition.abort()
     }
-  }, [enabled, resetKey])
+  }, [enabled, resetKey, micTrack, trackStartSupported])
 
-  return { caption, isSupported }
+  return { caption, isSupported, usesSelectedMic }
 }
