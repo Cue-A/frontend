@@ -69,7 +69,8 @@ function supportsTrackStart(): boolean {
       recognition.stop()
       trackStartSupport = false
     } catch (error) {
-      trackStartSupport = error instanceof Error && error.name === 'TypeError'
+      // iframe 의 realm 에서 던진 에러라 `error instanceof Error` 는 항상 false 다(다른 window 의 Error). 이름으로 판정한다.
+      trackStartSupport = (error as { name?: unknown } | null)?.name === 'TypeError'
     }
   } catch {
     trackStartSupport = false
@@ -117,7 +118,8 @@ export function useLiveCaption(
   const [prevResetKey, setPrevResetKey] = useState(resetKey)
   const [prevEnabled, setPrevEnabled] = useState(enabled)
   const isSupported = getSpeechRecognition() !== null
-  const trackStartSupported = isSupported && micTrack !== null && supportsTrackStart()
+  // 기능 감지는 마운트 때 한 번만 한다(결과는 모듈에도 캐시된다). 렌더마다 부르지 않는다.
+  const [trackStartSupported] = useState(() => isSupported && supportsTrackStart())
   const usesSelectedMic = micTrack === null || trackStartSupported
 
   // 렌더 중 상태 보정(React 권장 패턴) — 질문이 바뀌거나, 같은 질문에서 답변을 다시 시작하면

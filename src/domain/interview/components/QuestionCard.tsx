@@ -93,7 +93,9 @@ export default function QuestionCard({
           <LoadingLine label={loadingLabel} />
         )
       ) : (
-        showCaptionLine && <CaptionLine caption={caption} isSupported={captionSupported} usesSelectedMic={captionUsesSelectedMic} />
+        showCaptionLine && (
+          <CaptionLine caption={caption} isSupported={captionSupported} usesSelectedMic={captionUsesSelectedMic} />
+        )
       )}
     </section>
   )

@@ -23,7 +23,7 @@ export default function CaptionLine({ caption, isSupported = true, usesSelectedM
         : caption
       : usesSelectedMic
         ? '아직 인식된 음성이 없어요'
-        : '시스템 기본 마이크로 인식해요. 선택한 마이크와 다르면 자막이 나오지 않을 수 있어요'
+        : '기본 마이크로 자막을 만들어요. 고른 마이크와 다르면 자막이 안 나올 수 있어요'
 
   return (
     <div className="flex min-h-6 items-center border-t border-neutral-200 pt-3.5">
