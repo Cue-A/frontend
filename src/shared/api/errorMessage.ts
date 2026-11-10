@@ -65,9 +65,6 @@ const ERROR_MESSAGE: Record<string, string> = {
   DOCUMENT_NOT_FOUND: '문서를 찾을 수 없어요.',
   STORAGE_ERROR: '파일을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
 
-  // ── 마이페이지 — 프로필 수정에서 바꾼 칸 없이 저장했을 때(API 명세서 "프로필 수정"). 화면이 버튼을 잠가서 보통은 나지 않습니다
-  EMPTY_UPDATE_REQUEST: '바뀐 내용이 없어요.',
-
   // ── 기업 — 관심 기업 등록 · 기업 상세 (Cue-A/backend#101). 없는 기업과 검증되지 않은 기업이 같은 코드입니다
   COMPANY_NOT_FOUND: '기업 정보를 찾을 수 없어요.',
 

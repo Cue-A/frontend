@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { MYPAGE_ACCOUNT_ID, ROUTES, toMyPageProfile } from '@/app/routes'
@@ -6,8 +6,7 @@ import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
 import { useMe } from '../hooks/useMe'
-import { WITHDRAW_DETAIL_MAX, WITHDRAW_REASONS } from '../lib/withdrawReasons'
-import type { WithdrawReason, WithdrawRequest } from '../types/user'
+import { WITHDRAW_DELETED_ITEMS } from '../lib/withdrawal'
 
 import MyPageHeader from './MyPageHeader'
 import WithdrawConfirmDialog from './WithdrawConfirmDialog'
@@ -15,31 +14,28 @@ import WithdrawConfirmDialog from './WithdrawConfirmDialog'
 /** 탈퇴를 그만두면 돌아가는 곳 — 프로필의 계정 칸 */
 const ACCOUNT_SECTION = toMyPageProfile(MYPAGE_ACCOUNT_ID)
 
+/** 탈퇴 전에 알아야 할 것. 지워지는 것 · 되돌릴 수 없음 · 다른 기기 로그아웃 (Cue-A/backend#64) */
+const NOTICES = [
+  `${WITHDRAW_DELETED_ITEMS}가 모두 지워져요.`,
+  '지운 기록은 되돌릴 수 없어요. 같은 이메일로 다시 가입해도 예전 기록은 돌아오지 않아요.',
+  '로그인된 다른 기기에서도 모두 로그아웃돼요.',
+]
+
 /**
- * 회원 탈퇴 — 이유 고르기 → 최종 확인(창) → 완료. (마이페이지 > 프로필 > 계정 탈퇴하기)
+ * 회원 탈퇴 — 안내 → 최종 확인(창) → 완료. (마이페이지 > 프로필 > 계정 탈퇴하기)
  *
- * 프레시코드 탈퇴 화면을 참고한 임시 흐름입니다(시안 없음). 한 화면에서 **이유를 왜 묻는지** 먼저 적고 이유를
- * 고르게 한 뒤, "탈퇴하기" 를 누르면 확인 창(WithdrawConfirmDialog)에서 한 번 더 묻습니다.
+ * 시안이 없는 임시 흐름입니다. 무엇이 지워지는지 먼저 적고, "탈퇴하기" 를 누르면 확인 창(WithdrawConfirmDialog)에서
+ * 한 번 더 묻습니다.
  *
- * 이유는 꼭 하나 골라야 합니다. 탈퇴 요청에 같이 보냅니다 (docs/90-open-questions.md Q14).
+ * 전에는 탈퇴 이유를 꼭 하나 고르게 했는데, 백엔드 탈퇴 API(`DELETE /api/users/me`)가 이유를 받지 않아서 이유 고르기를
+ * 뺐습니다 (이슈 #201 — 이유를 받지 않기로 정함). 보내지도 않을 이유를 고르게 하면 사용자만 한 단계 더 거칩니다.
  */
 export default function WithdrawPage() {
   const me = useMe()
   const navigate = useNavigate()
-  const detailId = useId()
-  const hintId = useId()
-
-  const [reason, setReason] = useState<WithdrawReason | null>(null)
-  const [detail, setDetail] = useState('')
-  const [confirming, setConfirming] = useState<WithdrawRequest | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   const nickname = me.status === 'ready' ? me.me.nickname : null
-
-  const openConfirm = () => {
-    if (!reason) return
-    const trimmed = detail.trim()
-    setConfirming({ reason, ...(reason === 'OTHER' && trimmed ? { detail: trimmed } : {}) })
-  }
 
   // 계정 설정은 프로필에 합쳤습니다(이슈 #185). 돌아가는 곳은 프로필의 계정 칸입니다
   const title = (
@@ -61,75 +57,31 @@ export default function WithdrawPage() {
           <h2 className="break-keep text-h2 text-neutral-900">
             {nickname ? `${nickname}님, ` : ''}그동안 Cue&amp;A 와 함께해 주셔서 고마워요
           </h2>
-          <p className="break-keep text-body-md text-neutral-500">
-            떠나시는 이유를 알려주시면, 다른 분들이 같은 불편을 겪지 않도록 면접 질문 · 리포트 · 연습 환경을 고치는 데
-            참고할게요.
-          </p>
+          <p className="break-keep text-body-md text-neutral-500">탈퇴하기 전에 아래 내용을 확인해 주세요.</p>
         </div>
 
         <hr className="my-4 border-neutral-200" />
 
-        <fieldset aria-describedby={reason ? undefined : hintId}>
-          <legend className="mb-2 text-body-lg text-neutral-900">탈퇴하시는 이유를 골라주세요</legend>
-          <div className="flex flex-col">
-            {WITHDRAW_REASONS.map((option) => (
-              <label
-                key={option.value}
-                className="flex cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-body-md text-neutral-700 transition-colors hover:bg-neutral-50 has-[:checked]:text-neutral-900"
-              >
-                <input
-                  type="radio"
-                  name="withdraw-reason"
-                  value={option.value}
-                  checked={reason === option.value}
-                  onChange={() => setReason(option.value)}
-                  className="h-4 w-4 shrink-0 accent-primary-500"
-                />
-                {option.label}
-              </label>
-            ))}
-          </div>
+        <ul className="flex list-disc flex-col gap-2 pl-5 text-body-md text-neutral-700">
+          {NOTICES.map((notice) => (
+            <li key={notice} className="break-keep">
+              {notice}
+            </li>
+          ))}
+        </ul>
 
-          {reason === 'OTHER' && (
-            <div className="mt-2 flex flex-col gap-1 pl-2">
-              <label htmlFor={detailId} className="text-body-sm text-neutral-500">
-                어떤 점이 불편하셨는지 적어주세요 (선택)
-              </label>
-              <textarea
-                id={detailId}
-                value={detail}
-                maxLength={WITHDRAW_DETAIL_MAX}
-                onChange={(event) => setDetail(event.target.value)}
-                rows={3}
-                className="resize-none rounded-sm border border-neutral-300 px-3 py-2 text-body-md text-neutral-900 outline-none focus:border-primary-500"
-              />
-              <p className="self-end text-micro text-neutral-500">
-                {detail.length} / {WITHDRAW_DETAIL_MAX}
-              </p>
-            </div>
-          )}
-        </fieldset>
-
-        <div className="mt-5 flex items-center justify-between gap-3">
+        <div className="mt-6 flex items-center justify-between gap-3">
           <Button to={ACCOUNT_SECTION}>이전</Button>
-          <div className="flex items-center gap-3">
-            {!reason && (
-              <p id={hintId} className="text-body-sm text-neutral-500">
-                이유를 하나 골라주세요
-              </p>
-            )}
-            <Button variant="primary" onClick={openConfirm} disabled={!reason}>
-              탈퇴하기
-            </Button>
-          </div>
+          <Button variant="primary" onClick={() => setConfirming(true)}>
+            탈퇴하기
+          </Button>
         </div>
       </Card>
 
       {confirming && (
         <WithdrawConfirmDialog
-          request={confirming}
           onWithdrawn={() => navigate(ROUTES.LANDING, { replace: true })}
-          onClose={() => setConfirming(null)}
+          onClose={() => setConfirming(false)}
         />
       )}
     </div>

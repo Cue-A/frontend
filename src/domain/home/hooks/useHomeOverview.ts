@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError } from '@/shared/api/apiError'
 
-import { getHomeExtras, getHomeStats, getRecentReports } from '../api/homeApi'
-import type { HomeExtras, HomeStats, RecentReport } from '../types/home'
+import { getHomeExtras, getHomeStats, getRecentReports, getWeeklyGoal } from '../api/homeApi'
+import type { HomeExtras, HomeStats, RecentReport, WeeklyGoal } from '../types/home'
 
 /** 홈의 한 칸. 칸마다 따로 받아서, 한 칸이 실패해도 다른 칸은 보입니다 */
 export type HomeSection<T> = (
@@ -55,8 +55,13 @@ export type UseHomeOverviewResult = {
   stats: HomeSection<HomeStats>
   /** 최근 리포트 (`/api/home/recent-reports`) */
   recentReports: HomeSection<RecentReport[]>
-  /** 배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행 (`/api/home`, 백엔드에 없어 목업이 답합니다) */
+  /** 배지 · 다가오는 일정 · 인재상 · 질문은행 (`/api/home`, 백엔드에 없어 목업이 답합니다) */
   extras: HomeSection<HomeExtras>
+  /**
+   * 이번 주 목표 (`/api/growth`, 성장 관리와 같은 값 · 이슈 #201). 목표를 안 정했으면 null.
+   * 실서버(목표)와 목업(`/api/home`)이 섞여 있어서 따로 받습니다 — 같이 받으면 한쪽만 실패해도 둘 다 오류가 됩니다
+   */
+  weeklyGoal: HomeSection<WeeklyGoal | null>
 }
 
 /**
@@ -68,7 +73,8 @@ export type UseHomeOverviewResult = {
 export function useHomeOverview(): UseHomeOverviewResult {
   const stats = useSection(getHomeStats, '연습 통계')
   const recentReports = useSection(getRecentReports, '최근 리포트')
-  const extras = useSection(getHomeExtras, '배지 · 목표 · 일정')
+  const extras = useSection(getHomeExtras, '배지 · 일정')
+  const weeklyGoal = useSection(getWeeklyGoal, '이번 주 목표')
 
-  return { stats, recentReports, extras }
+  return { stats, recentReports, extras, weeklyGoal }
 }

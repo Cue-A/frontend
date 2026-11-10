@@ -1,5 +1,5 @@
 import { ROUTES } from '@/app/routes'
-import { useLogout } from '@/domain/auth/hooks/useLogout'
+import { useLogoutConfirm } from '@/domain/auth/hooks/useLogoutConfirm'
 import { toTopBarProfile, useMe } from '@/domain/user/hooks/useMe'
 import TopBarActions from '@/shared/ui/TopBarActions'
 
@@ -9,11 +9,13 @@ import TopBarActions from '@/shared/ui/TopBarActions'
  */
 export default function GrowthTopBar() {
   const me = useMe()
-  const logout = useLogout()
+  const { openLogoutConfirm, logoutConfirmDialog } = useLogoutConfirm()
 
   return (
     <div className="flex items-center justify-end gap-4">
-      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
+      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={openLogoutConfirm} />
+
+      {logoutConfirmDialog}
     </div>
   )
 }

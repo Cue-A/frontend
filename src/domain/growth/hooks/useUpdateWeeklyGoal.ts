@@ -16,7 +16,7 @@ export type UseUpdateWeeklyGoalResult = {
   clearError: () => void
 }
 
-/** 이번 주 목표 횟수를 바꿉니다. (`PATCH /api/growth/weekly-goal` — 백엔드에 없어 목업이 답합니다) */
+/** 이번 주 목표 횟수를 바꿉니다. (`PATCH /api/growth/weekly-goal` — Cue-A/backend#132) */
 export function useUpdateWeeklyGoal(): UseUpdateWeeklyGoalResult {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

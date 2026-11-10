@@ -17,6 +17,7 @@ import MyPageTitle from './MyPageTitle'
  *
  * 목록과 해제는 company 도메인의 훅이 맡습니다(Cue-A/backend #101). 등록은 기업 탐색 화면에서 해서, 위쪽과 빈 목록 안내에
  * "기업 둘러보기" 를 둡니다. 기업 이름을 누르면 그 기업의 상세(인재상)로 갑니다. (이슈 #162)
+ * 상세의 돌아가기 링크가 이 화면으로 돌아오도록 주소에 `?from=interests` 를 붙입니다 (이슈 #186).
  *
  * 시안의 기업마다 다른 원 색 · 한 줄 소개(예: "도전과 몰입을 중시하는 인재")는 넣지 않았습니다. 관심 기업 응답에 기업 id · 이름만
  * 있어서입니다. 원 안에는 기업명 첫 글자를 씁니다.
@@ -79,7 +80,7 @@ export default function InterestsPage() {
                         {initialOf(company.name)}
                       </span>
                       <Link
-                        to={toCompany(company.companyId)}
+                        to={toCompany(company.companyId, 'interests')}
                         className="truncate rounded-xs text-body-md font-semibold text-neutral-900 hover:text-primary-600 focus-visible:outline-2 focus-visible:outline-primary-500"
                       >
                         {company.name}

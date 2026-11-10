@@ -109,6 +109,7 @@ function labelClass(expanded: boolean) {
 const OPEN_DELAY_MS = 150
 
 type Props = {
+  /** 맨 아래 "로그아웃". 바로 로그아웃하지 않고 확인 창을 엽니다 — 쓰는 쪽이 `useLogoutConfirm()` 을 넘깁니다 (이슈 #186) */
   onLogout: () => void
 }
 

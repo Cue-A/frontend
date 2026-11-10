@@ -1,6 +1,6 @@
 import { Outlet, useMatches } from 'react-router-dom'
 
-import { useLogout } from '@/domain/auth/hooks/useLogout'
+import { useLogoutConfirm } from '@/domain/auth/hooks/useLogoutConfirm'
 
 import SideNav from './SideNav'
 
@@ -29,15 +29,17 @@ function isFullBleed(handle: unknown): boolean {
  */
 export default function AppLayout() {
   const fullBleed = useMatches().some((match) => isFullBleed(match.handle))
-  const logout = useLogout()
+  const { openLogoutConfirm, logoutConfirmDialog } = useLogoutConfirm()
 
   return (
     <div data-app-layout data-full-bleed={fullBleed || undefined} className="flex min-h-screen bg-neutral-50">
-      <SideNav onLogout={logout} />
+      <SideNav onLogout={openLogoutConfirm} />
 
       <main className={`min-w-0 flex-1 ${fullBleed ? '' : 'p-6 md:p-10'}`}>
         <Outlet />
       </main>
+
+      {logoutConfirmDialog}
     </div>
   )
 }

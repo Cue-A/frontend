@@ -162,24 +162,17 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   계약(`Cue-A/backend` `docs/03-auth.md`).
 - `POST /api/auth/oauth/kakao` 가 실제로 붙는 3단계 전에는 정해져야 합니다.
 
-### Q14. 🟡 회원 탈퇴 API 와 탈퇴 정책이 없습니다
+### Q14. ✅ 회원 탈퇴는 `DELETE /api/users/me` 이고 탈퇴 이유는 받지 않습니다
 
-기능명세서 P0 에 "마이페이지 > 계정 설정 > 로그아웃 · 회원 탈퇴" 가 있는데, 백엔드(dev · #34)에는
-로그아웃과 내 정보 조회만 있고 탈퇴 API 가 없습니다. 계정 설정 시안도 아직 없습니다.
+백엔드 탈퇴 API(Cue-A/backend#64)가 들어와 실서버로 붙였습니다 (이슈 #201).
 
-- **임시 결정: 탈퇴 흐름(이유 고르기 → 최종 확인 창 → 완료)과 탈퇴 뒤 토큰 정리까지 만들고, API 는
-  `POST /api/users/me/withdrawal` (본문 `{ reason, detail? }`) 로 가정해 목업(`missingInBackend`)이 답하게
-  둡니다.** 계정 설정은 프로필 시안을, 탈퇴 흐름은 프레시코드 탈퇴 화면을 참고해 임시로 그렸습니다.
-- 남은 결정 (백엔드)
-  - 경로 · 응답. 탈퇴 뒤 그 사용자의 refresh token 을 모두 끊는지
-  - 탈퇴 이유(`reason` 7종 · `detail`)를 저장할지. 저장한다면 enum 값을 같이 맞춥니다
-  - 지워지는 범위. 최종 확인 창은 "면접 기록과 답변 녹화 · 리포트 · 보관함 문서 · 계정 정보가 지워진다" 고 안내합니다.
-    다르거나 재가입 제한 기간이 있으면 문구를 고칩니다
-  - 비밀번호 재확인을 받을지. 카카오로만 가입한 계정은 비밀번호가 없어서 받는다면 방법을 따로 정해야 합니다
-  - 카카오 계정 연결 끊기(unlink)를 백엔드가 같이 하는지
-- 남은 결정 (기획): 계정 설정 · 탈퇴 화면 시안, 탈퇴 이유 목록.
+- **결정: `DELETE /api/users/me`, 본문 없음.** 계정과 모든 연관 데이터(문서 · 면접 기록 · 리포트 등)를 영구 삭제하고,
+  로그인된 모든 기기의 refresh token 을 폐기합니다. 프론트는 응답을 받자마자 이 브라우저의 토큰을 지웁니다
+- **결정: 탈퇴 이유를 받지 않습니다.** 전에 가정했던 `POST /api/users/me/withdrawal` 의 `{ reason, detail? }` 은 백엔드에 없어서,
+  탈퇴 화면에서 이유 고르기를 뺐습니다. 화면은 안내(지워지는 것 · 되돌릴 수 없음 · 다른 기기 로그아웃) → 최종 확인 창 → 완료입니다
+- 비밀번호 재확인은 받지 않습니다(백엔드가 받지 않음). 카카오 연결 끊기(unlink) · 재가입 제한은 백엔드 범위 밖입니다
 - 걸리는 작업: `domain/user/api/userApi.ts` 의 `withdraw`, `domain/user/components/WithdrawPage.tsx` ·
-  `WithdrawConfirmDialog.tsx`, `domain/user/lib/withdrawReasons.ts`.
+  `WithdrawConfirmDialog.tsx`, `domain/user/lib/withdrawal.ts`.
 
 ### Q15. 🟡 직접 작성 문서의 본문 수정 · 제목 수정 창 시안
 
@@ -193,7 +186,7 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   다시 고르기 전까지 옛 제목으로 보입니다. 면접 시작은 `documentId` 로 하므로 동작에는 영향이 없습니다.
 - 걸리는 작업: `domain/document/components/DocumentRenameDialog.tsx`.
 
-### Q16. 🟡 마이페이지 확장 화면의 API 가 아직 서버에 없습니다
+### Q16. 🟡 마이페이지 확장 화면의 API — 알림 설정만 서버에 없습니다
 
 기능명세서 "사용자" 도메인(MY-1~3)의 프로필 · 계정 정보는 API 명세서를 받았지만(진행 상태 "시작 전"),
 "알림 설정"은 기능명세서 자체에 없는 항목입니다. 관심 기업은 백엔드 #101 로 생겼습니다.
@@ -202,26 +195,26 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 이슈 #185 에서 마이페이지를 정리했습니다. 메뉴 목록 화면 · 나만의 명함 · 사이드바 커뮤니티 · 홈 화면 테마 색 점을 지웠고,
 계정 설정 · 알림 설정은 프로필 한 화면 아래 칸으로 합쳤습니다(옛 주소는 프로필의 그 칸으로 보냅니다).
 
-- **임시 결정: 아래 경로로 목업(`missingInBackend`)이 답하게 두고 화면을 완성했습니다.**
+- **프로필 · 계정 정보 · 탈퇴는 실서버로 붙였습니다** (Cue-A/backend#64 · #126 · #128, 이슈 #201). 아래는 목업 시절 결정과 바뀐 점입니다.
   - 프로필 조회 · 수정: API 명세서 그대로 `GET · PATCH /api/users/me/profile`.
     - 응답 `userId · userName · email · profileImageUrl · introduction · targetJobRole · careerLevel · schoolName · major · graduationYear`
-    - 수정은 바꾼 칸만 보냅니다. 빈 본문은 `EMPTY_UPDATE_REQUEST` 라 바뀐 게 없으면 저장 버튼을 잠급니다
+    - 수정은 바꾼 칸만 보냅니다. 빈 본문은 400 `INVALID_REQUEST` 라 바뀐 게 없으면 저장 버튼을 잠급니다
+    - 서버는 `null` 을 "안 보냄" 으로 봐서 칸을 지울 때는 빈 문자열(`''`)을 보냅니다. 조회의 `''` 는 비어 있는 것으로 그립니다 (이슈 #201)
     - 화면은 이름 · 직무(50자)만 고칩니다. 자기소개 · 경력 단계 · 학교 · 전공 · 졸업연도는 시안이 없어 아직 그리지 않았습니다
     - 프로필 사진은 주소(`profileImageUrl`)만 받고 올릴 API 가 없어 "사진 변경" 을 넣지 않았습니다
     - "계정 탈퇴하기" 는 명세 피드백에 따라 프로필 판에서 빼고 아래 계정 칸에만 둡니다
   - 계정 정보: API 명세서 그대로 `GET /api/users/me/account` (이메일 · 가입일 · 로그인 수단별 연결일 · 비밀번호 유무)
-  - 이메일 변경 `PATCH /api/users/me/email` · 비밀번호 변경 `PATCH /api/users/me/password` 은 명세만 받았고 화면은 다음 작업입니다
+  - 이메일 변경 `PATCH /api/users/me/email` · 비밀번호 변경 `PATCH /api/users/me/password` 은 백엔드에 들어왔고(#125 · #127),
+    화면은 이슈 #201 의 두 번째 작업에서 만듭니다
   - 관심 기업: 백엔드 #101 계약 그대로 `GET /api/companies/interests`, `POST · DELETE /api/companies/{companyId}/interest`.
     배포 서버에도 있어서(2026-11 재배포) 목업 표시(`missingInBackend`)를 지웠습니다. `companies` 를 켜면 실제 서버로 갑니다
-  - 알림 설정: `GET · PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로입니다.
+  - 알림 설정: `GET · PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로입니다. **아직 목업입니다.**
     PATCH 는 바꾼 항목만 보냅니다
   - 명함: MVP 범위 밖이라 화면 · 목업을 지웠습니다(이슈 #185). 명세서 경로는 `POST · GET · PATCH /api/users/me/business-card` 였습니다
 - 남은 결정 (백엔드에 확인 중)
-  - 프로필 · 계정 API 명세의 응답 모양(`code` · `ACCESS_TOKEN_EXPIRED` 등)이 지금 서버 공통 응답(`errorCode` · `TOKEN_EXPIRED`)과
-    다릅니다. 프론트 토큰 재발급이 `TOKEN_EXPIRED` 에 걸려 있어 기존 공통 응답을 따르는지 확인이 필요합니다
-  - 프로필의 `userName` 과 `GET /api/users/me` 의 `nickname` 이 같은 값인지 (프론트는 같은 값으로 보고 화면 머리를 바꿉니다)
   - 프로필 직무(50자)와 면접 직무 `jobRole`(100자) 길이를 맞출지
-  - 프로필 사진 업로드 방식, 회원 탈퇴 API, 알림 설정의 실제 계약
+  - 프로필 사진 업로드 방식, 알림 설정의 실제 계약
+- 확인됨: 실서버 응답은 공통 응답(`errorCode` · `TOKEN_EXPIRED`)을 따르고, 프로필의 `userName` 은 `users/me` 의 `nickname` 과 같은 값입니다
 - 걸리는 작업: `domain/user/components/ProfilePage.tsx` · `AccountSection.tsx` · `NotificationSection.tsx`,
   `domain/user/api/userApi.ts` · `userMock.ts`.
 

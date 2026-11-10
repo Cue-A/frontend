@@ -33,26 +33,27 @@ const profile: Profile = {
   graduationYear: null,
 }
 
-/** 명세서는 받았지만 백엔드가 아직 시작 전입니다 (docs/90-open-questions.md Q16) */
-const PROFILE_MISSING = '프로필 · 계정 정보 API 없음 (명세서 "시작 전", Q16)'
+/* 프로필 · 계정 정보 · 탈퇴는 백엔드에 들어왔습니다(Cue-A/backend#64 · #126 · #128). `users` 를 켜면 실제 서버로 갑니다 */
 
-registerMock('GET', '/api/users/me/profile', () => ({ ...profile }), { missingInBackend: PROFILE_MISSING })
+registerMock('GET', '/api/users/me/profile', () => ({ ...profile }))
 
 const CAREER_LEVELS: CareerLevel[] = ['student', 'entry', 'junior', 'experienced']
 
 /**
- * 프로필 수정 목업. 명세처럼 **보낸 칸만** 고치고, 아무것도 안 보내면 `EMPTY_UPDATE_REQUEST` 입니다.
- * 화면이 쓰는 이름 · 직무만 길이를 검사하고, 나머지 칸은 명세의 값 제약만 봅니다.
+ * 프로필 수정 목업. 서버처럼 **보낸 칸만** 고치고, 아무것도 안 보내면 400 `INVALID_REQUEST` 입니다.
+ * 서버는 `null` 을 "안 보냄" 으로 봐서 칸을 지우지 않습니다. 글 칸은 빈 문자열(`''`)을 보내야 지워지고, 서버에는 `''` 로 남습니다.
+ * 화면이 쓰는 이름 · 직무만 길이를 검사하고, 나머지 칸은 서버의 값 제약만 봅니다.
  */
 registerMock(
   'PATCH',
   '/api/users/me/profile',
   (_params, body) => {
     const input = (body ?? {}) as Partial<Record<keyof Profile, unknown>>
-    const keys = Object.keys(input).filter((key) => input[key as keyof Profile] !== undefined)
-    if (keys.length === 0) throw new ApiError('EMPTY_UPDATE_REQUEST', '수정할 프로필 정보가 없습니다.')
+    // 서버처럼 null 은 보내지 않은 것으로 봅니다
+    const keys = Object.keys(input).filter((key) => input[key as keyof Profile] != null)
+    if (keys.length === 0) throw new ApiError('INVALID_REQUEST', '수정할 프로필 정보가 없습니다')
 
-    if (input.userName !== undefined) {
+    if (input.userName != null) {
       const userName = typeof input.userName === 'string' ? input.userName.trim() : ''
       if (!userName || userName.length > NICKNAME_MAX_LENGTH) {
         throw new ApiError('INVALID_REQUEST', `이름은 1~${NICKNAME_MAX_LENGTH}자여야 합니다`)
@@ -60,30 +61,29 @@ registerMock(
       profile.userName = userName
       me.nickname = userName
     }
-    if (input.targetJobRole !== undefined) {
-      const job = typeof input.targetJobRole === 'string' ? input.targetJobRole.trim() : ''
+    if (input.targetJobRole != null) {
+      const job = typeof input.targetJobRole === 'string' ? input.targetJobRole : ''
       if (job.length > JOB_TITLE_MAX_LENGTH) {
         throw new ApiError('INVALID_REQUEST', `직무는 ${JOB_TITLE_MAX_LENGTH}자까지 적을 수 있습니다`)
       }
-      profile.targetJobRole = job || null
+      // 서버처럼 빈 문자열을 그대로 둡니다. 화면은 조회에서 `''` 를 비어 있는 것으로 봅니다 (userApi `toProfile`)
+      profile.targetJobRole = job
     }
-    if (input.careerLevel !== undefined) {
-      if (input.careerLevel !== null && !CAREER_LEVELS.includes(input.careerLevel as CareerLevel)) {
-        throw new ApiError('INVALID_REQUEST', '경력 단계가 올바르지 않습니다')
+    if (input.careerLevel != null) {
+      if (!CAREER_LEVELS.includes(input.careerLevel as CareerLevel)) {
+        throw new ApiError('INVALID_REQUEST', '허용되지 않은 careerLevel 값입니다')
       }
-      profile.careerLevel = input.careerLevel as CareerLevel | null
+      profile.careerLevel = input.careerLevel as CareerLevel
     }
-    for (const key of ['profileImageUrl', 'introduction', 'schoolName', 'major'] as const) {
+    // 프로필 사진은 이 API 로 바뀌지 않습니다 (서버도 받지 않음)
+    for (const key of ['introduction', 'schoolName', 'major'] as const) {
       const value = input[key]
-      if (value !== undefined) profile[key] = typeof value === 'string' && value ? value : null
+      if (typeof value === 'string') profile[key] = value
     }
-    if (input.graduationYear !== undefined) {
-      profile.graduationYear = typeof input.graduationYear === 'number' ? input.graduationYear : null
-    }
+    if (typeof input.graduationYear === 'number') profile.graduationYear = input.graduationYear
 
     return { ...profile }
   },
-  { missingInBackend: PROFILE_MISSING },
 )
 
 /** 계정 정보 목업. 이메일로 가입한 계정입니다 */
@@ -95,17 +95,13 @@ registerMock(
     createdAt: '2026-09-01T10:00:00',
     auths: [{ provider: 'LOCAL', hasPassword: true, linkedAt: '2026-09-01T10:00:00' }],
   }),
-  { missingInBackend: PROFILE_MISSING },
 )
 
 /**
- * 회원 탈퇴 목업입니다. 백엔드에 탈퇴 API 가 아직 없어서 `users` 를 실제 서버에 붙여도 이 API 만은
- * 목업이 답합니다 (docs/90-open-questions.md Q14). 목업은 아무것도 지우지 않습니다 — 탈퇴 뒤 다시
+ * 회원 탈퇴 목업입니다 (`DELETE /api/users/me`, 본문 없음). 목업은 아무것도 지우지 않습니다 — 탈퇴 뒤 다시
  * 로그인하면 같은 목업 사용자로 들어옵니다.
  */
-registerMock('POST', '/api/users/me/withdrawal', () => undefined, {
-  missingInBackend: '회원 탈퇴 API 없음 (백엔드 요청 예정)',
-})
+registerMock('DELETE', '/api/users/me', () => undefined)
 
 /** 알림 설정 목업. 시안의 처음 상태(이메일 켬 · 푸시 끔)입니다 */
 const notificationSettings: NotificationSettings = { emailAlerts: true, pushAlerts: false }

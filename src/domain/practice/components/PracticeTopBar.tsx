@@ -1,5 +1,5 @@
 import { ROUTES } from '@/app/routes'
-import { useLogout } from '@/domain/auth/hooks/useLogout'
+import { useLogoutConfirm } from '@/domain/auth/hooks/useLogoutConfirm'
 import { toTopBarProfile, useMe } from '@/domain/user/hooks/useMe'
 import Breadcrumb from '@/shared/ui/Breadcrumb'
 import TopBarActions from '@/shared/ui/TopBarActions'
@@ -10,12 +10,14 @@ import TopBarActions from '@/shared/ui/TopBarActions'
  */
 export default function PracticeTopBar() {
   const me = useMe()
-  const logout = useLogout()
+  const { openLogoutConfirm, logoutConfirmDialog } = useLogoutConfirm()
 
   return (
     <div className="flex items-center justify-between gap-4">
       <Breadcrumb items={['내 보관함', '연습 기록']} />
-      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
+      <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={openLogoutConfirm} />
+
+      {logoutConfirmDialog}
     </div>
   )
 }
