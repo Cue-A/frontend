@@ -1,4 +1,4 @@
-import { IconBookmarkFilled, IconStar, IconStarFilled } from '@tabler/icons-react'
+import { IconBookmarkFilled, IconPencil, IconStar, IconStarFilled, IconTrash } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
 import { ROUTES } from '@/app/routes'
@@ -34,6 +34,9 @@ type Props = {
   /** 서버에 보내는 중이면 true. 그 카드의 별을 잠급니다 */
   isFavoritePending: (question: CommonQuestion) => boolean
   onCommonMemoSaved: (question: CommonQuestion, memo: string | null) => void
+  /** 내가 추가한 질문의 수정 · 삭제 버튼. 창은 화면이 엽니다 */
+  onEditCommon: (question: CommonQuestion) => void
+  onRemoveCommon: (question: CommonQuestion) => void
 }
 
 function Notice({ children, focusTarget = false }: { children: ReactNode; focusTarget?: boolean }) {
@@ -56,6 +59,8 @@ function renderBody({
   onToggleFavorite,
   isFavoritePending,
   onCommonMemoSaved,
+  onEditCommon,
+  onRemoveCommon,
 }: Props) {
   switch (body.kind) {
     case 'loading':
@@ -95,6 +100,7 @@ function renderBody({
       return (
         <Notice>
           <p className="text-body-md text-neutral-900">공통 질문이 아직 없어요.</p>
+          <p className="mt-1 text-body-sm text-neutral-500">‘질문 추가’로 연습하고 싶은 질문을 직접 넣을 수 있어요.</p>
         </Notice>
       )
     case 'no-match':
@@ -133,28 +139,51 @@ function renderBody({
       return body.questions.map((question) => (
         <li key={question.questionId}>
           <QuestionCard
+            badge={question.custom ? '내 질문' : null}
             meta={metaOfCommon(question)}
             text={question.text}
             action={
-              <button
-                type="button"
-                onClick={() => onToggleFavorite(question)}
-                // 누르면 카드가 맨 위로 옮겨 가면서 포커스가 풀립니다. 다시 이 별로 돌리려고 찾는 표시입니다 (QuestionBankPage)
-                data-common-favorite={question.questionId}
-                aria-pressed={question.favorite}
-                // `disabled` 로 잠그면 키보드로 누른 순간 포커스가 화면 밖으로 빠집니다. 서버에 보내는 동안의 연타는
-                // 훅이 막으니 여기서는 상태만 알립니다 (shared/ui/Pagination 의 포커스 처리와 같은 이유).
-                aria-disabled={isFavoritePending(question) || undefined}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-primary-500 aria-disabled:cursor-wait"
-              >
-                {question.favorite ? (
-                  <IconStarFilled size={20} aria-hidden className="text-primary-500" />
-                ) : (
-                  <IconStar size={20} stroke={2} aria-hidden className="text-neutral-300" />
+              <div className="flex shrink-0 items-center">
+                {question.custom && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onEditCommon(question)}
+                      className="flex h-9 w-9 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-primary-500"
+                    >
+                      <IconPencil size={20} stroke={2} aria-hidden />
+                      <span className="sr-only">질문 수정 — {question.text}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveCommon(question)}
+                      className="flex h-9 w-9 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-semantic-danger focus-visible:outline-2 focus-visible:outline-primary-500"
+                    >
+                      <IconTrash size={20} stroke={2} aria-hidden />
+                      <span className="sr-only">질문 삭제 — {question.text}</span>
+                    </button>
+                  </>
                 )}
-                {/* 켜짐 · 꺼짐은 aria-pressed 가 알립니다. 이름까지 "추가 · 해제" 로 바꾸면 "해제, 눌림" 처럼 거꾸로 읽힙니다 */}
-                <span className="sr-only">즐겨찾기 — {question.text}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleFavorite(question)}
+                  // 누르면 카드가 맨 위로 옮겨 가면서 포커스가 풀립니다. 다시 이 별로 돌리려고 찾는 표시입니다 (QuestionBankPage)
+                  data-common-favorite={question.questionId}
+                  aria-pressed={question.favorite}
+                  // `disabled` 로 잠그면 키보드로 누른 순간 포커스가 화면 밖으로 빠집니다. 서버에 보내는 동안의 연타는
+                  // 훅이 막으니 여기서는 상태만 알립니다 (shared/ui/Pagination 의 포커스 처리와 같은 이유).
+                  aria-disabled={isFavoritePending(question) || undefined}
+                  className="flex h-9 w-9 items-center justify-center rounded-sm transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-primary-500 aria-disabled:cursor-wait"
+                >
+                  {question.favorite ? (
+                    <IconStarFilled size={20} aria-hidden className="text-primary-500" />
+                  ) : (
+                    <IconStar size={20} stroke={2} aria-hidden className="text-neutral-300" />
+                  )}
+                  {/* 켜짐 · 꺼짐은 aria-pressed 가 알립니다. 이름까지 "추가 · 해제" 로 바꾸면 "해제, 눌림" 처럼 거꾸로 읽힙니다 */}
+                  <span className="sr-only">즐겨찾기 — {question.text}</span>
+                </button>
+              </div>
             }
             footer={<CommonMemo question={question} onSaved={onCommonMemoSaved} />}
           />

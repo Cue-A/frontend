@@ -20,6 +20,8 @@ import {
 import type { BookmarkedQuestion, CommonQuestion, QuestionTab } from '../types/question'
 
 import BookmarkRemoveDialog from './BookmarkRemoveDialog'
+import CommonQuestionFormDialog from './CommonQuestionFormDialog'
+import CommonQuestionRemoveDialog from './CommonQuestionRemoveDialog'
 import QuestionList, { type QuestionListBody } from './QuestionList'
 import QuestionTopBar from './QuestionTopBar'
 
@@ -30,7 +32,12 @@ import QuestionTopBar from './QuestionTopBar'
  * - `empty` 남은 카드가 없을 때의 "북마크한 질문이 없어요" 안내
  * - `favorite` 공통 질문에서 즐겨찾기를 누르면 그 카드가 맨 위로 옮겨 가면서 포커스가 풀립니다. 그 카드의 별로 돌립니다
  */
-type FocusRequest = { kind: 'card'; key: string } | { kind: 'empty' } | { kind: 'favorite'; questionId: string }
+type FocusRequest =
+  | { kind: 'card'; key: string }
+  | { kind: 'empty' }
+  | { kind: 'favorite'; questionId: string }
+  /** 내가 추가한 질문을 지우면 그 카드가 사라집니다. "질문 추가" 버튼으로 돌립니다 */
+  | { kind: 'add' }
 
 /** 해제 안내를 보여주는 시간. 다른 탭으로 옮기거나 새 동작을 하면 바로 사라집니다 */
 const NOTICE_MS = 4000
@@ -50,13 +57,17 @@ const GONE_NOTICE = '이미 해제된 북마크예요. 목록에서 지웠어요
  * 서버에 검색이 없어서 북마크를 전부 받아 두고(`useBookmarks`) 검색은 화면이 합니다. 그래서 쪽 나누기도 없고,
  * 빼기 · 메모 저장은 서버가 성공한 뒤 받아 둔 목록을 바로 고칩니다.
  *
- * "+ 질문 추가" 는 기획이 정해지지 않아 자리만 두고 잠가 뒀습니다.
+ * "+ 질문 추가" 로 내 질문을 공통 질문 탭에 넣습니다. 내가 추가한 질문은 카드에서 고치고 지울 수 있습니다
+ * (CommonQuestionFormDialog · CommonQuestionRemoveDialog). **백엔드 API 가 없어 목업이 답합니다** (questionMock.ts).
  */
 export default function QuestionBankPage() {
   const [tab, setTab] = useState<QuestionTab>('BOOKMARKED')
   const [query, setQuery] = useState('')
   const [removing, setRemoving] = useState<BookmarkedQuestion | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  /** 내 질문 추가 · 수정 창. `editing` 이 null 이면 추가 */
+  const [formState, setFormState] = useState<{ editing: CommonQuestion | null } | null>(null)
+  const [removingCommon, setRemovingCommon] = useState<CommonQuestion | null>(null)
 
   const bookmarks = useBookmarks()
   const common = useCommonQuestions()
@@ -80,6 +91,8 @@ export default function QuestionBankPage() {
 
     if (request.kind === 'card') {
       document.querySelector<HTMLElement>(`[data-bookmark-remove="${CSS.escape(request.key)}"]`)?.focus()
+    } else if (request.kind === 'add') {
+      document.querySelector<HTMLElement>('[data-question-add] button')?.focus()
     } else if (request.kind === 'favorite') {
       document.querySelector<HTMLElement>(`[data-common-favorite="${CSS.escape(request.questionId)}"]`)?.focus()
     } else {
@@ -105,6 +118,33 @@ export default function QuestionBankPage() {
       focusRequestRef.current = { kind: 'favorite', questionId: question.questionId }
     }
     common.toggleFavorite(question)
+  }
+
+  const openAdd = () => {
+    setNotice(null)
+    setFormState({ editing: null })
+  }
+
+  const handleQuestionSaved = (saved: CommonQuestion) => {
+    if (formState?.editing) {
+      common.replaceLocal(saved)
+      setNotice('질문을 수정했어요.')
+      return
+    }
+
+    // 목록을 아직 받지 못했거나(받는 중 · 실패) 받는 중인 응답이 추가 전 목록일 수 있어서, 그때는 다시 받습니다
+    if (common.status === 'ready') common.addLocal(saved)
+    else common.reload()
+    // 검색어에 걸리지 않으면 방금 넣은 질문이 안 보입니다. 보이도록 검색을 비우고 공통 질문 탭으로 옮깁니다
+    setQuery('')
+    setTab('COMMON')
+    setNotice('질문을 추가했어요.')
+  }
+
+  const handleCommonRemoved = (question: CommonQuestion, message: string) => {
+    focusRequestRef.current = { kind: 'add' }
+    common.removeLocal(question)
+    setNotice(message)
   }
 
   const askRemove = (bookmark: BookmarkedQuestion) => {
@@ -187,12 +227,12 @@ export default function QuestionBankPage() {
         </div>
 
         <div className="flex shrink-0 flex-col items-start gap-1 lg:items-end">
-          <Button variant="primary" size="sm" disabled className="whitespace-nowrap">
-            <IconPlus size={16} stroke={2} aria-hidden />
-            질문 추가
-          </Button>
-          {/* 비활성 버튼의 이유는 글로 적습니다 (docs/01-conventions.md). */}
-          <p className="break-keep text-body-sm text-neutral-500">질문을 직접 추가하는 기능은 준비 중이에요.</p>
+          <div data-question-add="">
+            <Button variant="primary" size="sm" onClick={openAdd} className="whitespace-nowrap">
+              <IconPlus size={16} stroke={2} aria-hidden />
+              질문 추가
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -244,7 +284,33 @@ export default function QuestionBankPage() {
         onToggleFavorite={handleToggleFavorite}
         isFavoritePending={common.isFavoritePending}
         onCommonMemoSaved={common.setMemoLocal}
+        onEditCommon={(question) => {
+          setNotice(null)
+          setFormState({ editing: question })
+        }}
+        onRemoveCommon={(question) => {
+          setNotice(null)
+          setRemovingCommon(question)
+        }}
       />
+
+      {formState && (
+        <CommonQuestionFormDialog
+          editing={formState.editing}
+          onSaved={handleQuestionSaved}
+          onGone={(question) => handleCommonRemoved(question, '이미 삭제된 질문이에요. 목록에서 지웠어요.')}
+          onClose={() => setFormState(null)}
+        />
+      )}
+
+      {removingCommon && (
+        <CommonQuestionRemoveDialog
+          question={removingCommon}
+          onRemoved={(question) => handleCommonRemoved(question, '질문을 삭제했어요.')}
+          onGone={(question) => handleCommonRemoved(question, '이미 삭제된 질문이에요. 목록에서 지웠어요.')}
+          onClose={() => setRemovingCommon(null)}
+        />
+      )}
 
       {removing && (
         <BookmarkRemoveDialog

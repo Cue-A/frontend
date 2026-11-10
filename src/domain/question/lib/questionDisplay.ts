@@ -20,6 +20,16 @@ export const BOOKMARK_TYPE_LABEL: Record<BookmarkType, string | null> = {
 /** 메모는 질문마다 하나이고 최대 500자입니다 (PATCH /api/bookmarks) */
 export const MAX_MEMO_LENGTH = 500
 
+/**
+ * 질문은행 공통 질문 분류(백엔드 `CustomQuestionRule`) — 면접 질문 AI 분류(북마크 탭의 8종)와 다른 목록입니다.
+ * 내 질문을 추가 · 수정할 때 고르고, 기본 공통 질문도 같은 목록을 씁니다. 서버는 이 다섯 개만 받습니다
+ * (DB 제약 `common_question_category_check`). 8종을 보내면 400 `INVALID_REQUEST` 입니다.
+ */
+export const QUESTION_CATEGORIES = ['인성', '경험', '지원동기', '직무', '기타'] as const
+
+/** 내 질문 문구의 최대 길이 */
+export const MAX_QUESTION_LENGTH = 200
+
 /** 같은 질문을 재연습에서 또 담으면 줄이 따로 생겨서, 한 줄은 `(sessionId, questionId)` 둘로 가립니다 */
 export function bookmarkKey(bookmark: Pick<BookmarkedQuestion, 'sessionId' | 'questionId'>): string {
   return `${bookmark.sessionId}:${bookmark.questionId}`
