@@ -21,21 +21,11 @@ export const BOOKMARK_TYPE_LABEL: Record<BookmarkType, string | null> = {
 export const MAX_MEMO_LENGTH = 500
 
 /**
- * 질문 분류. 내 질문을 추가할 때 고르고, 기본 공통 질문도 같은 이름을 씁니다.
- * 앞의 여덟은 백엔드 `Question` 엔티티의 면접 질문 분류와 같아서(북마크 탭의 분류), 세 탭의 분류 이름이 하나로 보입니다.
- * "기타" 는 어디에도 안 맞는 질문용으로 프론트가 더한 값입니다 (백엔드가 허용하는지는 명세를 맞출 때 확인).
+ * 질문은행 공통 질문 분류(백엔드 `CustomQuestionRule`) — 면접 질문 AI 분류(북마크 탭의 8종)와 다른 목록입니다.
+ * 내 질문을 추가 · 수정할 때 고르고, 기본 공통 질문도 같은 목록을 씁니다. 서버는 이 다섯 개만 받습니다
+ * (DB 제약 `common_question_category_check`). 8종을 보내면 400 `INVALID_REQUEST` 입니다.
  */
-export const QUESTION_CATEGORIES = [
-  '지원동기',
-  '직무역량',
-  '프로젝트경험',
-  '문제해결',
-  '협업·갈등',
-  '실패·성장',
-  '가치관·인성',
-  '미래계획',
-  '기타',
-] as const
+export const QUESTION_CATEGORIES = ['인성', '경험', '지원동기', '직무', '기타'] as const
 
 /** 내 질문 문구의 최대 길이 */
 export const MAX_QUESTION_LENGTH = 200

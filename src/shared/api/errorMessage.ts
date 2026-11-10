@@ -82,6 +82,8 @@ const ERROR_MESSAGE: Record<string, string> = {
   SESSION_ENDED: '이미 끝난 면접이에요. 새 면접을 시작해 주세요.',
   SESSION_ABORTED: '중단된 면접이에요. 새 면접을 시작해 주세요.',
   QUESTION_NOT_FOUND: '질문을 찾을 수 없어요.',
+  // 질문 은행 > 내 질문 추가. 한 사람이 100개까지 넣을 수 있습니다.
+  CUSTOM_QUESTION_LIMIT_EXCEEDED: '내 질문은 100개까지 추가할 수 있어요.',
   // 질문 은행(북마크)의 메모 · 해제. 다른 탭에서 이미 뺐거나 내 북마크가 아닌 경우입니다.
   BOOKMARK_NOT_FOUND: '질문 은행에 없는 질문이에요. 새로고침한 뒤 다시 시도해 주세요.',
   // A-05 가 3 · 6 · 9 만 고르게 해서 화면에서는 나지 않습니다. 서버가 다시 보는 값입니다.
