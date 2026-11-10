@@ -73,6 +73,12 @@ export type CalendarMonthResponse = {
  * 보내고 `timeSpecified: false` 로 구분합니다 — "자정 면접" 과 "시간 미정" 이 같은 값이 되지 않게 하려는 칸이라,
  * 백엔드에 요청할 때 `title` 과 함께 추가를 적습니다 (엔티티에는 둘 다 없습니다).
  */
+/** `GET /api/calendar/events/upcoming?limit=` — 홈 "다가오는 면접일" 이 씁니다 (이슈 #201) */
+export type UpcomingEventListResponse = {
+  /** 지금 이후 일정, 가까운 순 */
+  events: Array<{ eventId: string; title: string; date: string; time: string | null }>
+}
+
 export type CalendarEventCreateRequest = {
   title: string
   scheduledAt: string

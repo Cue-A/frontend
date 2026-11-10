@@ -1,15 +1,25 @@
 import { api } from '@/shared/api/apiClient'
 
 import { toIsoDate } from '../lib/homeDate'
-import type { HomeExtras, HomeStats, PracticePeriod, PracticeRecord, RecentReport, WeeklyGoal } from '../types/home'
+import { BADGE_DESCRIPTION, isBadgeCode } from '../lib/homeDisplay'
+import type {
+  HomeExtras,
+  HomeGrowth,
+  HomeStats,
+  PracticePeriod,
+  PracticeRecord,
+  RecentReport,
+  UpcomingEvent,
+} from '../types/home'
 
 import type {
   HomeExtrasResponse,
+  HomeGrowthResponse,
   HomeStatsResponse,
-  HomeWeeklyGoalResponse,
   PracticeRecordResponse,
   RecentReportListResponse,
   RecentReportResponse,
+  UpcomingEventListResponse,
 } from './homeResponse'
 
 import './homeMock'
@@ -55,31 +65,34 @@ export async function getRecentReports(limit = RECENT_REPORT_COUNT): Promise<Rec
 }
 
 /**
- * 배지 · 다가오는 일정 · 인재상 · 질문은행. `GET /api/home`
+ * 기업별 인재상 · 질문은행. `GET /api/home`
  *
- * **백엔드에 없는 API 입니다.** 경로도 프론트가 임시로 정했고 목업(`missingInBackend`)이 답합니다. 배지 지급 기준 ·
- * 일정 관리는 백엔드 기획이 정해진 뒤 따로 붙입니다. 이번 주 목표는 성장 관리와 같은 `GET /api/growth` 로 따로 받습니다(`getWeeklyGoal`).
+ * **백엔드에 없는 API 입니다.** 경로도 프론트가 임시로 정했고 목업(`missingInBackend`)이 답합니다. 배지 · 다가오는 일정은
+ * 실서버로 옮겼습니다 (`getHomeGrowth` · `getUpcomingEvents`, 이슈 #201).
  */
 export async function getHomeExtras(): Promise<HomeExtras> {
   const response = await api.get<HomeExtrasResponse>('/api/home')
+  return { talentKeywords: response.talentKeywords, popularQuestions: response.popularQuestions }
+}
 
-  return {
-    badges: {
-      earnedCount: response.badges.earnedCount,
-      totalCount: response.badges.totalCount,
-      featured: response.badges.featured.map((badge) => ({
-        code: badge.badgeCode,
-        name: badge.badgeName,
-        description: badge.description,
-        tone: badge.tone,
-        earned: badge.earnedAt !== null,
-      })),
-      nextHint: response.badges.nextHint,
-    },
-    upcomingEvents: response.upcomingEvents,
-    talentKeywords: response.talentKeywords,
-    popularQuestions: response.popularQuestions,
-  }
+/** 홈 "다가오는 면접일" 줄 수 (시안의 세 줄까지). 서버는 1 ~ 10 을 받습니다 */
+export const UPCOMING_EVENT_COUNT = 3
+
+/**
+ * 다가오는 면접 일정. `GET /api/calendar/events/upcoming?limit=` (Cue-A/backend#133) — `VITE_REAL_APIS` 이름은 `calendar` 입니다.
+ *
+ * 지금 이후의 일정만 가까운 순으로 옵니다. 날짜만 적은 일정은 그날 00:00 이라, 오늘 날짜만 있는 일정은 서버가 이미 지난 것으로
+ * 뺍니다. 날짜(`YYYY-MM-DD`) · 시각(`HH:mm`, 시간을 안 적었으면 null)은 서버가 한국 시간으로 쪼개서 줍니다. 일정은 성장 관리의
+ * 면접 캘린더에서 넣습니다.
+ */
+export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
+  const response = await api.get<UpcomingEventListResponse>(`/api/calendar/events/upcoming?limit=${UPCOMING_EVENT_COUNT}`)
+  return response.events.map((event) => ({
+    eventId: event.eventId,
+    title: event.title,
+    date: event.date,
+    time: event.time,
+  }))
 }
 
 /**
@@ -106,17 +119,37 @@ export async function getPracticeRecord(period: PracticePeriod): Promise<Practic
 }
 
 /**
- * 이번 주 목표. `GET /api/growth` 의 `weeklyGoal` (Cue-A/backend#132) — `VITE_REAL_APIS` 이름은 `growth` 입니다.
+ * 이번 주 목표 · 배지. `GET /api/growth` (Cue-A/backend#132 · #134) — `VITE_REAL_APIS` 이름은 `growth` 입니다.
  *
- * 전에는 `GET /api/home`(목업)에서 받았는데, 성장 관리가 실서버 목표를 쓰게 되면서 두 화면의 숫자가 달라졌습니다. 같은 곳에서
- * 받도록 바꿨습니다 (이슈 #201 — 홈도 /api/growth 로 받기로 정함). 목표를 고치는 창은 성장 관리에 있습니다.
+ * 성장 관리와 같은 곳에서 받아 두 화면의 숫자가 늘 같습니다 (이슈 #201 — 홈도 /api/growth 로 받기로 정함). 전에는 배지를
+ * `GET /api/home`(목업)에서 받았는데, 서버에 배지가 들어와서(#134) 목표와 같은 요청으로 받습니다. 목표를 고치는 창은 성장 관리에 있습니다.
  *
- * 서버 목표에는 제목이 없어서, 목표 횟수로 한 줄을 만듭니다. 목업 모드에서는 성장 관리 목업(`growth/api/growthMock.ts`)이
- * 답합니다 — 라우터가 모든 화면을 처음에 불러와서 홈에서도 그 목업이 등록돼 있습니다.
+ * - 서버 목표에는 제목이 없어서, 목표 횟수로 한 줄을 만듭니다
+ * - 배지는 설명 글이 오지 않아 배지 코드로 화면이 정합니다(`BADGE_DESCRIPTION`). 서버 시드의 설명과 같은 글입니다.
+ *   모르는 배지 코드는 아이콘을 고를 수 없어서 뺍니다
+ * - 목업 모드에서는 성장 관리 목업(`growth/api/growthMock.ts`)이 답합니다 — 라우터가 모든 화면을 처음에 불러와서 홈에서도 그
+ *   목업이 등록돼 있습니다
  */
-export async function getWeeklyGoal(): Promise<WeeklyGoal | null> {
-  const response = await api.get<HomeWeeklyGoalResponse>('/api/growth')
+export async function getHomeGrowth(): Promise<HomeGrowth> {
+  const response = await api.get<HomeGrowthResponse>('/api/growth')
   const goal = response.weeklyGoal
-  if (!goal) return null
-  return { title: `이번 주 연습 ${goal.targetValue}번 하기`, target: goal.targetValue, done: goal.doneCount }
+
+  return {
+    weeklyGoal: goal
+      ? { title: `이번 주 연습 ${goal.targetValue}번 하기`, target: goal.targetValue, done: goal.doneCount }
+      : null,
+    badges: response.badges.flatMap((badge) =>
+      isBadgeCode(badge.badgeCode)
+        ? [
+            {
+              code: badge.badgeCode,
+              name: badge.badgeName,
+              description: BADGE_DESCRIPTION[badge.badgeCode],
+              tone: badge.tone,
+              earned: badge.earnedAt !== null,
+            },
+          ]
+        : [],
+    ),
+  }
 }

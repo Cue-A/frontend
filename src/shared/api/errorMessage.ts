@@ -46,6 +46,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   // 회원가입 비밀번호 규칙 — 영문 · 숫자를 하나 이상씩 넣어 8~64자 (Cue-A/backend#34 `AuthService`).
   // 빠져 있으면 공통 문구("잠시 후 다시 시도해 주세요")로 떨어져서, 다시 눌러도 계속 실패하는데 이유를 알 수 없습니다.
   INVALID_PASSWORD_FORMAT: '비밀번호는 영문과 숫자를 모두 넣어 8~64자로 만들어 주세요.',
+  // 마이페이지 이메일 · 비밀번호 변경 (Cue-A/backend#125 · #127). 화면은 카카오 전용 계정에 두 줄을 두지 않아서 보통은 나지 않습니다
+  EMAIL_CHANGE_NOT_ALLOWED: '카카오로 가입한 계정은 이메일을 바꿀 수 없어요.',
+  PASSWORD_NOT_SET: '카카오로 가입한 계정은 비밀번호가 없어요.',
   // AUTH-2 카카오. code 교환이 실패했을 때 백엔드가 내려주는 코드입니다 (이슈 #53).
   OAUTH_FAILED: '카카오 로그인에 실패했어요. 다시 시도해 주세요.',
 

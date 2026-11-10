@@ -7,7 +7,7 @@ import type { AccountInfo } from '../types/user'
 
 export type UseAccountResult = { status: 'loading' } | { status: 'error' } | { status: 'ready'; account: AccountInfo }
 
-/** 계정 정보(이메일 · 가입일 · 로그인 수단)를 한 번 불러옵니다. `GET /api/users/me/account` (백엔드 시작 전, 목업 · Q16) */
+/** 계정 정보(이메일 · 가입일 · 로그인 수단)를 한 번 불러옵니다. `GET /api/users/me/account` (Cue-A/backend#126) */
 export function useAccount(): UseAccountResult {
   const [state, setState] = useState<UseAccountResult>({ status: 'loading' })
 

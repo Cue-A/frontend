@@ -12,6 +12,11 @@ import type {
 
 import './userMock'
 
+/** `PATCH /api/users/me/email` 응답 (Cue-A/backend `EmailChangeResponse`) */
+type EmailChangeResponse = {
+  email: string
+}
+
 /** 서버 응답 모양 (Cue-A/backend `UserResponse`). 화면 타입과 같지만 변환 자리를 둡니다. */
 type UserResponse = {
   userId: string
@@ -105,6 +110,31 @@ export async function updateProfile(input: ProfileUpdateInput) {
  */
 export function getAccount() {
   return api.get<AccountInfo>('/api/users/me/account')
+}
+
+/**
+ * 이메일 변경. `PATCH /api/users/me/email` (Cue-A/backend#125) — 이슈 #201
+ *
+ * 새 이메일과 **현재 비밀번호**를 같이 보냅니다. 응답은 바뀐 이메일 `{ email }` 입니다.
+ * - 이메일로 가입한(LOCAL) 계정만 됩니다. 카카오 전용 계정은 400 `EMAIL_CHANGE_NOT_ALLOWED` — 화면은 그런 계정에 줄을 두지 않습니다
+ * - 현재 비밀번호가 틀리면 401 `INVALID_CREDENTIALS` 입니다. 401 이지만 강제 로그아웃 코드가 아니라 로그인 화면으로 가지 않습니다
+ * - 다른 계정이 쓰는 이메일이면 409 `EMAIL_ALREADY_EXISTS`, 형식이 틀리면 400 `INVALID_REQUEST` 입니다. 지금 이메일과 같으면 그대로 성공합니다
+ * - 바꿔도 로그인은 유지됩니다(토큰을 다시 받지 않습니다)
+ */
+export async function changeEmail(newEmail: string, currentPassword: string) {
+  const response = await api.patch<EmailChangeResponse>('/api/users/me/email', { newEmail, currentPassword })
+  return response.email
+}
+
+/**
+ * 비밀번호 변경. `PATCH /api/users/me/password` (Cue-A/backend#127) — 이슈 #201. 응답 본문이 없습니다.
+ *
+ * - 새 비밀번호는 회원가입과 같은 규칙(영문 · 숫자를 하나 이상씩 넣어 8~64자)이고, 어기면 400 `INVALID_PASSWORD_FORMAT` 입니다
+ * - 현재 비밀번호가 틀리면 401 `INVALID_CREDENTIALS`, 카카오 전용 계정은 400 `PASSWORD_NOT_SET` 입니다
+ * - **다른 기기의 로그인은 끊지 않습니다.** 서버가 비밀번호만 바꾸고 토큰은 그대로 둡니다 (백엔드 `UserPasswordService` 확인)
+ */
+export async function changePassword(currentPassword: string, newPassword: string) {
+  await api.patch<void>('/api/users/me/password', { currentPassword, newPassword })
 }
 
 /**

@@ -19,7 +19,7 @@ export type UseSaveCommonQuestionResult = {
 }
 
 /**
- * 내 질문을 추가하거나 고칩니다. (`POST` · `PATCH /api/common-questions` — 백엔드에 없어 목업이 답합니다)
+ * 내 질문을 추가하거나 고칩니다. (`POST` · `PATCH /api/common-questions`)
  * 저장하는 동안 버튼을 잠그고, 실패하면 입력을 그대로 두고 이유를 보여줍니다.
  */
 export function useSaveCommonQuestion(editing: CommonQuestion | null): UseSaveCommonQuestionResult {

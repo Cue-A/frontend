@@ -19,15 +19,15 @@ import {
 import './growthMock'
 
 /*
- * 성장 관리 API 입니다.
- * - 가장 최근 리포트(`/api/home/recent-reports`) · 이번 주 목표(`/api/growth` · `/api/growth/weekly-goal`, Cue-A/backend#132)는 백엔드에 있습니다
- * - 배지는 `/api/growth` 응답 안에 자리만 있고 실서버는 빈 배열을 줍니다(배지 API 는 따로 나올 예정)
- * - 면접 캘린더(`/api/calendar`)는 백엔드 PR(Cue-A/backend#133) 배포 전이라 목업(`missingInBackend`)이 답합니다
+ * 성장 관리 API 입니다. 모두 백엔드에 있습니다 (이슈 #201).
+ * - 가장 최근 리포트 `/api/home/recent-reports`
+ * - 이번 주 목표 · 배지 `/api/growth` · `/api/growth/weekly-goal` (Cue-A/backend#132 · #134) — `VITE_REAL_APIS` 이름 `growth`
+ * - 면접 캘린더 `/api/calendar` (Cue-A/backend#133) — `VITE_REAL_APIS` 이름 `calendar`
  */
 
 /**
- * 이번 주 목표 · 배지. `GET /api/growth` (Cue-A/backend#132). 목표를 안 정했으면 `weeklyGoal` 이 null 입니다.
- * 실서버의 배지는 아직 빈 배열이라 배지 카드는 "받은 배지 없음" 으로 보입니다 (이슈 #201 — 빈 카드를 받아들이기로 정함)
+ * 이번 주 목표 · 배지. `GET /api/growth` (Cue-A/backend#132 · #134). 목표를 안 정했으면 `weeklyGoal` 이 null 입니다.
+ * 배지는 받지 않은 것까지 다섯 개가 다 오고(`earnedAt: null`), 서버가 조회할 때 빠진 배지를 그 자리에서 지급합니다.
  */
 export async function getGrowthOverview() {
   const response = await api.get<GrowthOverviewResponse>('/api/growth')
@@ -40,8 +40,8 @@ export async function getGrowthOverview() {
  * 점수 추이 · 이전 회차 대비 변화는 이 리포트로 회차 비교(`GET /api/reports/{reportId}/comparison`)를 따로 부릅니다.
  * 리포트 id 를 실서버에서 받아야 실서버 회차 비교가 그 리포트를 찾습니다.
  *
- * 목표 · 배지와 따로 부릅니다. 실서버(이것)와 목업(`/api/growth`)이 섞여 있어 한쪽만 실패할 수 있는데, 같이 받으면 최근
- * 리포트만 실패해도 목표 · 배지 칸까지 오류가 됩니다 (PR #184 리뷰).
+ * 목표 · 배지와 따로 부릅니다. 도메인(`home` · `growth`)이 달라 한쪽만 실서버이거나 한쪽만 실패할 수 있는데, 같이 받으면
+ * 최근 리포트만 실패해도 목표 · 배지 칸까지 오류가 됩니다 (PR #184 리뷰).
  */
 export async function getLatestInterview() {
   const response = await api.get<LatestReportListResponse>('/api/home/recent-reports?limit=1')
@@ -58,7 +58,11 @@ export async function updateWeeklyGoal(targetValue: number) {
   return toWeeklyGoal(response)
 }
 
-/** 그 달의 면접 일정과 연습한 날. `GET /api/calendar?month=YYYY-MM` */
+/**
+ * 그 달의 면접 일정과 연습한 날. `GET /api/calendar?month=YYYY-MM` (Cue-A/backend#133)
+ *
+ * 연습한 날(`practicedDates`)은 서버가 완료한 면접에서 한국 시간 날짜로 셉니다. 일정은 날짜 · 시간 순입니다.
+ */
 export async function getCalendarMonth(month: string) {
   const response = await api.get<CalendarMonthResponse>(`/api/calendar?month=${month}`)
   return toCalendarMonth(response)

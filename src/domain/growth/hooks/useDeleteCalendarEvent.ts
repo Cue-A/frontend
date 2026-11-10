@@ -15,7 +15,7 @@ export type UseDeleteCalendarEventResult = {
 }
 
 /**
- * 면접 일정을 지웁니다. (`DELETE /api/calendar/events/{id}` — 이슈 #190, Cue-A/backend#133 리뷰 중이라 지금은 목업이 답합니다)
+ * 면접 일정을 지웁니다. (`DELETE /api/calendar/events/{id}` — 이슈 #190, Cue-A/backend#133)
  *
  * 이미 지워진 일정(`CALENDAR_EVENT_NOT_FOUND`)도 화면에서는 빼야 해서, 그때는 지운 것으로 봅니다. 서버는 다시 지우면
  * 404 를 줍니다(멱등하지 않음).

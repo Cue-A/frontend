@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { MYPAGE_ACCOUNT_ID, ROUTES } from '@/app/routes'
@@ -10,6 +11,9 @@ import Card from '@/shared/ui/Card'
 import type { UseAccountResult } from '../hooks/useAccount'
 import type { UseMeResult } from '../hooks/useMe'
 import type { LoginProvider } from '../types/user'
+
+import EmailChangeDialog from './EmailChangeDialog'
+import PasswordChangeDialog from './PasswordChangeDialog'
 
 const PROVIDER_LABEL: Record<LoginProvider, string> = {
   LOCAL: '이메일',
@@ -24,6 +28,8 @@ type Props = {
    * 뒤에 내려가야 위치가 밀리지 않습니다 (PR #188 리뷰)
    */
   account: UseAccountResult
+  /** 이메일을 바꿨을 때. 화면이 프로필 칸 · 머리의 이메일도 같이 바꿉니다 */
+  onEmailChanged: (email: string) => void
 }
 
 /**
@@ -32,7 +38,9 @@ type Props = {
  * 전에는 마이페이지 > 계정 설정 화면이었는데, 프로필과 둘 다 짧은 화면이라 프로필 아래로 합쳤습니다 (이슈 #185).
  * 옛 주소(`/mypage/account`)와 홈의 톱니바퀴는 이 칸(`#account`)으로 바로 내려옵니다.
  *
- * - 이메일은 바로 위 프로필 칸에 있어서 여기서는 다시 적지 않습니다
+ * - 이메일로 가입한 계정(LOCAL · 비밀번호 있음)이면 이메일 변경 · 비밀번호 변경 줄이 있습니다 (이슈 #201). 누르면 창에서 받고,
+ *   바꾸면 이 칸 아래에 한 줄로 알립니다. 카카오 전용 계정은 서버가 둘 다 거절해서(`EMAIL_CHANGE_NOT_ALLOWED` ·
+ *   `PASSWORD_NOT_SET`) 줄 대신 안내만 적습니다. 계정 정보를 못 불러오면 어느 쪽인지 몰라서 두 줄 모두 두지 않습니다
  * - 로그인 방식 · 가입일은 계정 정보(`GET /api/users/me/account`, Cue-A/backend#126)에서 읽습니다.
  *   못 불러오면 화면 머리와 같은 사용자 정보(`GET /api/users/me`)의 로그인 방식만 보여줍니다
  * - 로그아웃은 한 번 묻고(`useLogoutConfirm` 의 확인 창) 합니다. 탈퇴 바로 옆이라 잘못 누르기 쉽습니다.
@@ -40,9 +48,19 @@ type Props = {
  * - "계정 탈퇴하기" 는 판 맨 아래 가운데 빨간 글자이고, 누르면 탈퇴 화면(`WithdrawPage` — 안내 · 최종 확인)으로 갑니다.
  *   아래에 알림 설정 칸이 이어져서, 판 밖에 두면 두 칸 사이에 떠 보여 판 안에 넣었습니다
  */
-export default function AccountSection({ me, account }: Props) {
+export default function AccountSection({ me, account, onEmailChanged }: Props) {
   const { openLogoutConfirm, logoutConfirmDialog } = useLogoutConfirm()
   const info = account.status === 'ready' ? account.account : null
+  const [dialog, setDialog] = useState<'email' | 'password' | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  // 비밀번호로 로그인하는 수단이 있어야 바꿀 수 있습니다. 서버도 LOCAL 인증이 있는지로 가릅니다
+  const canChangeCredentials = info?.auths.some((auth) => auth.provider === 'LOCAL' && auth.hasPassword) ?? false
+
+  const openDialog = (next: 'email' | 'password') => {
+    setNotice(null)
+    setDialog(next)
+  }
 
   return (
     <div id={MYPAGE_ACCOUNT_ID} className="scroll-mt-6">
@@ -81,6 +99,44 @@ export default function AccountSection({ me, account }: Props) {
           </p>
         )}
 
+        {info && (
+          <>
+            <hr className="my-5 border-neutral-200" />
+
+            {canChangeCredentials ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-body-md font-semibold text-neutral-900">이메일</p>
+                    <p className="truncate text-body-sm text-neutral-500">{info.email ?? '이메일이 없어요'}</p>
+                  </div>
+                  <Button size="sm" onClick={() => openDialog('email')}>
+                    이메일 변경
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-body-md font-semibold text-neutral-900">비밀번호</p>
+                    <p className="text-body-sm text-neutral-500">바꿔도 로그인은 그대로 유지돼요.</p>
+                  </div>
+                  <Button size="sm" onClick={() => openDialog('password')}>
+                    비밀번호 변경
+                  </Button>
+                </div>
+                {notice && (
+                  <p role="status" className="text-body-sm text-badge-success-text">
+                    {notice}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="break-keep text-body-sm text-neutral-500">
+                카카오로 가입한 계정은 이메일 · 비밀번호를 여기서 바꿀 수 없어요.
+              </p>
+            )}
+          </>
+        )}
+
         <hr className="my-5 border-neutral-200" />
 
         <div className="flex items-center justify-between gap-4">
@@ -106,6 +162,22 @@ export default function AccountSection({ me, account }: Props) {
       </Card>
 
       {logoutConfirmDialog}
+      {dialog === 'email' && info && (
+        <EmailChangeDialog
+          currentEmail={info.email}
+          onChanged={(email) => {
+            setNotice('이메일을 바꿨어요. 다음 로그인부터 새 이메일을 써 주세요.')
+            onEmailChanged(email)
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog === 'password' && (
+        <PasswordChangeDialog
+          onChanged={() => setNotice('비밀번호를 바꿨어요. 다음 로그인부터 새 비밀번호를 써 주세요.')}
+          onClose={() => setDialog(null)}
+        />
+      )}
     </div>
   )
 }

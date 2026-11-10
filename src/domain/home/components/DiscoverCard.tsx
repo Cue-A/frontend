@@ -1,4 +1,5 @@
 import { ROUTES } from '@/app/routes'
+import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
 import CardLink from './CardLink'
@@ -26,10 +27,29 @@ type Props = {
   /** null 이면 불러오는 중 */
   talentKeywords: string[] | null
   popularQuestions: string[] | null
+  /** 못 불러왔을 때 "다시 불러오기". 있으면 두 칸 대신 실패 안내를 그립니다 */
+  onRetry?: () => void
 }
 
-/** 기업별 인재상과 질문은행. 시안에서 한 판 안에 구분선으로 나뉘어 있습니다 */
-export default function DiscoverCard({ talentKeywords, popularQuestions }: Props) {
+/**
+ * 기업별 인재상과 질문은행. 시안에서 한 판 안에 구분선으로 나뉘어 있습니다.
+ * 두 목록은 백엔드에 없어 목업(`GET /api/home`)이 답합니다 (api/homeApi.ts `getHomeExtras`).
+ */
+export default function DiscoverCard({ talentKeywords, popularQuestions, onRetry }: Props) {
+  if (onRetry) {
+    return (
+      <Card label="기업별 인재상 · 질문은행" padding="lg" surface="glass-soft">
+        <CardHeader title="기업별 인재상 · 질문은행" />
+        <div className="mt-4 flex flex-col items-start gap-3">
+          <p className="text-body-md text-neutral-500">인재상 · 질문은행을 불러오지 못했어요.</p>
+          <Button size="sm" onClick={onRetry}>
+            다시 불러오기
+          </Button>
+        </div>
+      </Card>
+    )
+  }
+
   return (
     <Card label="기업별 인재상 · 질문은행" padding="lg" surface="glass-soft">
       <CardHeader title="기업별 인재상" aside={<CardLink label="전체보기" to={ROUTES.COMPANIES} />} />
