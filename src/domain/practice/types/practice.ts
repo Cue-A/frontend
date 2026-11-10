@@ -44,6 +44,14 @@ export type PracticeSession = {
   reportId: string | null
   /** 리포트의 종합 점수. 볼 수 있는 리포트가 아니면 null 입니다 */
   totalScore: number | null
+  /** 들어 있는 폴더. 폴더에 넣지 않았으면 null 입니다 */
+  folder: PracticeSessionFolder | null
+}
+
+/** 세션이 들어 있는 폴더. 목록 응답에 이름까지 같이 옵니다 */
+export type PracticeSessionFolder = {
+  folderId: string
+  name: string
 }
 
 export type PracticePage = {
@@ -68,6 +76,14 @@ export type PracticeFolders = {
   totalCount: number
   /** 만든 순서입니다 */
   folders: PracticeFolder[]
+}
+
+/** 폴더로 옮긴 결과 */
+export type PracticeMoveResult = {
+  /** 옮긴 폴더. 폴더에서 뺐으면 null */
+  folderId: string | null
+  /** 같이 옮겨진 회차까지 센 수. 재면접이 있으면 1 보다 큽니다 */
+  movedCount: number
 }
 
 /** 폴더 카드에서 고른 것. 폴더 id 는 UUID 라 상수와 겹치지 않습니다 */
