@@ -30,6 +30,15 @@ import PracticeTopBar from './PracticeTopBar'
 /** 검색어를 다 칠 때까지 기다리는 시간. 글자마다 서버에 묻지 않으려는 것입니다 */
 const SEARCH_DELAY_MS = 300
 
+/** 지금 열린 창 */
+type OpenDialog =
+  | { kind: 'create' }
+  | { kind: 'rename'; folder: PracticeFolder }
+  | { kind: 'delete'; folder: PracticeFolder }
+  | { kind: 'move'; session: PracticeSession }
+
+const FOLDER_GONE_NOTICE = '이미 지워진 폴더예요. 폴더를 새로 불러왔어요.'
+
 /**
  * 내 보관함 > 연습 기록.
  *
@@ -46,15 +55,6 @@ const SEARCH_DELAY_MS = 300
  * 시안에 없는 기능이라 다른 창과 같은 모양으로 그렸습니다. 옮기거나 지운 뒤에는 목록과 폴더 숫자를 둘 다 뒤에서 다시 받습니다 —
  * 서버는 면접 단위로 옮겨서 화면이 들고 있는 줄만 고쳐서는 다른 회차 · 폴더 숫자가 맞지 않습니다.
  */
-
-/** 지금 열린 창 */
-type OpenDialog =
-  | { kind: 'create' }
-  | { kind: 'rename'; folder: PracticeFolder }
-  | { kind: 'delete'; folder: PracticeFolder }
-  | { kind: 'move'; session: PracticeSession }
-
-const FOLDER_GONE_NOTICE = '이미 지워진 폴더예요. 폴더를 새로 불러왔어요.'
 export default function PracticeRecordsPage() {
   const folders = usePracticeFolders()
   const [folder, setFolder] = useState<FolderSelection>(ALL_FOLDERS)
