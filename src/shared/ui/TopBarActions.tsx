@@ -137,7 +137,7 @@ type Props = {
    * 비우면 "준비 중" 으로 그립니다 — 마이페이지 화면이 아직 없습니다
    */
   myPageTo?: string
-  /** 프로필 메뉴의 "로그아웃". 쓰는 쪽이 `useLogout()` 을 넘깁니다 */
+  /** 프로필 메뉴의 "로그아웃". 바로 로그아웃하지 않고 확인 창을 열도록 쓰는 쪽이 `useLogoutConfirm()` 을 넘깁니다 (이슈 #186) */
   onLogout: () => void
 }
 
@@ -148,7 +148,7 @@ type Props = {
  * (docs/01-conventions.md — 같은 모양이 두 번째 화면에 생기면 올립니다). AppLayout 공통으로
  * 두지 않은 이유는 옵션 설정(A-05) 시안에는 이 묶음이 없기 때문입니다.
  *
- * 프로필 메뉴의 로그아웃은 이제 동작합니다(#69 의 `useLogout` 을 쓰는 쪽이 넘깁니다).
+ * 프로필 메뉴의 로그아웃은 한 번 묻고 합니다(이슈 #186). 확인 창은 auth 도메인 것이라 shared 는 모르고, 쓰는 쪽이 여는 함수를 넘깁니다.
  */
 export default function TopBarActions({ profile, myPageTo, onLogout }: Props) {
   return (

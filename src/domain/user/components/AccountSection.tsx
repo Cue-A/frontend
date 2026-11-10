@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { MYPAGE_ACCOUNT_ID, ROUTES } from '@/app/routes'
+import { useLogoutConfirm } from '@/domain/auth/hooks/useLogoutConfirm'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
@@ -9,8 +9,6 @@ import Card from '@/shared/ui/Card'
 import type { UseAccountResult } from '../hooks/useAccount'
 import type { UseMeResult } from '../hooks/useMe'
 import type { LoginProvider } from '../types/user'
-
-import LogoutConfirmDialog from './LogoutConfirmDialog'
 
 const PROVIDER_LABEL: Record<LoginProvider, string> = {
   LOCAL: '이메일',
@@ -41,12 +39,13 @@ type Props = {
  * - 이메일은 바로 위 프로필 칸에 있어서 여기서는 다시 적지 않습니다
  * - 로그인 방식 · 가입일은 계정 정보(`GET /api/users/me/account`)에서 읽습니다. 백엔드에 아직 없어 목업이 답하고(Q16),
  *   못 불러오면 화면 머리와 같은 사용자 정보(`GET /api/users/me`)의 로그인 방식만 보여줍니다
- * - 로그아웃은 한 번 묻고(LogoutConfirmDialog) 합니다. 탈퇴 바로 옆이라 잘못 누르기 쉽습니다
+ * - 로그아웃은 한 번 묻고(`useLogoutConfirm` 의 확인 창) 합니다. 탈퇴 바로 옆이라 잘못 누르기 쉽습니다.
+ *   창은 auth 도메인 것이라 컴포넌트를 직접 가져오지 않고 훅으로 엽니다 (docs/01-conventions.md — 도메인 간 참조는 hooks 레벨에서만)
  * - "계정 탈퇴하기" 는 판 맨 아래 가운데 빨간 글자이고, 누르면 탈퇴 화면(`WithdrawPage` — 이유 고르기 · 최종 확인)으로 갑니다.
  *   아래에 알림 설정 칸이 이어져서, 판 밖에 두면 두 칸 사이에 떠 보여 판 안에 넣었습니다
  */
 export default function AccountSection({ me, account }: Props) {
-  const [logoutOpen, setLogoutOpen] = useState(false)
+  const { openLogoutConfirm, logoutConfirmDialog } = useLogoutConfirm()
   const info = account.status === 'ready' ? account.account : null
 
   return (
@@ -93,7 +92,7 @@ export default function AccountSection({ me, account }: Props) {
             <p className="text-body-md font-semibold text-neutral-900">로그아웃</p>
             <p className="text-body-sm text-neutral-500">이 브라우저에서만 로그아웃해요.</p>
           </div>
-          <Button size="sm" onClick={() => setLogoutOpen(true)}>
+          <Button size="sm" onClick={openLogoutConfirm}>
             로그아웃
           </Button>
         </div>
@@ -110,7 +109,7 @@ export default function AccountSection({ me, account }: Props) {
         </div>
       </Card>
 
-      {logoutOpen && <LogoutConfirmDialog onClose={() => setLogoutOpen(false)} />}
+      {logoutConfirmDialog}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { ROUTES } from '@/app/routes'
-import { useLogout } from '@/domain/auth/hooks/useLogout'
+import { useLogoutConfirm } from '@/domain/auth/hooks/useLogoutConfirm'
 import TopBarActions from '@/shared/ui/TopBarActions'
 
 import { toTopBarProfile, type UseMeResult } from '../hooks/useMe'
@@ -16,14 +16,16 @@ type Props = {
  * 마이페이지 화면들의 머리입니다. 오른쪽 위 알림 · 프로필, 그 아래 화면 제목. (마이페이지 시안)
  */
 export default function MyPageHeader({ title, me }: Props) {
-  const logout = useLogout()
+  const { openLogoutConfirm, logoutConfirmDialog } = useLogoutConfirm()
 
   return (
     <header className="flex flex-col gap-3">
       <div className="flex justify-end">
-        <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={logout} />
+        <TopBarActions profile={toTopBarProfile(me)} myPageTo={ROUTES.MYPAGE_PROFILE} onLogout={openLogoutConfirm} />
       </div>
       <h1 className="text-h1 text-neutral-900">{title}</h1>
+
+      {logoutConfirmDialog}
     </header>
   )
 }

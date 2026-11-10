@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef } from 'react'
 
-import { useLogout } from '@/domain/auth/hooks/useLogout'
 import Button from '@/shared/ui/Button'
+
+import { useLogout } from '../hooks/useLogout'
 
 type Props = {
   /** 로그아웃하지 않고 창이 닫힌 뒤 */
@@ -9,10 +10,14 @@ type Props = {
 }
 
 /**
- * 프로필 화면 계정 칸의 "로그아웃" 을 누르면 한 번 묻습니다.
+ * 로그아웃 전에 한 번 묻습니다.
  *
- * 프로필의 계정 칸에서만 씁니다. 아이콘 레일 · 상단 프로필 메뉴의 로그아웃은 지금처럼 바로 로그아웃됩니다 —
- * 그쪽은 "나가기" 가 목적이라 한 번 더 묻는 게 번거롭고, 여기는 탈퇴 바로 옆이라 잘못 누르기 쉽습니다.
+ * 로그아웃 버튼이 있는 곳은 모두 이 창을 거칩니다 — 프로필 화면의 계정 칸, 사이드바(아이콘 레일) 맨 아래, 상단 프로필 메뉴.
+ * 전에는 프로필 계정 칸에서만 묻고 레일 · 프로필 메뉴는 바로 로그아웃했는데, 레일은 맨 아래라 마우스를 내리다 잘못 누르기
+ * 쉬워서 모두 묻기로 했습니다 (이슈 #186). 계정 칸 밖에서는 `useLogoutConfirm` 으로 엽니다.
+ *
+ * 다른 도메인의 TopBar 도 쓰는 창이라 user 가 아니라 로그아웃이 속한 auth 도메인에 둡니다
+ * (docs/01-conventions.md — 도메인 간 참조는 hooks 레벨에서만).
  *
  * - 창을 열면 포커스가 "취소" 에 있습니다
  * - 로그아웃은 #69 의 `useLogout` 을 그대로 부릅니다. 로컬 세션을 먼저 지우고 로그인 화면으로 보내서
