@@ -25,7 +25,7 @@ import './practiceMock'
  * - `keyword` 회사 이름 · 직무에서 찾습니다
  * - `size` 는 100 을 넘길 수 없습니다
  *
- * "폴더에 넣지 않은 기록만" 거르는 조건은 서버에 없어서, 시안의 "기타" 카드는 아직 두지 않습니다 (이슈 #167 · #205).
+ * "폴더에 넣지 않은 기록만" 거르는 조건은 서버에 없습니다. 시안의 "기타" 카드는 두지 않기로 했습니다 (docs/90 Q17).
  */
 export async function getPracticeSessions(query: PracticeListQuery) {
   const params = new URLSearchParams()
