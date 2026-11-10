@@ -58,7 +58,7 @@ const GONE_NOTICE = '이미 해제된 북마크예요. 목록에서 지웠어요
  * 빼기 · 메모 저장은 서버가 성공한 뒤 받아 둔 목록을 바로 고칩니다.
  *
  * "+ 질문 추가" 로 내 질문을 공통 질문 탭에 넣습니다. 내가 추가한 질문은 카드에서 고치고 지울 수 있습니다
- * (CommonQuestionFormDialog · CommonQuestionRemoveDialog). **백엔드 API 가 없어 목업이 답합니다** (questionMock.ts).
+ * (CommonQuestionFormDialog · CommonQuestionRemoveDialog). 서버는 `/api/common-questions` 입니다 (이슈 #201, questionApi.ts).
  */
 export default function QuestionBankPage() {
   const [tab, setTab] = useState<QuestionTab>('BOOKMARKED')

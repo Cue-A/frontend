@@ -21,7 +21,7 @@ export type UseSaveCalendarEventResult = {
 
 /**
  * 면접 일정을 등록하거나 고칩니다. `eventId` 가 없으면 등록(`POST /api/calendar/events`), 있으면 그 일정 수정
- * (`PUT /api/calendar/events/{id}`, 이슈 #190) 입니다. 백엔드는 Cue-A/backend#133 에서 리뷰 중이라 지금은 목업이 답합니다.
+ * (`PUT /api/calendar/events/{id}`, 이슈 #190) 입니다. 백엔드는 Cue-A/backend#133 입니다.
  */
 export function useSaveCalendarEvent(eventId: string | null = null): UseSaveCalendarEventResult {
   const [saving, setSaving] = useState(false)

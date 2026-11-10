@@ -162,7 +162,9 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
   계약(`Cue-A/backend` `docs/03-auth.md`).
 - `POST /api/auth/oauth/kakao` 가 실제로 붙는 3단계 전에는 정해져야 합니다.
 
-### Q14. ✅ 회원 탈퇴는 `DELETE /api/users/me` 이고 탈퇴 이유는 받지 않습니다
+### Q19. ✅ 회원 탈퇴는 `DELETE /api/users/me` 이고 탈퇴 이유는 받지 않습니다
+
+> 번호가 "실패한 축만 다시 분석" 과 겹쳐서(둘 다 Q14) Q19 로 바꿨습니다. 이슈 #201 · PR #202 의 "Q14(탈퇴)" 는 이 항목입니다.
 
 백엔드 탈퇴 API(Cue-A/backend#64)가 들어와 실서버로 붙였습니다 (이슈 #201).
 
@@ -195,7 +197,8 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
 이슈 #185 에서 마이페이지를 정리했습니다. 메뉴 목록 화면 · 나만의 명함 · 사이드바 커뮤니티 · 홈 화면 테마 색 점을 지웠고,
 계정 설정 · 알림 설정은 프로필 한 화면 아래 칸으로 합쳤습니다(옛 주소는 프로필의 그 칸으로 보냅니다).
 
-- **프로필 · 계정 정보 · 탈퇴는 실서버로 붙였습니다** (Cue-A/backend#64 · #126 · #128, 이슈 #201). 아래는 목업 시절 결정과 바뀐 점입니다.
+- **프로필 · 계정 정보 · 탈퇴 · 이메일 변경 · 비밀번호 변경은 실서버로 붙였습니다** (Cue-A/backend#64 · #125~#128, 이슈 #201).
+  아래는 목업 시절 결정과 바뀐 점입니다.
   - 프로필 조회 · 수정: API 명세서 그대로 `GET · PATCH /api/users/me/profile`.
     - 응답 `userId · userName · email · profileImageUrl · introduction · targetJobRole · careerLevel · schoolName · major · graduationYear`
     - 수정은 바꾼 칸만 보냅니다. 빈 본문은 400 `INVALID_REQUEST` 라 바뀐 게 없으면 저장 버튼을 잠급니다
@@ -204,8 +207,11 @@ OAuth 인가 코드 방식에서 `state` 는 로그인 CSRF 를 막는 자리입
     - 프로필 사진은 주소(`profileImageUrl`)만 받고 올릴 API 가 없어 "사진 변경" 을 넣지 않았습니다
     - "계정 탈퇴하기" 는 명세 피드백에 따라 프로필 판에서 빼고 아래 계정 칸에만 둡니다
   - 계정 정보: API 명세서 그대로 `GET /api/users/me/account` (이메일 · 가입일 · 로그인 수단별 연결일 · 비밀번호 유무)
-  - 이메일 변경 `PATCH /api/users/me/email` · 비밀번호 변경 `PATCH /api/users/me/password` 은 백엔드에 들어왔고(#125 · #127),
-    화면은 이슈 #201 의 두 번째 작업에서 만듭니다
+  - 이메일 변경 `PATCH /api/users/me/email` · 비밀번호 변경 `PATCH /api/users/me/password` (#125 · #127): 계정 칸에 두 줄을 두고
+    창에서 받습니다(시안 없음 — 이슈 #201 에서 시안 없이 하기로 정함). 둘 다 현재 비밀번호를 받고, 틀리면 401 `INVALID_CREDENTIALS`
+    지만 로그인 화면으로 가지 않고 "현재 비밀번호가 올바르지 않아요" 로 보여줍니다. 카카오 전용 계정은 서버가 둘 다 거절해서
+    (`EMAIL_CHANGE_NOT_ALLOWED` · `PASSWORD_NOT_SET`) 줄 대신 안내만 둡니다. 비밀번호를 바꿔도 다른 기기 로그인은 그대로입니다
+    (백엔드 확인 — 토큰을 끊지 않음)
   - 관심 기업: 백엔드 #101 계약 그대로 `GET /api/companies/interests`, `POST · DELETE /api/companies/{companyId}/interest`.
     배포 서버에도 있어서(2026-11 재배포) 목업 표시(`missingInBackend`)를 지웠습니다. `companies` 를 켜면 실제 서버로 갑니다
   - 알림 설정: `GET · PATCH /api/users/me/notification-settings` — 명세서에 없는 완전 임시 경로입니다. **아직 목업입니다.**

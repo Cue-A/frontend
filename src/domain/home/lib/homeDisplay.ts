@@ -1,4 +1,4 @@
-import type { MonthlyActivity } from '../types/home'
+import type { BadgeCode, MonthlyActivity } from '../types/home'
 
 import { daysBetween, parseIsoDate, startOfToday } from './homeDate'
 
@@ -34,4 +34,21 @@ export function dDayOf(isoDate: string, today: Date = startOfToday()) {
     label: days === 0 ? 'D-DAY' : days > 0 ? `D-${days}` : `D+${-days}`,
     urgent: days >= 0 && days <= URGENT_WITHIN_DAYS,
   }
+}
+
+/**
+ * 배지 아래 한 줄 설명. 서버 응답에 설명 글이 없어서(Cue-A/backend#134 `BadgeView`) 배지 코드로 정합니다.
+ * 서버 시드(`V7__seed_badges.sql` 의 `description`)와 같은 글입니다 — 바뀌면 같이 바꿔 주세요.
+ */
+export const BADGE_DESCRIPTION: Record<BadgeCode, string> = {
+  FIRST_SESSION: '첫 면접 완료',
+  STREAK_3: '스트릭 3일',
+  PRESSURE_CLEAR: '매운맛 완주',
+  RISING: '3회 연속 상승',
+  TEN_SESSIONS: '누적 10회',
+}
+
+/** 홈이 아는 배지 코드인지. 모르는 코드는 아이콘 · 설명이 없어서 그리지 않습니다 */
+export function isBadgeCode(code: string): code is BadgeCode {
+  return code in BADGE_DESCRIPTION
 }

@@ -12,7 +12,7 @@ export type UseSaveCommonMemoResult = {
   clearError: () => void
 }
 
-/** 공통 질문 메모를 쓰거나 고치거나 지웁니다. (`PATCH /api/common-questions/{questionId}/memo` — 백엔드에 없어 목업이 답합니다) */
+/** 공통 질문 메모를 쓰거나 고치거나 지웁니다. (`PATCH /api/common-questions/{questionId}/memo`) */
 export function useSaveCommonMemo(question: CommonQuestion): UseSaveCommonMemoResult {
   const { run, saving, error, clearError } = useMemoSaving()
   const { questionId } = question

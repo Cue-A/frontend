@@ -36,7 +36,7 @@ type State =
   | { status: 'ready'; questions: CommonQuestion[] }
 
 /**
- * 기본 공통 질문입니다. (`GET /api/common-questions` — 백엔드에 없어 목업이 답합니다)
+ * 기본 공통 질문과 내가 추가한 질문입니다. (`GET /api/common-questions`)
  *
  * 즐겨찾기는 **누르는 순간 별부터 바꾸고** 서버가 거절하면 되돌립니다. 누르면 그 질문이 바로 맨 위로 올라가야 해서
  * 응답을 기다리지 않습니다. 같은 질문을 서버가 처리하는 동안에는 다시 누를 수 없습니다 — 연달아 눌러 켜기와 끄기

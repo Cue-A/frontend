@@ -11,7 +11,7 @@ export type UseProfileResult =
   | { status: 'error'; error: string }
   | { status: 'ready'; profile: Profile }
 
-/** 내 프로필을 한 번 불러옵니다. `GET /api/users/me/profile` (백엔드 시작 전, 목업 · Q16) */
+/** 내 프로필을 한 번 불러옵니다. `GET /api/users/me/profile` (Cue-A/backend#128) */
 export function useProfile(): UseProfileResult {
   const [state, setState] = useState<UseProfileResult>({ status: 'loading' })
 

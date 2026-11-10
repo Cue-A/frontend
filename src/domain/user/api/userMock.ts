@@ -1,6 +1,7 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
+import { isValidPassword } from '../lib/credentials'
 import { JOB_TITLE_MAX_LENGTH, NICKNAME_MAX_LENGTH } from '../lib/profileLimits'
 import type { CareerLevel, NotificationSettings, Profile } from '../types/user'
 
@@ -102,6 +103,45 @@ registerMock(
  * 로그인하면 같은 목업 사용자로 들어옵니다.
  */
 registerMock('DELETE', '/api/users/me', () => undefined)
+
+/**
+ * 이메일 · 비밀번호 변경 목업 (이슈 #201). 로그인 목업은 아무 비밀번호나 받지만, 여기서는 **현재 비밀번호를 `password1`** 로 봅니다
+ * — 틀린 비밀번호 안내를 확인할 수 있게. 비밀번호를 바꾸면 그 값이 현재 비밀번호가 됩니다.
+ * `taken@example.com` 은 다른 계정이 쓰는 이메일로 봅니다(409).
+ */
+let mockPassword = 'password1'
+const TAKEN_EMAIL = 'taken@example.com'
+
+function readStrings<K extends string>(body: unknown, keys: K[]): Record<K, string> {
+  const source = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {}
+  const result = {} as Record<K, string>
+  for (const key of keys) {
+    const value = source[key]
+    if (typeof value !== 'string' || !value.trim()) throw new ApiError('INVALID_REQUEST', `${key} 가 필요합니다`)
+    result[key] = value
+  }
+  return result
+}
+
+registerMock('PATCH', '/api/users/me/email', (_params, body) => {
+  const { newEmail, currentPassword } = readStrings(body, ['newEmail', 'currentPassword'])
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) throw new ApiError('INVALID_REQUEST', '이메일 형식이 아닙니다')
+  if (currentPassword !== mockPassword) throw new ApiError('INVALID_CREDENTIALS', '비밀번호가 올바르지 않습니다')
+  if (newEmail === TAKEN_EMAIL) throw new ApiError('EMAIL_ALREADY_EXISTS', '이미 가입된 이메일입니다')
+
+  me.email = newEmail
+  profile.email = newEmail
+  return { email: newEmail }
+})
+
+registerMock('PATCH', '/api/users/me/password', (_params, body) => {
+  const { currentPassword, newPassword } = readStrings(body, ['currentPassword', 'newPassword'])
+  if (currentPassword !== mockPassword) throw new ApiError('INVALID_CREDENTIALS', '비밀번호가 올바르지 않습니다')
+  if (!isValidPassword(newPassword)) throw new ApiError('INVALID_PASSWORD_FORMAT', '비밀번호 형식이 아닙니다')
+
+  mockPassword = newPassword
+  return undefined
+})
 
 /** 알림 설정 목업. 시안의 처음 상태(이메일 켬 · 푸시 끔)입니다 */
 const notificationSettings: NotificationSettings = { emailAlerts: true, pushAlerts: false }
