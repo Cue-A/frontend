@@ -25,18 +25,25 @@ type BackTarget = {
   to: string
   /** 돌아가기 링크 글자. 없는 기업 안내 버튼은 뒤에 "으로" 를 붙여 씁니다 */
   label: string
+  /** 상단 경로에서 기업 이름 앞에 오는 칸들. 돌아가기 링크와 같은 곳을 가리켜야 어디서 왔는지 헷갈리지 않습니다 (이슈 #203) */
+  trail: string[]
 }
 
-/** 들어온 곳별 돌아갈 곳. `CompanyFrom` 에 값을 더하면 여기도 채우라고 타입이 알려줍니다 */
+/**
+ * 들어온 곳별 돌아갈 곳 · 상단 경로. `CompanyFrom` 에 값을 더하면 여기도 채우라고 타입이 알려줍니다 — 돌아가기 링크와 경로를
+ * 한 자리에서 정해서 둘이 어긋나지 않게 합니다 (이슈 #203)
+ */
 const BACK_TARGETS: Record<CompanyFrom, BackTarget> = {
-  interests: { to: ROUTES.MYPAGE_INTERESTS, label: '관심 기업' },
+  // 관심 기업 화면 제목("마이페이지 · 관심 기업")과 이어지게 마이페이지부터 적습니다 (이슈 #203 — 정함)
+  interests: { to: ROUTES.MYPAGE_INTERESTS, label: '관심 기업', trail: ['마이페이지', '관심 기업'] },
 }
 
-const DEFAULT_BACK_TARGET: BackTarget = { to: ROUTES.COMPANIES, label: '기업 목록' }
+const DEFAULT_BACK_TARGET: BackTarget = { to: ROUTES.COMPANIES, label: '기업 목록', trail: ['기업 탐색'] }
 
 /**
  * 상세에서 돌아갈 곳. 관심 기업에서 들어왔으면(`?from=interests`) 관심 기업으로, 아니면 기업 탐색으로 갑니다 (이슈 #186).
  * 전에는 늘 기업 탐색으로 가서, 관심 기업에서 들어온 사람은 보던 화면을 잃었습니다. 모르는 값은 기업 탐색으로 떨어뜨립니다.
+ * 상단 경로도 같은 값으로 정합니다 — 관심 기업에서 들어오면 "마이페이지 > 관심 기업 > 기업명" (이슈 #203).
  */
 function useBackTarget(): BackTarget {
   const [searchParams] = useSearchParams()
@@ -161,7 +168,8 @@ export default function CompanyDetailPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-312 flex-col gap-6">
-      <CompanyTopBar items={['기업 탐색', name]} />
+      {/* 불러오는 중 · 없는 기업도 같은 경로 규칙을 따릅니다. 마지막 칸만 "기업 상세" 입니다 */}
+      <CompanyTopBar items={[...backTarget.trail, name]} />
       <BackLink target={backTarget} />
 
       {detail.status === 'loading' && <p className="text-body-md text-neutral-500">기업 정보를 불러오는 중이에요…</p>}
