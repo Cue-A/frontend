@@ -30,6 +30,14 @@ export function titleOf(session: PracticeSession): string {
 }
 
 /**
+ * 행 버튼을 스크린리더가 읽을 이름. 제목만으로는 같은 면접의 1 · 2회차나, 기업 · 직무 · 면접관이 같은 면접끼리 이름이 같아서
+ * 회차와 날짜를 붙입니다 — `삼성전자 · 마케팅 직무 · 압박 면접관 · 2회차 · 2026.08.02` (PR #206 리뷰)
+ */
+export function rowNameOf(session: PracticeSession): string {
+  return `${titleOf(session)} · ${session.round}회차 · ${formatDate(session.startedAt)}`
+}
+
+/**
  * 제목 아래 한 줄. 상태에 따라 붙는 말이 다릅니다.
  * - 완료 `2026.08.02 · 질문 9문항 · 종합 84점` (점수가 아직 없으면 점수 대신 `분석 중` · `분석 실패`, 맡기지 않았으면 빼고)
  * - 진행 중 `2026.07.20 · 진행 중`

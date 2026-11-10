@@ -7,7 +7,7 @@ import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import ListCard from '@/shared/ui/ListCard'
 
-import { metaOf, titleOf } from '../lib/practiceDisplay'
+import { metaOf, rowNameOf, titleOf } from '../lib/practiceDisplay'
 import type { PracticeSession } from '../types/practice'
 
 /** 목록 자리에 들어갈 것. 행이 아니면 한 줄짜리 안내입니다 */
@@ -63,7 +63,7 @@ function Notice({ children }: { children: ReactNode }) {
  * 만료 여부 필드 없음) 화면이 만료를 알 수 없습니다. 정해지면 이 자리에 상태를 하나 더합니다.
  */
 function RowAction({ session }: { session: PracticeSession }) {
-  const title = titleOf(session)
+  const title = rowNameOf(session)
 
   if (session.status === 'COMPLETED' && session.reportStatus !== 'PROCESSING') {
     const to = session.reportId ? toReport(session.reportId) : toAnalyzing(session.sessionId)
@@ -93,7 +93,7 @@ function MoveAction({ session, onMove }: { session: PracticeSession; onMove?: (s
     >
       <IconFolderSymlink size={16} stroke={2} aria-hidden />
       폴더
-      <span className="sr-only"> 옮기기 — {titleOf(session)}</span>
+      <span className="sr-only"> 옮기기 — {rowNameOf(session)}</span>
     </button>
   )
 }
