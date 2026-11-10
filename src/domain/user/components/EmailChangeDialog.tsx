@@ -26,10 +26,12 @@ type Props = {
  *
  * - 형식은 브라우저(`type="email"`)가 먼저 보고, 서버가 다시 봅니다(400 `INVALID_REQUEST`)
  * - 지금 이메일과 같으면(대소문자 · 앞뒤 공백 무시) 바꾸기 버튼이 잠깁니다
- * - 저장하는 동안은 닫을 수 없고, 실패하면 창을 두고 이유를 보여줍니다. 비밀번호가 틀리면 비밀번호 칸으로 돌아갑니다
+ * - 저장하는 동안은 닫을 수 없고, 실패하면 창을 두고 이유를 보여줍니다. 비밀번호가 틀리면 비밀번호 칸, 그 밖(이미 쓰는
+ *   이메일 · 형식 오류 등)은 이메일 칸으로 돌아갑니다
  */
 export default function EmailChangeDialog({ currentEmail, onChanged, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
+  const emailRef = useRef<HTMLInputElement | null>(null)
   const passwordRef = useRef<HTMLInputElement | null>(null)
   const headingId = useId()
   const emailId = useId()
@@ -66,13 +68,15 @@ export default function EmailChangeDialog({ currentEmail, onChanged, onClose }: 
     event.preventDefault()
     if (!canSubmit) return
 
-    const email = await submit(trimmedEmail, currentPassword)
-    if (email === null) {
-      passwordRef.current?.focus()
+    const result = await submit(trimmedEmail, currentPassword)
+    if (result.kind === 'failed') {
+      // 원인인 칸으로 돌아갑니다. 비밀번호가 틀렸으면 비밀번호 칸, 이미 쓰는 이메일 · 형식 오류 등은 이메일 칸 (PR #207 리뷰)
+      const causeField = result.field === 'password' ? passwordRef : emailRef
+      causeField.current?.focus()
       return
     }
 
-    onChanged(email)
+    onChanged(result.email)
     dialogRef.current?.close()
   }
 
@@ -100,6 +104,7 @@ export default function EmailChangeDialog({ currentEmail, onChanged, onClose }: 
               새 이메일
             </label>
             <input
+              ref={emailRef}
               id={emailId}
               type="email"
               required

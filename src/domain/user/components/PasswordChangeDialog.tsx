@@ -31,11 +31,12 @@ type Props = {
  * - 새 비밀번호 규칙(영문 · 숫자 포함 8~64자)은 회원가입과 같은 안내를 칸 아래에 늘 적어 두고, 다 쓴 뒤 어기면 빨간 글씨로 바꿉니다
  * - 규칙을 어기거나 확인 칸이 다르면 바꾸기 버튼이 잠깁니다. 서버도 같은 규칙으로 다시 봅니다(`INVALID_PASSWORD_FORMAT`)
  * - 바꿔도 이 기기 · 다른 기기의 로그인은 그대로입니다. 서버가 토큰을 끊지 않아서 따로 안내하지 않습니다
- * - 저장하는 동안은 닫을 수 없고, 실패하면 창을 두고 이유를 보여줍니다
+ * - 저장하는 동안은 닫을 수 없고, 실패하면 창을 두고 이유를 보여주며 원인인 칸으로 포커스를 돌립니다
  */
 export default function PasswordChangeDialog({ onChanged, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
   const currentRef = useRef<HTMLInputElement | null>(null)
+  const nextRef = useRef<HTMLInputElement | null>(null)
   const headingId = useId()
   const currentId = useId()
   const nextId = useId()
@@ -75,9 +76,11 @@ export default function PasswordChangeDialog({ onChanged, onClose }: Props) {
     event.preventDefault()
     if (!canSubmit) return
 
-    const changed = await submit(currentPassword, nextPassword)
-    if (!changed) {
-      currentRef.current?.focus()
+    const result = await submit(currentPassword, nextPassword)
+    if (result.kind === 'failed') {
+      // 원인인 칸으로 돌아갑니다. 현재 비밀번호가 틀렸으면 현재 비밀번호 칸, 새 비밀번호 규칙 위반이면 새 비밀번호 칸
+      const causeField = result.field === 'next' ? nextRef : currentRef
+      causeField.current?.focus()
       return
     }
 
@@ -129,6 +132,7 @@ export default function PasswordChangeDialog({ onChanged, onClose }: Props) {
               새 비밀번호
             </label>
             <input
+              ref={nextRef}
               id={nextId}
               type="password"
               required
