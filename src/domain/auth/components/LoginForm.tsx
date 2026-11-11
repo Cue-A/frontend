@@ -95,6 +95,22 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
         href={buildKakaoAuthorizeUrl()}
         className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-[#FEE500] px-4 py-3 text-center text-body-md font-semibold text-black/85 transition-colors hover:bg-[#FADA0A]"
       >
+        {/* 카카오 말풍선 심볼. 장식이라 스크린리더에서는 숨깁니다. */}
+        <svg
+          aria-hidden="true"
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M9 1C4.029 1 0 4.129 0 7.989c0 2.4 1.558 4.516 3.93 5.773l-1 3.67c-.088.325.28.585.56.394l4.364-2.9c.38.037.766.057 1.146.057 4.971 0 9-3.129 9-6.994C18 4.129 13.971 1 9 1Z"
+            fill="currentColor"
+          />
+        </svg>
         카카오로 계속하기
       </a>
 
