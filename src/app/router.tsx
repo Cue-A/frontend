@@ -17,6 +17,7 @@ import PracticeRecordsPage from '@/domain/practice/components/PracticeRecordsPag
 import QuestionBankPage from '@/domain/question/components/QuestionBankPage'
 import AnalyzingPage from '@/domain/report/components/AnalyzingPage'
 import ReportPage from '@/domain/report/components/ReportPage'
+import SharedReportPage from '@/domain/report/components/SharedReportPage'
 import InterestsPage from '@/domain/user/components/InterestsPage'
 import ProfilePage from '@/domain/user/components/ProfilePage'
 import WithdrawPage from '@/domain/user/components/WithdrawPage'
@@ -49,9 +50,12 @@ export const router = createBrowserRouter([
     ),
   },
   { path: ROUTES.KAKAO_CALLBACK, element: <KakaoCallbackPage /> },
+  // 공유 링크로 연 리포트. 링크를 받은 사람은 로그인하지 않았을 수 있어서 가드 밖에 둡니다 (이슈 #199).
+  // 로그인한 사람이 열어도 같은 읽기 전용 화면입니다
+  { path: ROUTES.SHARED_REPORT, element: <SharedReportPage /> },
   {
     // AUTH-4 보호 라우트 가드. refresh token 이 없으면 로그인 화면으로 보냅니다
-    // (RequireAuth 주석 참고). 로그인 전 화면(랜딩 · 로그인 · 카카오 콜백)과
+    // (RequireAuth 주석 참고). 로그인 전 화면(랜딩 · 로그인 · 카카오 콜백), 공유 리포트와
     // 404 는 이 가드 밖에 둡니다.
     element: <RequireAuth />,
     children: [

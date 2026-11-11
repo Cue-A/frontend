@@ -12,7 +12,11 @@ export type UsePracticeFoldersResult = (
 ) & {
   /** 실패 안내의 "다시 시도" 에 씁니다 */
   reload: () => void
-  /** 카드를 그대로 둔 채 뒤에서 다시 받습니다. 폴더를 만든 직후에 씁니다 (useDocuments 의 refresh 와 같습니다) */
+  /**
+   * 카드를 그대로 둔 채 뒤에서 다시 받습니다. 폴더를 만들거나 옮긴 직후에 씁니다.
+   * **다시 받기가 실패해도 이미 받은 폴더는 그대로 둡니다** — 숫자가 잠깐 낡을 뿐인데 오류로 바꾸면 카드 줄과, 폴더 목록이 필요한
+   * 창(만들기 · 이름 바꾸기 · 옮기기)이 통째로 사라집니다 (PR #206 리뷰). 처음 받기 · "다시 시도"(`reload`)의 실패만 오류로 보여줍니다
+   */
   refresh: () => void
 }
 
@@ -37,7 +41,8 @@ export function usePracticeFolders(): UsePracticeFoldersResult {
         if (cancelled) return
         const apiError = error instanceof ApiError ? error : new ApiError('UNKNOWN', '알 수 없는 오류가 발생했어요.')
         console.error('폴더 목록 조회 실패 code=%s', apiError.code)
-        setState({ status: 'error', error: apiError })
+        // 이미 받은 폴더가 있으면(뒤에서 다시 받기) 그대로 둡니다
+        setState((previous) => (previous.status === 'ready' ? previous : { status: 'error', error: apiError }))
       })
 
     return () => {

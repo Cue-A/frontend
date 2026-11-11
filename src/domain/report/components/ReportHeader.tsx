@@ -1,17 +1,18 @@
 import Badge from '@/shared/ui/Badge'
 
 import { totalScoreToneClass } from '../lib/scoreTone'
-import type { Report } from '../types/report'
+import type { ReportContent } from '../types/report'
 
 type Props = {
-  report: Report
+  /** 본인 리포트(`Report`)와 공유 링크로 연 리포트(`ReportContent`)가 같이 씁니다 */
+  report: ReportContent
 }
 
 /**
  * '네이버 · 기획 직무 면접 · 2026.07.18 · 질문 4문항'
  * 회사명 · 직무는 리포트 응답에 아직 없어서 비어 오면 그 칸만 뺍니다 ('2026.07.18 · 질문 4문항').
  */
-function buildMeta(report: Report) {
+function buildMeta(report: ReportContent) {
   const parts = [
     report.companyName,
     report.jobRole && `${report.jobRole} 면접`,
@@ -23,7 +24,7 @@ function buildMeta(report: Report) {
 }
 
 /** '▲ 2회차 +6점' — 첫 회차면 비교할 대상이 없어 아예 그리지 않습니다. */
-function buildDelta(report: Report) {
+function buildDelta(report: ReportContent) {
   const delta = report.totalScoreDelta
   if (!delta) return null
 

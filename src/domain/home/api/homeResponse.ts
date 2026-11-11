@@ -9,7 +9,7 @@
  * - `/api/home` — **백엔드에 없는 프론트 임시안**입니다. 배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행을 담고
  *   목업이 답합니다. 백엔드가 기획 · 범위를 정하면 그 API 로 바꿉니다
  */
-import type { BadgeCode, BadgeTone, PracticePeriod } from '../types/home'
+import type { BadgeTone, PracticePeriod } from '../types/home'
 
 /** `GET /api/home/stats` */
 export type HomeStatsResponse = {
@@ -43,28 +43,16 @@ export type RecentReportListResponse = {
   reports: RecentReportResponse[]
 }
 
-/** `GET /api/home` — 백엔드에 없는 프론트 임시안 */
+/** `GET /api/home` — 백엔드에 없는 프론트 임시안. 인재상 · 질문은행만 남았습니다 (배지 · 일정은 이슈 #201 에서 실서버로) */
 export type HomeExtrasResponse = {
-  badges: {
-    earnedCount: number
-    totalCount: number
-    /**
-     * 배지 **전부**(받은 것 · 못 받은 것)를 내려 주세요. 홈은 이 중 받은 것만 그리고, 받은 개수도 이 목록에서 셉니다
-     * — 일부만 내려 주면 화면의 개수가 실제보다 적어집니다
-     */
-    featured: Array<{
-      badgeCode: BadgeCode
-      badgeName: string
-      description: string
-      tone: BadgeTone
-      earnedAt: string | null
-    }>
-    nextHint: string | null
-  }
-  weeklyGoal: { title: string; targetValue: number; currentValue: number } | null
-  upcomingEvents: Array<{ eventId: string; title: string; date: string; time: string | null }>
   talentKeywords: string[]
   popularQuestions: string[]
+}
+
+/** `GET /api/calendar/events/upcoming?limit=` (Cue-A/backend#133) */
+export type UpcomingEventListResponse = {
+  /** 지금 이후 일정, 가까운 순. 날짜 · 시각은 한국 시간으로 쪼개져 옵니다 */
+  events: Array<{ eventId: string; title: string; date: string; time: string | null }>
 }
 
 /** `GET /api/home/practice?period=` */
@@ -80,4 +68,17 @@ export type PracticeRecordResponse = {
   bestScore: number | null
   /** 4w · 10w 는 회차별(최근 8개), 6m · 1y 는 월 평균. 점수 없는 날 · 달은 점으로 넣지 않습니다 */
   trend: { unit: 'session' | 'month'; points: Array<{ date: string; label: string; score: number }> }
+}
+
+/**
+ * `GET /api/growth` 에서 홈이 쓰는 칸 — 이번 주 목표 · 배지 (Cue-A/backend#132 · #134). 성장 관리 도메인의 api 를 가져다
+ * 쓰지 않는 규칙이라(docs/01-conventions.md) 여기 따로 적습니다. 전체 모양은 `growth/api/growthResponse.ts` 의
+ * `GrowthOverviewResponse` 입니다.
+ *
+ * 배지는 받지 않은 것까지 다섯 개가 다 오고, 받지 않았으면 `earnedAt` 이 null 입니다. 설명 글은 오지 않아 화면이 정합니다.
+ */
+export type HomeGrowthResponse = {
+  /** 이번 주 목표를 안 정했으면 null */
+  weeklyGoal: { targetValue: number; doneCount: number } | null
+  badges: Array<{ badgeCode: string; badgeName: string; tone: BadgeTone; earnedAt: string | null }>
 }

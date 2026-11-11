@@ -1,5 +1,6 @@
 import { toGrowth } from '@/app/routes'
 import Badge from '@/shared/ui/Badge'
+import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
 import { formatDotDateWithWeekday } from '../lib/homeDate'
@@ -13,18 +14,28 @@ import SkeletonBlock from './SkeletonBlock'
 type Props = {
   /** null 이면 불러오는 중 */
   events: UpcomingEvent[] | null
+  /** 못 불러왔을 때 "다시 불러오기". 있으면 실패 안내를 그립니다 */
+  onRetry?: () => void
 }
 
 /**
  * 다가오는 면접일. 일주일 안에 있는 일정은 왼쪽 줄과 D-day 를 강조합니다.
  * 일정을 넣는 곳은 성장 관리(C-04)의 면접 캘린더라, "전체보기" 는 성장 관리의 캘린더 자리로 갑니다 (이슈 #142).
+ * 일정은 그 캘린더와 같은 서버(`GET /api/calendar/events/upcoming`)에서 받습니다 (이슈 #201).
  */
-export default function UpcomingEventsCard({ events }: Props) {
+export default function UpcomingEventsCard({ events, onRetry }: Props) {
   return (
     <Card label="다가오는 면접일" padding="lg" surface="glass-soft">
       <CardHeader title="다가오는 면접일" aside={<CardLink label="전체보기" to={toGrowth('calendar')} />} />
 
-      {events === null ? (
+      {onRetry ? (
+        <div className="mt-4 flex flex-col items-start gap-3">
+          <p className="text-body-md text-neutral-500">면접 일정을 불러오지 못했어요.</p>
+          <Button size="sm" onClick={onRetry}>
+            다시 불러오기
+          </Button>
+        </div>
+      ) : events === null ? (
         <div aria-busy className="mt-4 flex flex-col gap-4">
           {[0, 1].map((index) => (
             <span key={index} className="flex flex-col gap-2">

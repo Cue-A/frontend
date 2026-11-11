@@ -69,12 +69,25 @@ function domainOf(path: string): string | undefined {
  * 그대로 돌아옵니다 — 질문은 목업에서 오는데 답변 제출은 실제 서버로 갑니다.
  * (PR #55 리뷰)
  */
+/**
+ * 다른 도메인을 **따라 켜지고 꺼지는** 도메인입니다. 한쪽만 실서버면 반쪽 상태가 되어 조용히 실패하는 묶음입니다.
+ *
+ * - `public` → `reports`: 공유 링크는 `reports`(`POST /api/reports/{id}/share`)에서 만들고 `public`
+ *   (`GET /api/public/reports/{shareId}`)에서 엽니다. `reports` 만 켜면 실서버가 만든 링크를 목업이 찾아 늘 404 이고,
+ *   `public` 만 켜면 목업이 만든 링크를 실서버가 찾아 404 입니다. 그래서 `public` 은 따로 적지 않고 `reports` 를 따릅니다
+ *   (PR #200 리뷰)
+ */
+const LINKED_DOMAINS: Record<string, string> = {
+  public: 'reports',
+}
+
 export function isRealApi(path: string): boolean {
   if (!USE_MOCK) return true
   if (REAL_APIS.length === 0) return false
 
   const domain = domainOf(path)
-  return domain !== undefined && REAL_APIS.includes(domain)
+  if (domain === undefined) return false
+  return REAL_APIS.includes(LINKED_DOMAINS[domain] ?? domain)
 }
 
 /**

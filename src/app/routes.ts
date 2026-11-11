@@ -17,6 +17,11 @@ export const ROUTES = {
   INTERVIEW: '/interviews/:sessionId',
   ANALYZING: '/interviews/:sessionId/analyzing',
   REPORT: '/reports/:reportId',
+  /**
+   * 공유 링크로 연 리포트 — 로그인 없이 보는 읽기 전용 화면입니다 (이슈 #199).
+   * 로그인 가드 · 사이드바 밖에 둡니다. `shareId` 는 `reportId` 와 다른 값이라, 이 주소로는 본인 리포트 API 를 부를 수 없습니다.
+   */
+  SHARED_REPORT: '/share/:shareId',
   /** C-02 내 보관함 > 자소서 · 포트폴리오 (이슈 #59) */
   LIBRARY_DOCUMENTS: '/library/documents',
   /** 내 보관함 > 연습 기록. 지난 모의면접을 폴더 · 상태로 거르고 리포트를 다시 봅니다 */
@@ -42,7 +47,7 @@ export const ROUTES = {
   MYPAGE_NOTIFICATIONS: '/mypage/notifications',
   /** 옛 계정 설정 주소. 프로필에 합쳐서 프로필의 계정 칸으로 보냅니다 (이슈 #185) */
   MYPAGE_ACCOUNT: '/mypage/account',
-  /** 프로필 > 계정 탈퇴하기 — 이유 고르기 · 최종 확인 */
+  /** 프로필 > 계정 탈퇴하기 — 안내 · 최종 확인 */
   MYPAGE_WITHDRAW: '/mypage/account/withdraw',
   /** B-01 확인용 정적 프리뷰. 리뷰 끝나면 지워도 되는 임시 라우트입니다. */
   DEV_INTERVIEW_PREVIEW: '/dev/interview-preview',
@@ -89,8 +94,35 @@ export function toSessionSetup(companyId?: string) {
   return `${ROUTES.SESSION_SETUP}?${SESSION_SETUP_COMPANY_PARAM}=${encodeURIComponent(companyId)}`
 }
 
-export function toCompany(companyId: string) {
-  return `/companies/${encodeURIComponent(companyId)}`
+/**
+ * 기업 상세 주소에 붙여 어디서 들어왔는지 알려줍니다. `/companies/6?from=interests`
+ * 상세의 돌아가기 링크가 이 값을 보고 관심 기업 · 기업 탐색 중 돌아갈 곳을 고릅니다 (이슈 #186).
+ * 새로고침하거나 주소를 복사해 열어도 남도록 `location.state` 가 아니라 주소에 싣습니다.
+ */
+export const COMPANY_FROM_PARAM = 'from'
+
+/** 기업 상세로 들어오는 곳 중 돌아갈 곳이 기업 탐색이 아닌 곳. 없으면 기업 탐색으로 돌아갑니다 */
+const COMPANY_FROMS = ['interests'] as const
+export type CompanyFrom = (typeof COMPANY_FROMS)[number]
+
+/** 주소의 `from` 값이 아는 값인지. 값을 늘릴 때 `COMPANY_FROMS` 한 곳만 고치면 됩니다 (PR #196 리뷰) */
+export function isCompanyFrom(value: string | null): value is CompanyFrom {
+  return COMPANY_FROMS.some((from) => from === value)
+}
+
+/**
+ * 기업 상세 주소(`/companies/{id}?from=…`)면 어디서 들어왔는지(`CompanyFrom`), 아니면 null 입니다. 기업 탐색 목록
+ * (`/companies`) · 모르는 `from` 도 null 입니다. 사이드바가 관심 기업에서 들어온 상세에서 "관심 기업" 을 켤 때 씁니다 (이슈 #203)
+ */
+export function companyFromOf(pathname: string, search: string): CompanyFrom | null {
+  if (!pathname.startsWith(`${ROUTES.COMPANIES}/`)) return null
+  const from = new URLSearchParams(search).get(COMPANY_FROM_PARAM)
+  return isCompanyFrom(from) ? from : null
+}
+
+export function toCompany(companyId: string, from?: CompanyFrom) {
+  const path = `/companies/${encodeURIComponent(companyId)}`
+  return from ? `${path}?${COMPANY_FROM_PARAM}=${from}` : path
 }
 
 export function toDeviceCheck(sessionId: string) {
@@ -120,4 +152,13 @@ export const REPORT_VIEW_GROWTH = 'growth'
 export function toReport(reportId: string, view?: typeof REPORT_VIEW_GROWTH) {
   const path = `/reports/${reportId}`
   return view ? `${path}?${REPORT_VIEW_PARAM}=${view}` : path
+}
+
+export function toSharedReport(shareId: string) {
+  return `/share/${encodeURIComponent(shareId)}`
+}
+
+/** 남에게 보낼 공유 링크 전체 주소. 서버는 프론트 주소를 몰라서 `shareId` 로 여기서 만듭니다 (이슈 #199) */
+export function toSharedReportUrl(shareId: string) {
+  return `${window.location.origin}${toSharedReport(shareId)}`
 }

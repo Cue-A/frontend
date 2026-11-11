@@ -20,6 +20,11 @@ export type UsePracticeSessionsResult = (
 ) & {
   /** 에러 화면의 "다시 시도" 에 씁니다. 불러오는 중 화면으로 바꾼 뒤 다시 받습니다 */
   reload: () => void
+  /**
+   * 목록을 그대로 둔 채 뒤에서 다시 받습니다. 폴더를 옮기거나 지운 직후에 씁니다 (usePracticeFolders 의 refresh 와 같습니다).
+   * 받는 동안 목록을 비우지 않아서 보던 자리가 흔들리지 않습니다
+   */
+  refresh: () => void
 }
 
 type State =
@@ -71,11 +76,13 @@ export function usePracticeSessions(query: PracticeListQuery): UsePracticeSessio
     setAttempt((value) => value + 1)
   }, [])
 
+  const refresh = useCallback(() => setAttempt((value) => value + 1), [])
+
   if (state.status === 'ready') {
-    return { status: 'ready', page: state.page, updating: state.key !== key, reload }
+    return { status: 'ready', page: state.page, updating: state.key !== key, reload, refresh }
   }
   if (state.status === 'error' && state.key === key) {
-    return { status: 'error', error: state.error, reload }
+    return { status: 'error', error: state.error, reload, refresh }
   }
-  return { status: 'loading', reload }
+  return { status: 'loading', reload, refresh }
 }

@@ -46,6 +46,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   // 회원가입 비밀번호 규칙 — 영문 · 숫자를 하나 이상씩 넣어 8~64자 (Cue-A/backend#34 `AuthService`).
   // 빠져 있으면 공통 문구("잠시 후 다시 시도해 주세요")로 떨어져서, 다시 눌러도 계속 실패하는데 이유를 알 수 없습니다.
   INVALID_PASSWORD_FORMAT: '비밀번호는 영문과 숫자를 모두 넣어 8~64자로 만들어 주세요.',
+  // 마이페이지 이메일 · 비밀번호 변경 (Cue-A/backend#125 · #127). 화면은 카카오 전용 계정에 두 줄을 두지 않아서 보통은 나지 않습니다
+  EMAIL_CHANGE_NOT_ALLOWED: '카카오로 가입한 계정은 이메일을 바꿀 수 없어요.',
+  PASSWORD_NOT_SET: '카카오로 가입한 계정은 비밀번호가 없어요.',
   // AUTH-2 카카오. code 교환이 실패했을 때 백엔드가 내려주는 코드입니다 (이슈 #53).
   OAUTH_FAILED: '카카오 로그인에 실패했어요. 다시 시도해 주세요.',
 
@@ -65,9 +68,6 @@ const ERROR_MESSAGE: Record<string, string> = {
   DOCUMENT_NOT_FOUND: '문서를 찾을 수 없어요.',
   STORAGE_ERROR: '파일을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
 
-  // ── 마이페이지 — 프로필 수정에서 바꾼 칸 없이 저장했을 때(API 명세서 "프로필 수정"). 화면이 버튼을 잠가서 보통은 나지 않습니다
-  EMPTY_UPDATE_REQUEST: '바뀐 내용이 없어요.',
-
   // ── 기업 — 관심 기업 등록 · 기업 상세 (Cue-A/backend#101). 없는 기업과 검증되지 않은 기업이 같은 코드입니다
   COMPANY_NOT_FOUND: '기업 정보를 찾을 수 없어요.',
 
@@ -85,6 +85,8 @@ const ERROR_MESSAGE: Record<string, string> = {
   SESSION_ENDED: '이미 끝난 면접이에요. 새 면접을 시작해 주세요.',
   SESSION_ABORTED: '중단된 면접이에요. 새 면접을 시작해 주세요.',
   QUESTION_NOT_FOUND: '질문을 찾을 수 없어요.',
+  // 질문 은행 > 내 질문 추가. 한 사람이 100개까지 넣을 수 있습니다.
+  CUSTOM_QUESTION_LIMIT_EXCEEDED: '내 질문은 100개까지 추가할 수 있어요.',
   // 질문 은행(북마크)의 메모 · 해제. 다른 탭에서 이미 뺐거나 내 북마크가 아닌 경우입니다.
   BOOKMARK_NOT_FOUND: '질문 은행에 없는 질문이에요. 새로고침한 뒤 다시 시도해 주세요.',
   // A-05 가 3 · 6 · 9 만 고르게 해서 화면에서는 나지 않습니다. 서버가 다시 보는 값입니다.
@@ -132,6 +134,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   // 답변이 2문항 미만이면 리포트를 만들지 않습니다. 재시도해도 결과가 같습니다.
   REPORT_TOO_SHORT: '답변이 너무 적어 리포트를 만들지 못했어요. 두 문항 이상 답해 주세요.',
   MEDIA_FETCH_FAILED: '녹화 파일을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+  // 공유 링크로 연 리포트(Cue-A/backend#137). 없는 · 해제된 · 형식이 틀린 링크가 모두 이 코드입니다.
+  // 다시 열어도 같아서 "다시 시도" 를 붙이지 않습니다.
+  SHARED_REPORT_NOT_FOUND: '공유가 해제됐거나 없는 링크예요.',
 
   // ── 서버가 아니라 프론트가 만드는 코드 ─────────────────────
   // presigned URL 로 녹화를 올리다 실패했습니다 (domain/interview/api/mediaApi.ts).

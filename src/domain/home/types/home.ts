@@ -76,21 +76,25 @@ export type HomeBadge = {
   earned: boolean
 }
 
-export type BadgeSummary = {
-  earnedCount: number
-  totalCount: number
+/**
+ * 이번 주 목표와 배지. 성장 관리와 같은 `GET /api/growth` 한 번으로 받습니다 (이슈 #201).
+ */
+export type HomeGrowth = {
+  /** 이번 주 목표를 안 정했으면 null */
+  weeklyGoal: WeeklyGoal | null
   /** 배지 전부. 아직 못 딴 것도 들어 있고(`earned: false`), 화면은 받은 것만 그립니다 */
-  featured: HomeBadge[]
-  /** "다음 뱃지까지 연습 2회 남았어요" 같은 안내. 줄 게 없으면 null */
-  nextHint: string | null
+  badges: HomeBadge[]
 }
 
+/** 이번 주 목표. 성장 관리와 같은 `GET /api/growth` 에서 받습니다 (이슈 #201) */
 export type WeeklyGoal = {
+  /** 목표 횟수로 만든 한 줄. 서버 목표에는 제목이 없습니다 */
   title: string
   target: number
   done: number
 }
 
+/** 다가오는 면접 일정 한 줄. `GET /api/calendar/events/upcoming` (이슈 #201) */
 export type UpcomingEvent = {
   eventId: string
   title: string
@@ -105,11 +109,6 @@ export type UpcomingEvent = {
  * ------------------------------------------------------------------------- */
 
 export type HomeExtras = {
-  badges: BadgeSummary
-  /** 이번 주 목표를 안 정했으면 null */
-  weeklyGoal: WeeklyGoal | null
-  /** 가까운 것부터. 지난 일정은 빠져 있습니다 */
-  upcomingEvents: UpcomingEvent[]
   /** 기업별 인재상 키워드 */
   talentKeywords: string[]
   /** 질문은행에서 많이 보는 질문 */

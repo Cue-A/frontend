@@ -1,17 +1,24 @@
-import { IconFolder, IconLayoutGrid, IconPlus } from '@tabler/icons-react'
+import { IconFolder, IconLayoutGrid, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useId } from 'react'
 
 import Button from '@/shared/ui/Button'
 
 import type { UsePracticeFoldersResult } from '../hooks/usePracticeFolders'
-import { ALL_FOLDERS, type FolderSelection } from '../types/practice'
+import { ALL_FOLDERS, type FolderSelection, type PracticeFolder } from '../types/practice'
 
 type Props = {
   folders: UsePracticeFoldersResult
   value: FolderSelection
   onChange: (value: FolderSelection) => void
   onCreate: () => void
+  /** 고른 폴더의 "이름 바꾸기" (이슈 #205) */
+  onRename: (folder: PracticeFolder) => void
+  /** 고른 폴더의 "지우기" (이슈 #205) */
+  onDelete: (folder: PracticeFolder) => void
 }
+
+const FOLDER_ACTION =
+  'inline-flex items-center gap-1 rounded-xs px-2 py-1 text-body-sm font-semibold text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-500'
 
 type CardOption = {
   value: FolderSelection
@@ -27,17 +34,22 @@ const CARD_BASE =
 /**
  * 연습 기록 위쪽의 폴더 카드 줄입니다. (연습 기록 시안 folder-row)
  *
- * **전체 · 내 폴더들** 순서입니다. 시안의 "기타"(폴더에 넣지 않은 세션) 카드는 아직 두지 않습니다 — 연습 기록 API 에
- * "폴더에 넣지 않은 기록만" 거르는 조건과 그 개수가 없고, 폴더로 옮기는 화면도 없어서 지금은 기타가 전체와 같습니다.
- * 폴더 이동 화면을 만들 때 백엔드에 필터를 요청하고 다시 넣습니다. (이슈 #167)
+ * **전체 · 내 폴더들** 순서입니다. 시안의 "기타"(폴더에 넣지 않은 세션) 카드는 두지 않기로 했습니다 (docs/90 Q17).
+ * "전체" 목록 각 줄에 들어 있는 폴더 이름이 붙어서, 폴더 이름이 없는 줄이 곧 정리 안 된 기록입니다. 기타 목록을 만들려면
+ * 연습 기록 API 에 "폴더에 넣지 않은 기록만" 거르는 조건이 있어야 하는데 지금은 없습니다. (이슈 #167 · #205)
  *
  * 여럿 중 하나를 고르는 것이라 필터 탭(SegmentedTabs)처럼 숨긴 라디오로 만듭니다. 화살표 키로 옮겨 다니고
  * 스크린리더가 "4개 중 2번째, 선택됨" 으로 읽습니다. "새 폴더" 는 고르는 칸이 아니라 버튼이라 라디오 묶음 밖에 둡니다.
  *
  * 폴더를 못 불러와도 "전체" 는 고를 수 있게 둡니다. 목록은 폴더와 따로 받아서 전체 목록은 그대로 보입니다.
+ *
+ * 폴더를 고르면 카드 줄 아래에 그 폴더의 "이름 바꾸기" · "지우기" 가 나옵니다 (이슈 #205). 카드 안에 버튼을 넣으면 카드가
+ * 라디오 라벨이라 누를 때 폴더 고르기와 겹쳐서, 고른 폴더 하나에만 따로 둡니다.
  */
-export default function FolderCards({ folders, value, onChange, onCreate }: Props) {
+export default function FolderCards({ folders, value, onChange, onCreate, onRename, onDelete }: Props) {
   const name = useId()
+  const selectedFolder =
+    folders.status === 'ready' ? folders.folders.folders.find((folder) => folder.folderId === value) : undefined
 
   const options: CardOption[] = [
     {
@@ -104,6 +116,22 @@ export default function FolderCards({ folders, value, onChange, onCreate }: Prop
           <IconPlus size={16} stroke={2} aria-hidden />새 폴더
         </button>
       </div>
+
+      {selectedFolder && (
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <p className="mr-1 min-w-0 truncate text-body-sm text-neutral-500">
+            ‘<span className="font-semibold text-neutral-700">{selectedFolder.name}</span>’ 폴더
+          </p>
+          <button type="button" onClick={() => onRename(selectedFolder)} className={FOLDER_ACTION}>
+            <IconPencil size={14} stroke={2} aria-hidden />
+            이름 바꾸기
+          </button>
+          <button type="button" onClick={() => onDelete(selectedFolder)} className={FOLDER_ACTION}>
+            <IconTrash size={14} stroke={2} aria-hidden />
+            지우기
+          </button>
+        </div>
+      )}
 
       {folders.status === 'loading' && <p className="text-body-sm text-neutral-500">폴더를 불러오는 중이에요…</p>}
       {folders.status === 'error' && (

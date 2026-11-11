@@ -9,12 +9,16 @@ import type {
   CalendarEventResponse,
   CalendarMonthResponse,
   GrowthOverviewResponse,
+  UpcomingEventListResponse,
   WeeklyGoalResponse,
 } from './growthResponse'
 
 /**
- * 성장 관리 목업입니다. **백엔드 컨트롤러가 아직 배포되지 않아서** `growth` · `calendar` 를 `VITE_REAL_APIS` 에 넣어도 목업이
- * 답합니다. 둘 다 백엔드 PR 로 나와 있습니다 — 목표 · 배지 Cue-A/backend#132, 캘린더 Cue-A/backend#133.
+ * 성장 관리 목업입니다. 백엔드 응답 모양 그대로 돌려주고, `growth` · `calendar` 를 `VITE_REAL_APIS` 에 넣으면 실제 서버로
+ * 갑니다 — 목표 Cue-A/backend#132, 배지 #134, 캘린더 #133 (모두 운영 배포 확인, 이슈 #201).
+ *
+ * 홈도 이 목업을 씁니다 — 이번 주 목표 · 배지(`/api/growth`)와 다가오는 면접일(`/api/calendar/events/upcoming`).
+ * 라우터가 모든 화면을 처음에 불러와서 홈에서도 이 목업이 등록돼 있습니다. 두 화면의 숫자 · 일정이 늘 같습니다.
  *
  * ## 시나리오
  *
@@ -62,17 +66,9 @@ function currentScenario(): Scenario {
   }
 }
 
-const MISSING = '성장 관리 API 미배포 — /api/growth 는 Cue-A/backend#132 (리뷰 중)'
-
 /**
- * 캘린더 API 는 백엔드 PR(Cue-A/backend#133)로 나와 있고 경로 · 본문 · 응답이 이 목업과 같습니다. 머지 · 배포되면 캘린더
- * 목업의 `missingInBackend` 를 지우고 `VITE_REAL_APIS` 에 `calendar` 를 넣으면 실서버로 갑니다.
- */
-const CALENDAR_MISSING = '면접 캘린더 API 미배포 — Cue-A/backend#133 (리뷰 중)'
-
-/**
- * 배지 목록. **홈 목업(`home/api/homeMock.ts` 의 `BADGES`)과 같은 다섯 개 · 같은 획득 상태입니다** — 도메인끼리 api 를
- * 가져다 쓰지 않는 규칙이라 여기 다시 적습니다. 바꾸면 같이 바꿔 주세요. 전에는 네 개라 홈(다섯 개)과 수가 달랐습니다 (PR #184 리뷰).
+ * 배지 다섯 개. 서버(Cue-A/backend#134)처럼 받지 않은 배지도 `earnedAt: null` 로 다 내려 주고, 이름 · 색도 서버 시드와 같습니다.
+ * 홈 배지 카드도 이 응답을 씁니다 (이슈 #201 — 전에는 홈 목업에 따로 적어 두었습니다).
  */
 const BADGES: GrowthOverviewResponse['badges'] = [
   { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', tone: 'brand', earnedAt: '2026-07-01T10:00:00+09:00' },
@@ -105,7 +101,11 @@ function buildOverview(scenario: Scenario): GrowthOverviewResponse {
   }
 }
 
-registerMock('GET', '/api/growth', () => buildOverview(currentScenario()), { missingInBackend: MISSING })
+/**
+ * 이번 주 목표 · 배지. `growth` 를 켜면 실제 서버로 갑니다. 서버는 조회할 때 빠진 배지를 그 자리에서 지급하고 다섯 개를 다 줍니다.
+ * 홈의 이번 주 목표 · 배지 칸도 이 응답을 씁니다 (이슈 #201).
+ */
+registerMock('GET', '/api/growth', () => buildOverview(currentScenario()))
 
 registerMock(
   'PATCH',
@@ -122,7 +122,6 @@ registerMock(
     if (!goal) throw new ApiError('UNKNOWN', '목업 목표를 만들지 못했습니다')
     return goal
   },
-  { missingInBackend: MISSING },
 )
 
 /* ---------------------------------------------------------------------------
@@ -208,7 +207,6 @@ registerMock(
 
     return { month, events, practicedDates }
   },
-  { missingInBackend: CALENDAR_MISSING },
 )
 
 /** 등록 · 수정 본문을 읽고 규칙을 봅니다. 맞지 않으면 `INVALID_REQUEST` 로 던집니다 */
@@ -246,7 +244,6 @@ registerMock(
     eventsOf(currentScenario()).push(event)
     return event
   },
-  { missingInBackend: CALENDAR_MISSING },
 )
 
 /** 일정 수정 (이슈 #190). 등록과 같은 네 칸을 받아 통째로 바꿉니다(PUT) */
@@ -259,7 +256,6 @@ registerMock(
     eventsOf(currentScenario())[index] = event
     return event
   },
-  { missingInBackend: CALENDAR_MISSING },
 )
 
 /** 일정 삭제 (이슈 #190). 없는 일정은 404 — 서버처럼 다시 지워도 404 입니다 */
@@ -269,5 +265,38 @@ registerMock(
   ({ calendarEventId }) => {
     eventsOf(currentScenario()).splice(indexOfEvent(calendarEventId), 1)
   },
-  { missingInBackend: CALENDAR_MISSING },
 )
+
+/** 홈 "다가오는 면접일" 의 기본 · 최대 개수. 서버와 같습니다 */
+const DEFAULT_UPCOMING_LIMIT = 3
+const MAX_UPCOMING_LIMIT = 10
+
+/**
+ * 다가오는 일정 (이슈 #201). 지금 이후의 일정만 가까운 순으로 `limit` 개(1~10, 비우면 3)입니다. 날짜만 있는 일정은 그날 00:00
+ * 이라, 서버처럼 오늘 날짜만 있는 일정은 이미 지난 것으로 빠집니다. 날짜 · 시각은 보는 사람 기준으로 쪼갭니다.
+ */
+registerMock('GET', '/api/calendar/events/upcoming', (_params, _body, query): UpcomingEventListResponse => {
+  const raw = query.get('limit')
+  const limit = raw === null || raw === '' ? DEFAULT_UPCOMING_LIMIT : Number(raw)
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_UPCOMING_LIMIT) {
+    throw new ApiError('INVALID_REQUEST', `limit 은 1~${MAX_UPCOMING_LIMIT} 입니다`)
+  }
+
+  const now = Date.now()
+  const events = eventsOf(currentScenario())
+    .filter((event) => new Date(event.scheduledAt).getTime() > now)
+    .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))
+    .slice(0, limit)
+    .map((event) => {
+      const at = new Date(event.scheduledAt)
+      const time = `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`
+      return {
+        eventId: event.calendarEventId,
+        title: event.title,
+        date: toDateKey(at),
+        time: event.timeSpecified ? time : null,
+      }
+    })
+
+  return { events }
+})

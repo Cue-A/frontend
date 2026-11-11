@@ -42,7 +42,7 @@ const sortKey = (event: CalendarEvent) => `${event.date} ${event.time ?? '00:00'
 
 /**
  * 면접 캘린더 한 달치(면접 일정 · 연습한 날)입니다. 달이 바뀌면 다시 받습니다.
- * (`GET /api/calendar?month=YYYY-MM` — 백엔드에 없어 목업이 답합니다)
+ * (`GET /api/calendar?month=YYYY-MM` — Cue-A/backend#133)
  *
  * 늦게 온 응답이 새 달을 덮지 않게, 달이 바뀌면 앞선 요청의 결과는 버립니다. 오류가 난 뒤 달을 바꾸면 새 응답이 올 때까지
  * 불러오는 중으로 둡니다 — 앞 달의 오류 안내가 남아 있으면 새 달도 실패한 것처럼 읽힙니다. (연습 기록 목록과 같은 방식)

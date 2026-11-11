@@ -16,7 +16,9 @@ import type {
  *
  * - `/api/home/stats` · `/api/home/recent-reports` · `/api/home/practice` 는 백엔드에 있습니다(Cue-A/backend#108 · #116).
  *   `home` 을 켜면 실제 서버로 갑니다. 목업도 그 응답 모양 그대로 돌려줍니다
- * - `/api/home`(배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행)은 백엔드에 없어서 `home` 을 켜도 목업이 답합니다
+ * - `/api/home`(인재상 · 질문은행)은 백엔드에 없어서 `home` 을 켜도 목업이 답합니다
+ * - 이번 주 목표 · 배지(`/api/growth`)와 다가오는 면접일(`/api/calendar/events/upcoming`)은 성장 관리와 같은 곳에서 받습니다.
+ *   그 목업은 `growth/api/growthMock.ts` 에 있습니다 (이슈 #201). 빈 화면은 `?mock=empty` 가 두 목업 모두에 걸립니다
  *
  * ## 두 가지 상태
  *
@@ -206,23 +208,11 @@ function growthScenario(): string | undefined {
 }
 
 /* ---------------------------------------------------------------------------
- * GET /api/home — 배지 · 목표 · 일정 · 인재상 · 질문은행 (백엔드에 없음)
- * ------------------------------------------------------------------------- */
-
-/**
- * 배지 목록과 sample 시나리오에서 받았는지. **성장 관리 목업(`growth/api/growthMock.ts` 의 `BADGES`)과 같은 다섯 개 ·
- * 같은 획득 상태입니다** — 도메인끼리 api 를 가져다 쓰지 않는 규칙이라 여기 다시 적습니다. 바꾸면 같이 바꿔 주세요.
+ * GET /api/home — 인재상 · 질문은행 (백엔드에 없음)
  *
- * 카드의 "받은 수 / 전체" 는 이 목록에서 셉니다. 전에는 전체를 12 로 고정해서 다섯 개를 다 받아도 5 / 12 로 보였고,
- * 성장 관리(네 개)와도 수가 달랐습니다 (PR #184 리뷰).
- */
-const BADGES = [
-  { badgeCode: 'FIRST_SESSION', badgeName: '첫 연습', description: '첫 면접 완료', tone: 'brand', earned: true },
-  { badgeCode: 'STREAK_3', badgeName: '3일 연속', description: '스트릭 3일', tone: 'warning', earned: true },
-  { badgeCode: 'PRESSURE_CLEAR', badgeName: '압박 극복', description: '매운맛 완주', tone: 'danger', earned: false },
-  { badgeCode: 'RISING', badgeName: '우상향', description: '3회 연속 상승', tone: 'info', earned: true },
-  { badgeCode: 'TEN_SESSIONS', badgeName: '10회 달성', description: '누적 10회', tone: 'success', earned: true },
-] as const
+ * 배지 · 다가오는 일정은 서버로 옮겼습니다(이슈 #201). 목업 모드에서는 성장 관리 목업(`growth/api/growthMock.ts` 의
+ * `/api/growth` · `/api/calendar/events/upcoming`)이 답해서, 성장 관리 화면과 같은 배지 · 일정이 보입니다.
+ * ------------------------------------------------------------------------- */
 
 /** 사용자와 상관없는 공용 목록이라 빈 상태에서도 그대로 보여줍니다 */
 const TALENT_KEYWORDS = ['도전과 신뢰', '리더십 & 탐구', '실용주의', '데이터 중심']
@@ -327,30 +317,8 @@ function buildRecentReports(scenario: Scenario, limit: number): RecentReportList
   }
 }
 
-function buildExtras(scenario: Scenario): HomeExtrasResponse {
-  const today = startOfToday()
-  const isEmpty = sessionsFor(scenario, today).length === 0
-
-  return {
-    badges: {
-      earnedCount: isEmpty ? 0 : BADGES.filter((badge) => badge.earned).length,
-      totalCount: BADGES.length,
-      featured: BADGES.map(({ earned, ...badge }, index) => ({
-        ...badge,
-        earnedAt: isEmpty || !earned ? null : toIsoDate(addDays(today, -(HISTORY_DAYS - 1) + index * 15)),
-      })),
-      nextHint: isEmpty ? '첫 면접을 마치면 첫 뱃지를 받아요' : '압박 면접을 끝까지 마치면 압박 극복 뱃지를 받아요',
-    },
-    weeklyGoal: isEmpty ? null : { title: '이번 주 안에 까다로운 실전 면접 3번 보기', targetValue: 3, currentValue: 2 },
-    upcomingEvents: isEmpty
-      ? []
-      : [
-          { eventId: 'event-1', title: '1차 기술 면접', date: toIsoDate(addDays(today, 4)), time: '14:00' },
-          { eventId: 'event-2', title: '서류 마감', date: toIsoDate(addDays(today, 10)), time: null },
-        ],
-    talentKeywords: TALENT_KEYWORDS,
-    popularQuestions: POPULAR_QUESTIONS,
-  }
+function buildExtras(): HomeExtrasResponse {
+  return { talentKeywords: TALENT_KEYWORDS, popularQuestions: POPULAR_QUESTIONS }
 }
 
 /* ---------------------------------------------------------------------------
@@ -414,9 +382,9 @@ function buildPracticeRecord(scenario: Scenario, period: PracticePeriod): Practi
   }
 }
 
-const MISSING = '홈 배지 · 이번 주 목표 · 다가오는 일정 · 인재상 · 질문은행 API 없음 — 경로 · 응답 모양 프론트 임시안'
+const MISSING = '홈 인재상 · 질문은행 API 없음 — 경로 · 응답 모양 프론트 임시안'
 
-registerMock('GET', '/api/home', () => buildExtras(currentScenario()), { missingInBackend: MISSING })
+registerMock('GET', '/api/home', () => buildExtras(), { missingInBackend: MISSING })
 
 registerMock('GET', '/api/home/stats', () => buildStats(currentScenario()))
 

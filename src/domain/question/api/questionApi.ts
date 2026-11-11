@@ -9,6 +9,8 @@ import {
   type BookmarkMemoResponse,
   type CommonFavoriteResponse,
   type CommonQuestionListResponse,
+  type CommonQuestionRequest,
+  type CommonQuestionResponse,
 } from './questionResponse'
 
 import './questionMock'
@@ -71,7 +73,7 @@ function bookmarkPath(sessionId: string, questionId: string) {
 /**
  * 공통 질문 목록. `GET /api/common-questions` — 정렬하지 않은 기본 순서입니다(즐겨찾기 정렬은 `orderCommon`).
  *
- * **백엔드에 없는 API 입니다.** 경로 · 응답 모양 모두 프론트 임시안이고 목업이 답합니다 (questionResponse.ts).
+ * `VITE_REAL_APIS` 이름은 `common-questions` 입니다. 기본 공통 질문과 내가 추가한 질문(`custom: true`)이 같이 옵니다.
  */
 export async function getCommonQuestions(): Promise<CommonQuestion[]> {
   const response = await api.get<CommonQuestionListResponse>('/api/common-questions')
@@ -81,8 +83,7 @@ export async function getCommonQuestions(): Promise<CommonQuestion[]> {
 /**
  * 공통 질문 즐겨찾기 켜기 · 끄기. `PUT /api/common-questions/{questionId}/favorite`
  *
- * 서버에는 **바뀔 상태**를 보냅니다. 이미 그 상태면 아무것도 바꾸지 않고 성공입니다 (북마크와 같은 방식).
- * **백엔드에 없는 API 입니다.** 임시안이고 목업이 답합니다.
+ * 서버에는 **바뀔 상태**를 보냅니다. 이미 그 상태면 아무것도 바꾸지 않고 성공입니다 (북마크와 같은 방식). 꺼도 메모는 남습니다.
  */
 export function setCommonFavorite(questionId: string, favorite: boolean) {
   return api.put<CommonFavoriteResponse>(commonPath(questionId, '/favorite'), { favorite })
@@ -90,12 +91,29 @@ export function setCommonFavorite(questionId: string, favorite: boolean) {
 
 /**
  * 공통 질문 메모 쓰기 · 수정 · 삭제. `PATCH /api/common-questions/{questionId}/memo` — 북마크 메모와 같은 규칙입니다
- * (비우면 삭제, 최대 500자). 돌려주는 값이 저장된 메모입니다(지웠으면 null).
- * **백엔드에 없는 API 입니다.** 임시안이고 목업이 답합니다.
+ * (비우면 삭제, 최대 500자). 돌려주는 값이 저장된 메모입니다(지웠으면 null). 기본 질문에도 쓸 수 있습니다.
  */
 export async function updateCommonMemo(questionId: string, memo: string) {
   const response = await api.patch<BookmarkMemoResponse>(commonPath(questionId, '/memo'), { memo })
   return response.memo
+}
+
+/**
+ * 내 질문 추가. `POST /api/common-questions` — 공통 질문 탭에 "내 질문" 배지가 붙은 질문으로 들어갑니다.
+ * 문구는 앞뒤 공백을 자른 뒤 1~200자, 분류는 다섯 가지 중 하나입니다(어기면 400). 내 질문은 100개까지입니다(409 `CUSTOM_QUESTION_LIMIT_EXCEEDED`).
+ */
+export async function createCommonQuestion(request: CommonQuestionRequest): Promise<CommonQuestion> {
+  return toCommonQuestion(await api.post<CommonQuestionResponse>('/api/common-questions', request))
+}
+
+/** 내가 추가한 질문 고치기. `PATCH /api/common-questions/{questionId}` — 기본 질문은 403, 없는 질문은 404 `QUESTION_NOT_FOUND` 입니다 */
+export async function updateCommonQuestion(questionId: string, request: CommonQuestionRequest): Promise<CommonQuestion> {
+  return toCommonQuestion(await api.patch<CommonQuestionResponse>(commonPath(questionId), request))
+}
+
+/** 내가 추가한 질문 지우기. `DELETE /api/common-questions/{questionId}` — 메모 · 즐겨찾기도 함께 지워집니다. 이미 없으면 404 입니다 */
+export function deleteCommonQuestion(questionId: string) {
+  return api.delete<void>(commonPath(questionId))
 }
 
 function commonPath(questionId: string, suffix = '') {

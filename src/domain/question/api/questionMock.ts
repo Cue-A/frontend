@@ -1,11 +1,14 @@
 import { ApiError } from '@/shared/api/apiError'
 import { registerMock } from '@/shared/api/mock'
 
+import { MAX_QUESTION_LENGTH, QUESTION_CATEGORIES } from '../lib/questionDisplay'
+
 import type {
   BookmarkListResponse,
   BookmarkResponse,
   CommonFavoriteResponse,
   CommonQuestionListResponse,
+  CommonQuestionRequest,
   CommonQuestionResponse,
 } from './questionResponse'
 
@@ -17,17 +20,15 @@ import type {
  * 표시가 없고, **`VITE_REAL_APIS` 에 `bookmarks` 를 넣으면 실제 서버로 갑니다**. 안 넣으면 이 목업이 답합니다.
  * 이 목업은 백엔드 동작을 따라 만들었습니다 — 되묻기는 `originalQuestionText` 가 되물은 질문, 꼬리질문은 그 토픽의
  * 주질문, 되묻기는 분류 · 난이도가 null, 메모는 공백뿐이면 지움.
- * 공통 질문(`/api/common-questions`): 백엔드에 없습니다. 명세가 정해지면
- * 1. `questionResponse.ts` 의 응답 타입과 변환 함수, `questionApi.ts` 의 경로를 고칩니다
- * 2. 아래 `registerMock` 의 `{ missingInBackend: MISSING_COMMON }` 을 지웁니다
- * 3. 북마크도 실서버로 확인이 끝나면 이 파일을 통째로 지우고, `questionApi.ts` 맨 위의 `import './questionMock'` 도
- *    같이 지웁니다
+ * 공통 질문(`/api/common-questions`): 백엔드에 들어왔습니다(운영 배포 확인, 이슈 #201). 조회 · 즐겨찾기 · 메모 · 내 질문
+ * 추가 · 수정 · 삭제 모두 이 목업과 경로 · 본문 · 응답이 같아서 `missingInBackend` 를 지웠습니다. **`VITE_REAL_APIS` 에
+ * `common-questions` 를 넣으면 실제 서버로 갑니다.** 기본 공통 질문 열두 개와 분류도 서버 기본 데이터(V5 마이그레이션)와 같습니다.
+ * 북마크 · 공통 질문 모두 실서버로 확인이 끝나면 이 파일을 통째로 지우고, `questionApi.ts` 맨 위의
+ * `import './questionMock'` 도 같이 지웁니다
  * ────────────────────────────────────────────────────────────────────────────
  *
  * 북마크 여섯 줄 중 다섯은 시안의 문장입니다. 날짜는 홈 · 연습 기록 목업처럼 **오늘 기준**으로 만듭니다.
  */
-
-const MISSING_COMMON = '공통 질문 API 없음 — 경로 · 응답 모양 프론트 임시안'
 
 const DEFAULT_PAGE_SIZE = 20
 const MAX_PAGE_SIZE = 100
@@ -197,11 +198,12 @@ const commonQuestions: CommonQuestionResponse[] = [
   favorite: false,
   favoritedAt: null,
   memo: null,
+  custom: false,
 }))
 
 function findCommon(questionId: string) {
   const found = commonQuestions.find((question) => question.questionId === questionId)
-  // 백엔드에 없는 API 라 에러 코드가 없습니다. 이미 매핑돼 있는 코드를 임시로 씁니다
+  // 서버도 없는 질문 · 남의 질문을 같은 404 로 답합니다
   if (!found) throw new ApiError('QUESTION_NOT_FOUND', `질문을 찾을 수 없습니다 (${questionId})`)
   return found
 }
@@ -210,7 +212,6 @@ registerMock(
   'GET',
   '/api/common-questions',
   (): CommonQuestionListResponse => ({ questions: commonQuestions.map((question) => ({ ...question })) }),
-  { missingInBackend: MISSING_COMMON },
 )
 
 registerMock(
@@ -228,7 +229,6 @@ registerMock(
     }
     return { favorite: found.favorite }
   },
-  { missingInBackend: MISSING_COMMON },
 )
 
 registerMock(
@@ -246,5 +246,71 @@ registerMock(
     found.memo = memo !== null && memo.trim() !== '' ? memo : null
     return { memo: found.memo }
   },
-  { missingInBackend: MISSING_COMMON },
+)
+
+/** 본문을 검사해 `{ text, category }` 로 돌려줍니다. 서버 검증을 흉내 냅니다 */
+function parseQuestionRequest(body: unknown): CommonQuestionRequest {
+  const { text, category } = (body ?? {}) as Partial<Record<keyof CommonQuestionRequest, unknown>>
+
+  if (typeof text !== 'string' || text.trim() === '') throw new ApiError('INVALID_REQUEST', 'text 는 비어 있을 수 없습니다')
+  if (text.trim().length > MAX_QUESTION_LENGTH) {
+    throw new ApiError('INVALID_REQUEST', `text 는 ${MAX_QUESTION_LENGTH}자까지입니다`)
+  }
+  if (typeof category !== 'string' || !(QUESTION_CATEGORIES as readonly string[]).includes(category)) {
+    throw new ApiError('INVALID_REQUEST', `category 는 ${QUESTION_CATEGORIES.join(' · ')} 중 하나여야 합니다`)
+  }
+
+  return { text: text.trim(), category }
+}
+
+/** 내 질문은 100개까지입니다. 넘으면 409 `CUSTOM_QUESTION_LIMIT_EXCEEDED` */
+const MAX_CUSTOM_QUESTIONS = 100
+
+let nextCustomId = 1
+
+registerMock(
+  'POST',
+  '/api/common-questions',
+  (_params, body): CommonQuestionResponse => {
+    const { text, category } = parseQuestionRequest(body)
+    if (commonQuestions.filter((question) => question.custom).length >= MAX_CUSTOM_QUESTIONS) {
+      throw new ApiError('CUSTOM_QUESTION_LIMIT_EXCEEDED', `내 질문은 ${MAX_CUSTOM_QUESTIONS}개까지입니다`)
+    }
+    const created: CommonQuestionResponse = {
+      questionId: `mock-custom-${nextCustomId++}`,
+      text,
+      category,
+      favorite: false,
+      favoritedAt: null,
+      memo: null,
+      custom: true,
+    }
+    // 내가 추가한 질문은 기본 질문보다 앞에 둡니다 (가장 최근 것이 맨 위)
+    commonQuestions.unshift(created)
+    return { ...created }
+  },
+)
+
+registerMock(
+  'PATCH',
+  '/api/common-questions/:questionId',
+  ({ questionId }, body): CommonQuestionResponse => {
+    const found = findCommon(questionId)
+    // 서버도 기본 질문은 403 으로 막습니다
+    if (!found.custom) throw new ApiError('FORBIDDEN', '기본 질문은 고칠 수 없습니다')
+
+    Object.assign(found, parseQuestionRequest(body))
+    return { ...found }
+  },
+)
+
+registerMock(
+  'DELETE',
+  '/api/common-questions/:questionId',
+  ({ questionId }) => {
+    const found = findCommon(questionId)
+    if (!found.custom) throw new ApiError('FORBIDDEN', '기본 질문은 지울 수 없습니다')
+
+    commonQuestions.splice(commonQuestions.indexOf(found), 1)
+  },
 )

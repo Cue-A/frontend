@@ -10,6 +10,7 @@ import type {
   QuestionResultResponse,
   ReportDetailResponse,
   ReportRetryInfoResponse,
+  ReportShareResponse,
 } from './reportResponse'
 
 /**
@@ -476,10 +477,26 @@ export function setMockRetry(reportId: string, info: ReportRetryInfoResponse | n
   else retryInfos.delete(reportId)
 }
 
-/** 지금 시점의 상세 응답 — 다시 분석해서 살아난 축 · 재시도 상태까지 반영한 것입니다. 목록에 없는 id 는 `latest` 모양입니다 */
+/**
+ * 리포트별 공유 링크(`share`)입니다. 공유 목업(`reportShareMock.ts`)이 만들고 지웁니다. 메모리에만 둡니다 (이슈 #199).
+ * 처음에는 모든 목업 리포트가 공유 안 함입니다.
+ */
+const shares = new Map<string, ReportShareResponse>()
+
+/** 공유 링크를 바꿉니다. null 이면 해제입니다 (`reportShareMock.ts`) */
+export function setMockShare(reportId: string, share: ReportShareResponse | null) {
+  if (share) shares.set(reportId, share)
+  else shares.delete(reportId)
+}
+
+/** 지금 시점의 상세 응답 — 다시 분석해서 살아난 축 · 재시도 상태 · 공유 링크까지 반영한 것입니다. 목록에 없는 id 는 `latest` 모양입니다 */
 function mockDetailOf(reportId: string): ReportDetailResponse {
   const base = SCENARIOS[reportId] ?? { ...LATEST, reportId }
-  return { ...withRecovered(base, recoveredAxes.get(reportId)), retry: retryInfos.get(reportId) ?? null }
+  return {
+    ...withRecovered(base, recoveredAxes.get(reportId)),
+    retry: retryInfos.get(reportId) ?? null,
+    share: shares.get(reportId) ?? null,
+  }
 }
 
 /** 타임라인 목업(`timelineMock.ts`)이 쓰는 상세 응답입니다. 다시 분석해서 살아난 축까지 반영돼 있습니다 */

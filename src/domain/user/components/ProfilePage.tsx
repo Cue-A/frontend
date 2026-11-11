@@ -27,25 +27,28 @@ const READONLY_FIELD_CLASS = 'rounded-sm border border-neutral-200 bg-neutral-50
 const LABEL_CLASS = 'text-body-sm font-medium text-neutral-700'
 
 /**
- * 처음 값과 견줘 **바뀐 칸만** 담습니다. 서버는 보낸 칸만 고치고, 빈 본문은 `EMPTY_UPDATE_REQUEST`(400) 입니다.
- * 직무를 비우면 null 을 보내서 지웁니다.
+ * 처음 값과 견줘 **바뀐 칸만** 담습니다. 서버는 보낸 칸만 고치고, 빈 본문은 400 `INVALID_REQUEST` 입니다.
+ *
+ * 직무를 비우면 **빈 문자열**을 보내서 지웁니다. 서버는 `null` 을 "안 보냄" 으로 봐서 null 로는 지워지지 않습니다
+ * (Cue-A/backend#128 · 이슈 #201 — 프론트가 지우기로 정함).
  */
 function changedFields(profile: Profile, userName: string, targetJobRole: string): ProfileUpdateInput {
   const changes: ProfileUpdateInput = {}
   if (userName !== profile.userName) changes.userName = userName
-  const job = targetJobRole || null
-  if (job !== profile.targetJobRole) changes.targetJobRole = job
+  if (targetJobRole !== (profile.targetJobRole ?? '')) changes.targetJobRole = targetJobRole
   return changes
 }
 
 type FormProps = {
   profile: Profile
+  /** 이메일을 아래 계정 칸에서 바꿀 수 있는 계정인지. 이메일 칸 아래 안내가 달라집니다 */
+  emailChangeable: boolean
   /** 저장이 끝나면 고친 뒤의 프로필을 넘깁니다. 화면 머리의 이름을 바꾸는 데 씁니다 */
   onSaved: (profile: Profile) => void
 }
 
 /** 서버 값으로 한 번만 초기화합니다. 부모가 `key={profile.userId}` 로 감싸서, 사용자가 바뀌면 새로 마운트됩니다. */
-function ProfileForm({ profile, onSaved }: FormProps) {
+function ProfileForm({ profile, emailChangeable, onSaved }: FormProps) {
   const { submit, saving, error } = useUpdateProfile()
   const nameId = useId()
   const jobId = useId()
@@ -98,7 +101,9 @@ function ProfileForm({ profile, onSaved }: FormProps) {
           {/* 카카오에서 이메일 제공에 동의하지 않으면 null 입니다 */}
           {profile.email ?? '카카오에서 이메일을 받지 않았어요'}
         </p>
-        <p className="text-body-sm text-neutral-400">이메일은 여기서 바꿀 수 없어요.</p>
+        <p className="text-body-sm text-neutral-400">
+          {emailChangeable ? '이메일은 아래 계정 칸에서 바꿀 수 있어요.' : '이메일은 여기서 바꿀 수 없어요.'}
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -146,29 +151,41 @@ function ProfileForm({ profile, onSaved }: FormProps) {
  * 옛 주소(`/mypage/account` · `/mypage/notifications`)와 홈 톱니바퀴는 `#account` · `#notifications` 로 그 칸에 내려옵니다.
  *
  * - 값은 프로필 조회(`GET /api/users/me/profile`)에서 읽고, 저장(`PATCH`)은 **바꾼 칸만** 보냅니다. 바뀐 게 없으면 저장 버튼이
- *   잠깁니다 — 빈 본문은 서버가 `EMPTY_UPDATE_REQUEST` 로 거절합니다. (API 명세서 "프로필 수정")
+ *   잠깁니다 — 빈 본문은 서버가 400 `INVALID_REQUEST` 로 거절합니다. (Cue-A/backend#128)
  * - 직무는 시안의 고정 목록이 아니라 옵션 설정처럼 **직접 적습니다**(50자). 고정 목록이면 목록에 없는 값이 "선택 안 함" 으로
  *   보여 실제 값과 어긋납니다. (PR #112 리뷰)
- * - 이메일 변경(`PATCH /api/users/me/email`)은 명세만 받았고 화면은 아직입니다. 카카오 로그인은 이메일이 없을 수 있습니다.
+ * - 이메일은 이 칸에서 보기만 하고, 바꾸기는 아래 계정 칸의 "이메일 변경" 창에서 합니다(`PATCH /api/users/me/email`, 이슈 #201).
+ *   바꾸면 머리 · 이 칸 · 계정 칸의 이메일을 바로 바꿉니다. 카카오 로그인은 이메일이 없을 수 있습니다.
  * - 시안의 "사진 변경" 은 사진을 올릴 API 가 없어(프로필은 주소만 받음) 넣지 않았습니다. 원 안에는 이름 첫 글자를 씁니다.
  * - 시안의 프로필 판 안 "계정 탈퇴하기" 링크는 뺐습니다. 탈퇴는 아래 계정 칸에서만 합니다 (API 명세서 "프로필 수정" 의 화면 피드백).
  * - 저장하면 화면 머리(오른쪽 위 프로필)의 이름도 바로 바꿉니다. 다른 화면은 들어갈 때 다시 불러와서 새 이름이 보입니다.
  *
- * 프로필 API 는 아직 백엔드에 없어 목업이 답합니다(명세서 "시작 전"). 프로필의 자기소개 · 경력 · 학교 칸은 시안이 없어
- * 아직 그리지 않았습니다. (docs/90-open-questions.md Q16)
+ * 프로필 · 계정 정보는 실서버 API 입니다(Cue-A/backend#126 · #128, 이슈 #201). 프로필의 자기소개 · 경력 · 학교 칸은 시안이 없어
+ * 아직 그리지 않았습니다.
  */
 export default function ProfilePage() {
   const loaded = useMe()
   const profileState = useProfile()
   // 저장한 이름을 머리에 바로 반영합니다. 프로필 이름(userName)과 머리의 닉네임은 같은 값으로 봅니다 (Q16)
   const [savedName, setSavedName] = useState<string | null>(null)
+  // 바꾼 이메일도 같은 방식으로 머리 · 프로필 칸 · 계정 칸에 바로 반영합니다 (이슈 #201)
+  const [changedEmail, setChangedEmail] = useState<string | null>(null)
   const me: UseMeResult =
-    savedName && loaded.status === 'ready' ? { status: 'ready', me: { ...loaded.me, nickname: savedName } } : loaded
+    loaded.status === 'ready' && (savedName || changedEmail)
+      ? {
+          status: 'ready',
+          me: { ...loaded.me, nickname: savedName ?? loaded.me.nickname, email: changedEmail ?? loaded.me.email },
+        }
+      : loaded
 
   const initialName = profileState.status === 'ready' ? (savedName ?? profileState.profile.userName) : null
 
   // 계정 · 알림 설정 칸이 쓸 값도 여기서 불러서 넘깁니다. 아래 "칸으로 내려가기" 가 세 칸이 다 그려지기를 기다려야 해서입니다
-  const account = useAccount()
+  const loadedAccount = useAccount()
+  const account =
+    changedEmail && loadedAccount.status === 'ready'
+      ? { ...loadedAccount, account: { ...loadedAccount.account, email: changedEmail } }
+      : loadedAccount
   const notifications = useNotificationSettings()
 
   /*
@@ -213,13 +230,19 @@ export default function ProfilePage() {
           {profileState.status === 'ready' && (
             <ProfileForm
               key={profileState.profile.userId}
-              profile={profileState.profile}
+              profile={
+                changedEmail ? { ...profileState.profile, email: changedEmail } : profileState.profile
+              }
+              emailChangeable={
+                account.status === 'ready' &&
+                account.account.auths.some((auth) => auth.provider === 'LOCAL' && auth.hasPassword)
+              }
               onSaved={(next) => setSavedName(next.userName)}
             />
           )}
         </Card>
 
-        <AccountSection me={me} account={account} />
+        <AccountSection me={me} account={account} onEmailChanged={setChangedEmail} />
         <NotificationSection state={notifications} />
       </div>
     </div>

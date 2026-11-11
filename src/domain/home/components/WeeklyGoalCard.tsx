@@ -1,4 +1,5 @@
 import { toGrowth } from '@/app/routes'
+import Button from '@/shared/ui/Button'
 import Card from '@/shared/ui/Card'
 
 import type { WeeklyGoal } from '../types/home'
@@ -50,15 +51,18 @@ function goalMessage({ done, target }: WeeklyGoal) {
 }
 
 type Props = {
-  /** undefined 면 불러오는 중, null 이면 이번 주 목표를 안 정함 */
+  /** undefined 면 불러오는 중(또는 못 불러옴), null 이면 이번 주 목표를 안 정함 */
   goal: WeeklyGoal | null | undefined
+  /** 못 불러왔을 때만 줍니다. 있으면 "다시 불러오기" 를 그립니다 */
+  onRetry?: () => void
 }
 
 /**
  * 이번 주 목표. "목표 수정 · 목표 정하기" 는 성장 관리로 가서 목표 수정 창을 바로 엽니다 (이슈 #142).
  * 목표를 고치는 창이 성장 관리에 있어서, 홈에 같은 창을 하나 더 두지 않고 그리로 보냅니다.
+ * 값은 성장 관리와 같은 `GET /api/growth` 에서 옵니다 (이슈 #201).
  */
-export default function WeeklyGoalCard({ goal }: Props) {
+export default function WeeklyGoalCard({ goal, onRetry }: Props) {
   return (
     <Card label="이번 주 목표" padding="lg" surface="glass-soft">
       <CardHeader
@@ -66,7 +70,14 @@ export default function WeeklyGoalCard({ goal }: Props) {
         aside={<CardLink label={goal === null ? '목표 정하기' : '목표 수정'} withArrow={false} to={toGrowth('goal')} />}
       />
 
-      {goal === undefined ? (
+      {onRetry ? (
+        <div className="mt-4 flex flex-col items-start gap-3">
+          <p className="text-body-md text-neutral-500">이번 주 목표를 불러오지 못했어요.</p>
+          <Button size="sm" onClick={onRetry}>
+            다시 불러오기
+          </Button>
+        </div>
+      ) : goal === undefined ? (
         <div aria-busy className="mt-5 flex items-center gap-5">
           <SkeletonBlock shape="circle" className="h-20 w-20" />
           <span className="flex flex-1 flex-col gap-2">

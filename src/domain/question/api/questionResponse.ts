@@ -4,7 +4,7 @@ import type { BookmarkedQuestion, BookmarkType, CommonQuestion } from '../types/
  * 질문 은행 서버 응답 모양입니다.
  *
  * - 북마크(`/api/bookmarks`)는 백엔드에 있습니다(Cue-A/backend#118). 응답 모양은 그 `BookmarkResponse` 와 같습니다
- * - 공통 질문(`/api/common-questions`)은 **명세가 없어서 프론트가 정한 임시안**입니다
+ * - 공통 질문(`/api/common-questions`)도 백엔드에 있습니다. 프론트 임시안대로 들어와서 모양이 같습니다 (이슈 #201)
  *
  * 응답이 바뀌면 이 파일의 변환 함수와 목업(`questionMock.ts`)만 고칩니다. 화면은 `types/question.ts` 만 봅니다.
  */
@@ -38,17 +38,15 @@ export type BookmarkMemoResponse = {
 }
 
 /**
- * TODO(백엔드): 공통 질문 API 가 없습니다. 기본 공통 질문을 담는 테이블도 ERD 에 없습니다. **프론트 임시안**입니다.
- * - `GET /api/common-questions` — `{ questions: [...] }`. **정렬하지 않은 기본 순서 그대로** `favorite` · `favoritedAt` 만
- *   붙여 내려 주세요. 즐겨찾기를 위로 올리는 정렬은 프론트(`orderCommon`)가 합니다. 그래야 즐겨찾기를 푼 질문이
- *   새로고침 직후에도 원래 자리로 돌아갑니다
- * - `PUT /api/common-questions/{questionId}/favorite` — 본문 `{ favorite: true | false }`. 바뀔 상태를 보내고, 이미 그
- *   상태면 아무것도 바꾸지 않고 성공합니다 (북마크 `PUT .../bookmark` 와 같은 방식)
- * - `PATCH /api/common-questions/{questionId}/memo` — 본문 `{ memo }`. 공통 질문은 모두가 같이 보고 메모 · 즐겨찾기는
- *   내 것이라, 경로로 구분했습니다(질문 자체를 고치는 API 로 읽히지 않게). 북마크 메모와 같은 규칙입니다(처음 쓰기 · 수정 · 삭제가
- *   한 API, 비우면 삭제, 최대 500자). 응답 `{ memo }`
- * - 공통 질문은 면접 세션이 없어서 북마크 API 의 키(`sessionId + questionId`)를 쓸 수 없습니다. 즐겨찾기를 풀어도
- *   메모는 남기는 것으로 가정했습니다(다시 담을 수 있어서). 다르게 하려면 알려 주세요
+ * 공통 질문 한 줄. 백엔드 `CommonQuestionResponse` 와 같습니다. 프론트가 먼저 정한 임시안(PR #195)대로 들어왔습니다.
+ * - `GET /api/common-questions` — `{ questions: [...] }`. **정렬하지 않은 기본 순서 그대로** 오고, 즐겨찾기를 위로 올리는
+ *   정렬은 프론트(`orderCommon`)가 합니다. 그래야 즐겨찾기를 푼 질문이 새로고침 직후에도 원래 자리로 돌아갑니다
+ * - `PUT …/{questionId}/favorite` 본문 `{ favorite }` — 바뀔 상태를 보내고, 이미 그 상태면 그대로 성공. 꺼도 메모는 남습니다
+ * - `PATCH …/{questionId}/memo` 본문 `{ memo }` — 처음 쓰기 · 수정 · 삭제가 한 API, 비우면 삭제, 최대 500자. 응답 `{ memo }`
+ * - `POST /api/common-questions` 본문 `{ text, category }` — 내 질문 추가. `text` 는 앞뒤 공백을 자른 뒤 1~200자, `category` 는
+ *   인성 · 경험 · 지원동기 · 직무 · 기타 중 하나(`QUESTION_CATEGORIES`). 내 질문은 100개까지(409 `CUSTOM_QUESTION_LIMIT_EXCEEDED`)
+ * - `PATCH …/{questionId}` 본문 `{ text, category }` — 내 질문만 고칩니다(기본 질문이면 403). 즐겨찾기 · 메모는 그대로
+ * - `DELETE …/{questionId}` — 내 질문만 지웁니다. 메모 · 즐겨찾기도 함께 지워지고, 이미 없으면 404 `QUESTION_NOT_FOUND`
  */
 export type CommonQuestionResponse = {
   questionId: string
@@ -57,6 +55,14 @@ export type CommonQuestionResponse = {
   favorite: boolean
   favoritedAt: string | null
   memo: string | null
+  /** 내가 직접 추가한 질문이면 true */
+  custom: boolean
+}
+
+/** `POST` · `PATCH /api/common-questions` 본문 */
+export type CommonQuestionRequest = {
+  text: string
+  category: string
 }
 
 export type CommonQuestionListResponse = {
@@ -91,5 +97,6 @@ export function toCommonQuestion(response: CommonQuestionResponse): CommonQuesti
     favorite: response.favorite,
     favoritedAt: response.favoritedAt,
     memo: response.memo,
+    custom: response.custom,
   }
 }

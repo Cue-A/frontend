@@ -22,6 +22,12 @@ export type UseCommonQuestionsResult = (
   favoriteError: string | null
   /** 서버가 돌려준 메모(지웠으면 null)로 그 질문만 바꿉니다 */
   setMemoLocal: (target: CommonQuestion, memo: string | null) => void
+  /** 내가 새로 추가한 질문을 목록에 넣습니다. 서버가 성공한 뒤에 부릅니다 */
+  addLocal: (question: CommonQuestion) => void
+  /** 서버가 돌려준 질문으로 그 줄을 바꿉니다(고친 뒤). 즐겨찾기 · 메모는 화면에 있던 값을 유지합니다 */
+  replaceLocal: (question: CommonQuestion) => void
+  /** 지운 질문을 목록에서 뺍니다 */
+  removeLocal: (question: CommonQuestion) => void
 }
 
 type State =
@@ -30,7 +36,7 @@ type State =
   | { status: 'ready'; questions: CommonQuestion[] }
 
 /**
- * 기본 공통 질문입니다. (`GET /api/common-questions` — 백엔드에 없어 목업이 답합니다)
+ * 기본 공통 질문과 내가 추가한 질문입니다. (`GET /api/common-questions`)
  *
  * 즐겨찾기는 **누르는 순간 별부터 바꾸고** 서버가 거절하면 되돌립니다. 누르면 그 질문이 바로 맨 위로 올라가야 해서
  * 응답을 기다리지 않습니다. 같은 질문을 서버가 처리하는 동안에는 다시 누를 수 없습니다 — 연달아 눌러 켜기와 끄기
@@ -106,6 +112,25 @@ export function useCommonQuestions(): UseCommonQuestionsResult {
     [patchQuestion],
   )
 
+  const addLocal = useCallback((question: CommonQuestion) => {
+    setState((previous) =>
+      previous.status === 'ready' ? { status: 'ready', questions: [question, ...previous.questions] } : previous,
+    )
+  }, [])
+
+  const replaceLocal = useCallback(
+    (question: CommonQuestion) => patchQuestion(question.questionId, { text: question.text, category: question.category }),
+    [patchQuestion],
+  )
+
+  const removeLocal = useCallback((question: CommonQuestion) => {
+    setState((previous) =>
+      previous.status === 'ready'
+        ? { status: 'ready', questions: previous.questions.filter((item) => item.questionId !== question.questionId) }
+        : previous,
+    )
+  }, [])
+
   const ordered = useMemo(() => (state.status === 'ready' ? orderCommon(state.questions) : []), [state])
 
   return {
@@ -115,5 +140,8 @@ export function useCommonQuestions(): UseCommonQuestionsResult {
     isFavoritePending,
     favoriteError,
     setMemoLocal,
+    addLocal,
+    replaceLocal,
+    removeLocal,
   }
 }

@@ -2,6 +2,8 @@ type Props = {
   caption: string | null
   /** false 면 브라우저가 음성 인식을 지원하지 않는 것 — 빈 상태 대신 안내 문구를 보여준다. */
   isSupported?: boolean
+  /** false 면 선택한 마이크가 아닌 시스템 기본 마이크로 인식하는 중 — 아직 인식된 말이 없을 때 그 사실을 알려준다. */
+  usesSelectedMic?: boolean
 }
 
 /** 한 줄에 보일 글자 수. 이보다 길면 앞을 자르고 가장 최근 인식분만 보여준다. */
@@ -12,14 +14,16 @@ const MAX_CHARS = 70
  * 답변이 길어지면 앞부분을 잘라 **가장 최근에 인식된 말**이 보이게 한다. 한 줄 말줄임(…)으로 두면 첫머리만 남아서
  * 지금 하는 말이 안 보인다.
  */
-export default function CaptionLine({ caption, isSupported = true }: Props) {
+export default function CaptionLine({ caption, isSupported = true, usesSelectedMic = true }: Props) {
   const text = !isSupported
     ? '이 브라우저에서는 실시간 자막을 지원하지 않아요 (Chrome 권장)'
     : caption
       ? caption.length > MAX_CHARS
         ? `…${caption.slice(-MAX_CHARS)}`
         : caption
-      : '아직 인식된 음성이 없어요'
+      : usesSelectedMic
+        ? '아직 인식된 음성이 없어요'
+        : '기본 마이크로 자막을 만들어요. 고른 마이크와 다르면 자막이 안 나올 수 있어요'
 
   return (
     <div className="flex min-h-6 items-center border-t border-neutral-200 pt-3.5">

@@ -50,7 +50,7 @@ type OpenDialog = 'goal' | 'event' | { kind: 'detail'; date: string } | { kind: 
  *   열립니다. 창을 닫으면 주소에서 지웁니다 — 남겨 두면 새로고침할 때마다 창이 다시 열립니다
  * - `#calendar` — 면접 캘린더로 내려갑니다(홈 "다가오는 면접일 · 전체보기")
  *
- * **성장 관리 API 가 백엔드에 아직 배포되지 않아 목업으로만 동작합니다** (api/growthApi.ts · Cue-A/backend#132 · #133).
+ * 이번 주 목표 · 배지(Cue-A/backend#132 · #134)와 면접 캘린더(#133)는 모두 실서버에 있습니다 (api/growthApi.ts, 이슈 #201).
  * 일정이 있는 날짜 칸 · 일정 목록을 누르면 그날 일정을 보고 고치거나 지울 수 있습니다 (이슈 #190 — 전에는 등록만 됐습니다).
  */
 export default function GrowthPage() {
