@@ -93,7 +93,7 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       */}
       <a
         href={buildKakaoAuthorizeUrl()}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-sm border border-neutral-300 px-4 py-3 text-center text-body-md font-semibold text-neutral-900 transition-colors hover:bg-neutral-50"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-[#FEE500] px-4 py-3 text-center text-body-md font-semibold text-black/85 transition-colors hover:bg-[#FADA0A]"
       >
         카카오로 계속하기
       </a>
