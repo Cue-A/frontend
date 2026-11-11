@@ -1,6 +1,7 @@
 import { useBookmarkHint } from '../hooks/useBookmarkHint'
 import { useQuestionBookmark } from '../hooks/useQuestionBookmark'
 import type { Question } from '../types/interview'
+import type { CaptionFailureReason } from '../types/media'
 
 import BookmarkBubble from './BookmarkBubble'
 import BookmarkButton from './BookmarkButton'
@@ -27,6 +28,7 @@ type Props = {
   caption?: string | null
   captionSupported?: boolean
   captionUsesSelectedMic?: boolean
+  captionFailure?: CaptionFailureReason | null
 }
 
 const BOOKMARK_NOTICE_TEXT = {
@@ -45,6 +47,7 @@ export default function QuestionCard({
   caption = null,
   captionSupported = true,
   captionUsesSelectedMic = true,
+  captionFailure = null,
 }: Props) {
   const bookmark = useQuestionBookmark(sessionId, question.questionId)
   const bookmarkHint = useBookmarkHint(bookmarkHintEligible)
@@ -94,7 +97,12 @@ export default function QuestionCard({
         )
       ) : (
         showCaptionLine && (
-          <CaptionLine caption={caption} isSupported={captionSupported} usesSelectedMic={captionUsesSelectedMic} />
+          <CaptionLine
+            caption={caption}
+            isSupported={captionSupported}
+            usesSelectedMic={captionUsesSelectedMic}
+            failure={captionFailure}
+          />
         )
       )}
     </section>

@@ -97,7 +97,12 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const { setAudioElement, amplitude } = useQuestionAudio(session.question, session.notifyPresentationDone)
   // 답변 중에만 브라우저 음성 인식(Web Speech API)으로 자막을 만든다 — 화면 표시 전용, 서버 전송 없음.
   const micTrack = audioRecordingStream?.getAudioTracks()[0] ?? null
-  const { caption, isSupported: captionSupported, usesSelectedMic: captionUsesSelectedMic } = useLiveCaption(
+  const {
+    caption,
+    isSupported: captionSupported,
+    usesSelectedMic: captionUsesSelectedMic,
+    failure: captionFailure,
+  } = useLiveCaption(
     session.phase === 'answering',
     session.question?.questionId,
     micTrack,
@@ -302,6 +307,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         caption={caption}
         captionSupported={captionSupported}
         captionUsesSelectedMic={captionUsesSelectedMic}
+        captionFailure={captionFailure}
         question={session.question}
         hideQuestionText={options.hideQuestionText}
         phase={session.phase}
