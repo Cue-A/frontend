@@ -93,11 +93,12 @@ export default function LoginForm({ onSwitchToSignup }: Props) {
       */}
       <a
         href={buildKakaoAuthorizeUrl()}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-[#FEE500] px-4 py-3 text-center text-body-md font-semibold text-black/85 transition-colors hover:bg-[#FADA0A]"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-kakao-container px-4 py-3 text-center text-body-md font-semibold text-kakao-label transition-colors hover:bg-kakao-container-hover"
       >
-        {/* 카카오 말풍선 심볼. 장식이라 스크린리더에서는 숨깁니다. */}
+        {/* 카카오 말풍선 심볼. 가이드상 글자(검정 85%)와 따로 #000000 이라 색을 분리합니다. 장식이라 스크린리더에서는 숨깁니다. */}
         <svg
           aria-hidden="true"
+          className="text-kakao-symbol"
           width="18"
           height="18"
           viewBox="0 0 18 18"
