@@ -2,6 +2,7 @@ import { useState, type RefObject } from 'react'
 
 import type { SubmitErrorState } from '../hooks/useInterviewSession'
 import type { InterviewerStyle, Question, SessionPhase } from '../types/interview'
+import type { CaptionFailureReason } from '../types/media'
 
 import AnswerControlBar from './AnswerControlBar'
 import InterviewerAvatarStage from './InterviewerAvatarStage'
@@ -34,6 +35,8 @@ type Props = {
   captionSupported?: boolean
   /** false 면 자막이 선택한 마이크가 아닌 시스템 기본 마이크로 인식되는 중 — 빈 자막 자리에 안내를 보여준다(이슈 #169). */
   captionUsesSelectedMic?: boolean
+  /** 이번 답변에서 자막을 만들 수 없게 된 이유. 있으면 빈 자막 자리에 이유를 보여준다(이슈 #215). */
+  captionFailure?: CaptionFailureReason | null
 
   /** 질문 음성 <audio> 에 물릴 콜백 ref. useQuestionAudio 가 준다. */
   onAudioElement?: (element: HTMLAudioElement | null) => void
@@ -77,6 +80,7 @@ export default function InterviewSessionPage({
   caption,
   captionSupported,
   captionUsesSelectedMic,
+  captionFailure,
   onAudioElement,
   question,
   hideQuestionText,
@@ -148,6 +152,7 @@ export default function InterviewSessionPage({
           caption={caption}
           captionSupported={captionSupported}
           captionUsesSelectedMic={captionUsesSelectedMic}
+          captionFailure={captionFailure}
         />
 
         <AnswerControlBar

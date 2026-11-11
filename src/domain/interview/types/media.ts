@@ -15,6 +15,15 @@ export type MediaTrackState = {
 }
 
 /**
+ * 실시간 자막(브라우저 음성 인식)이 아예 만들어지지 않는 이유입니다. 자막 칸에 이유별 문구를 보여주는 데 쓴다.
+ * - `network`: 구글 음성 서버에 닿지 못함(네트워크 차단 · VPN · 크롬이 아닌 크로미움 브라우저)
+ * - `permission`: 마이크 · 음성 인식 권한이 막힘
+ * - `audio-capture`: 마이크 소리를 받지 못함
+ * - `unsupported`: 그 밖에 브라우저가 인식을 못 하는 경우(미지원 언어 · 시작 실패 등)
+ */
+export type CaptionFailureReason = 'network' | 'permission' | 'audio-capture' | 'unsupported'
+
+/**
  * 답변 녹화 업로드 계약입니다 (이슈 #54, `feat/24-interview-answer-flow` 기준으로
  * 확인됨 — 추측이 아니라 백엔드 코드로 확인된 값이다).
  *

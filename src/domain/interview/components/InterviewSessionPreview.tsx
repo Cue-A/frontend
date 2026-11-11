@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { InterviewerStyle, Question, QuestionType, SessionPhase } from '../types/interview'
+import type { CaptionFailureReason } from '../types/media'
 
 import InterviewSessionPage from './InterviewSessionPage'
 import QuestionCard from './QuestionCard'
@@ -19,6 +20,25 @@ const QUESTION_TYPES: QuestionType[] = ['QUESTION', 'FOLLOWUP', 'REASK']
 const PHASES: SessionPhase[] = ['presenting', 'answering', 'submitting', 'waitingNextQuestion', 'finished']
 const INTERVIEWER_STYLES: InterviewerStyle[] = ['friendly', 'pressure']
 const SPEAKING_INTENSITIES = [0, 0.3, 0.7, 1] as const
+/**
+ * 자막 칸 상태 (이슈 #215). caption: 인식된 말 · empty: 아직 없음 · default-mic: 기본 마이크로 바꾼 뒤 아직 없음 ·
+ * 나머지는 자막을 만들 수 없는 이유(CaptionFailureReason).
+ */
+const CAPTION_STATES = ['caption', 'empty', 'default-mic', 'network', 'permission', 'audio-capture', 'unsupported'] as const
+type CaptionPreviewState = (typeof CAPTION_STATES)[number]
+const SAMPLE_CAPTION = '저는 데이터 분석 프로젝트에서 전처리를 담당했고...'
+
+function captionPropsOf(state: CaptionPreviewState): {
+  caption: string | null
+  captionUsesSelectedMic: boolean
+  captionFailure: CaptionFailureReason | null
+} {
+  if (state === 'caption') return { caption: SAMPLE_CAPTION, captionUsesSelectedMic: true, captionFailure: null }
+  if (state === 'empty') return { caption: null, captionUsesSelectedMic: true, captionFailure: null }
+  if (state === 'default-mic') return { caption: null, captionUsesSelectedMic: false, captionFailure: null }
+  return { caption: null, captionUsesSelectedMic: false, captionFailure: state }
+}
+
 /** pickAvatarPreset 해시로 각각 C · D 가 나오는 세션 id (이슈 #124). */
 const AVATAR_SESSION_IDS = ['preview-1', 'preview-2'] as const
 
@@ -94,6 +114,7 @@ type PreviewState = {
   needsRerecord: boolean
   showSubmitError: boolean
   remainingSec: number | null
+  captionState: CaptionPreviewState
 }
 
 const INITIAL_STATE: PreviewState = {
@@ -112,6 +133,7 @@ const INITIAL_STATE: PreviewState = {
   needsRerecord: false,
   showSubmitError: false,
   remainingSec: null,
+  captionState: 'caption',
 }
 
 const REMAINING_SEC_OPTIONS = ['none', '5', '45', '90'] as const
@@ -227,6 +249,7 @@ function LiveFullWidthPreview() {
           options={REMAINING_SEC_OPTIONS}
           onChange={(v) => set('remainingSec')(v === 'none' ? null : Number(v))}
         />
+        <ControlGroup label="자막 칸" value={state.captionState} options={CAPTION_STATES} onChange={set('captionState')} />
         <ControlGroup
           label="말하는 흉내 (자동 재생)"
           value={simulateSpeaking ? 'on' : 'off'}
@@ -277,7 +300,7 @@ function LiveFullWidthPreview() {
           sessionId={state.sessionId}
           hasCameraStream={state.hasCameraStream}
           isMicAvailable={state.isMicAvailable}
-          caption="저는 데이터 분석 프로젝트에서 전처리를 담당했고..."
+          {...captionPropsOf(state.captionState)}
           question={buildQuestion(state.questionType, state.audioAvailable, state.firstQuestion ? 1 : 2)}
           hideQuestionText={state.hideQuestionText}
           phase={state.phase}
