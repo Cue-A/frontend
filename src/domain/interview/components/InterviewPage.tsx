@@ -96,7 +96,12 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
   const { beginSubmit, submitAnswer, cancelSubmit } = session
   const { setAudioElement, amplitude } = useQuestionAudio(session.question, session.notifyPresentationDone)
   // 답변 중에만 브라우저 음성 인식(Web Speech API)으로 자막을 만든다 — 화면 표시 전용, 서버 전송 없음.
-  const { caption, isSupported: captionSupported } = useLiveCaption(session.phase === 'answering', session.question?.questionId)
+  const micTrack = audioRecordingStream?.getAudioTracks()[0] ?? null
+  const { caption, isSupported: captionSupported, usesSelectedMic: captionUsesSelectedMic } = useLiveCaption(
+    session.phase === 'answering',
+    session.question?.questionId,
+    micTrack,
+  )
 
   // 뒤로가기 등 인앱 이동으로 세션을 잃지 않도록 막는다(#26 — X 버튼·beforeunload 만으로는
   // 브라우저 뒤로가기가 안 잡혔다). "확인" 누른 직후의 navigate(ROUTES.HOME) 호출도
@@ -296,6 +301,7 @@ function ConnectedInterviewSession({ sessionId, options }: ConnectedProps) {
         onAudioElement={setAudioElement}
         caption={caption}
         captionSupported={captionSupported}
+        captionUsesSelectedMic={captionUsesSelectedMic}
         question={session.question}
         hideQuestionText={options.hideQuestionText}
         phase={session.phase}

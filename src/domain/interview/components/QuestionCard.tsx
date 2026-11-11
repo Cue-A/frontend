@@ -26,6 +26,7 @@ type Props = {
   bookmarkHintEligible?: boolean
   caption?: string | null
   captionSupported?: boolean
+  captionUsesSelectedMic?: boolean
 }
 
 const BOOKMARK_NOTICE_TEXT = {
@@ -43,6 +44,7 @@ export default function QuestionCard({
   bookmarkHintEligible = false,
   caption = null,
   captionSupported = true,
+  captionUsesSelectedMic = true,
 }: Props) {
   const bookmark = useQuestionBookmark(sessionId, question.questionId)
   const bookmarkHint = useBookmarkHint(bookmarkHintEligible)
@@ -91,7 +93,9 @@ export default function QuestionCard({
           <LoadingLine label={loadingLabel} />
         )
       ) : (
-        showCaptionLine && <CaptionLine caption={caption} isSupported={captionSupported} />
+        showCaptionLine && (
+          <CaptionLine caption={caption} isSupported={captionSupported} usesSelectedMic={captionUsesSelectedMic} />
+        )
       )}
     </section>
   )
