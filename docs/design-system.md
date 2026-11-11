@@ -156,6 +156,19 @@
 
 글자 · 버튼 색도 같은 계열 토큰으로 둔다: `stage-card`(질문 카드), `stage-text` · `stage-soft` · `stage-sub` · `stage-muted`(글자 4단계), `stage-cta-disabled`(답변 완료 비활성). 답변 완료 버튼은 북마크 버튼과 같은 `primary-100` / `primary-500`. 값은 `styles/tokens.css` 참고.
 
+### 2.8 카카오 로그인 버튼 (Kakao)
+
+*출처: 카카오 로그인 디자인 가이드 — 배경 · 심볼 · 글자 값은 가이드 규정 그대로이고 바꾸지 않는다*
+
+| 토큰 | 값 | 쓰는 자리 |
+|---|---|---|
+| `kakao-container` | `#FEE500` | 버튼 배경 |
+| `kakao-container-hover` | `#FADA0A` | 버튼 hover (가이드에 규정 없음 — 배경보다 한 단계 진한 노랑) |
+| `kakao-symbol` | `#000000` | 말풍선 심볼 |
+| `kakao-label` | `rgb(0 0 0 / 0.85)` | 버튼 글자 (검정 85%) |
+
+로그인 화면의 "카카오로 계속하기" 버튼(`LoginForm`)에서만 쓴다.
+
 ---
 
 ## 3. Typography Tokens
