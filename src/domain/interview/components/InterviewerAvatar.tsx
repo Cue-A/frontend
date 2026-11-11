@@ -34,17 +34,6 @@ function Hair({ preset }: { preset: AvatarPreset }) {
   )
 }
 
-function Beard({ color }: { color: string }) {
-  return (
-    <g fill={color}>
-      {/* 턱수염: 양 볼에서 턱으로 이어지는 U자 띠. 입 둘레는 피부가 보이게 비워 둔다 */}
-      <path d="M58 94 C57 128 78 150 100 150 C122 150 143 128 142 94 L135 100 C135 114 126 125 118 128 C112 133 88 133 82 128 C74 125 65 114 65 100Z" />
-      {/* 콧수염: 턱수염과 떨어진 별도 모양 */}
-      <path d="M80 113 C85 106 94 108 100 111 C106 108 115 106 120 113 C115 117 107 114 100 115 C93 114 85 117 80 113Z" />
-    </g>
-  )
-}
-
 /**
  * 면접관 아바타(SVG). 이미지 파일 없이 도형으로만 그려서 로딩이 0 이다.
  * 움직임: 호흡(body) · 눈 깜빡임(eye) · 입(볼륨 비례) · 대기 중 끄덕임(head).
@@ -88,11 +77,6 @@ export default function InterviewerAvatar({ preset, mouthOpen, isNodding, isSter
           <ellipse cx="145" cy="96" rx="2" ry="5" fill={preset.skinShade} />
 
           <path d={isLong ? FACE_PATH_LONG : FACE_PATH} fill={preset.skin} />
-          {/* 앞머리 가르마 선 아래 이마: 얼굴 윤곽과 머리카락 사이에 바탕이 비치는 틈을 메운다 */}
-          {preset.hairStyle === 'short' && <path d="M62 92 L64 50 L138 62 L140 92Z" fill={preset.skin} />}
-
-          {preset.beard && <Beard color={preset.hair} />}
-
           {/* 눈썹 · 코 */}
           <g fill="none" stroke={preset.hair} strokeWidth="3" strokeLinecap="round">
             <path d="M74 82 Q83 75 93 80" />

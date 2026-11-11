@@ -19,8 +19,8 @@ const QUESTION_TYPES: QuestionType[] = ['QUESTION', 'FOLLOWUP', 'REASK']
 const PHASES: SessionPhase[] = ['presenting', 'answering', 'submitting', 'waitingNextQuestion', 'finished']
 const INTERVIEWER_STYLES: InterviewerStyle[] = ['friendly', 'pressure']
 const SPEAKING_INTENSITIES = [0, 0.3, 0.7, 1] as const
-/** pickAvatarPreset 해시로 각각 A · B · C · D 가 나오는 세션 id (이슈 #124). */
-const AVATAR_SESSION_IDS = ['preview-1', 'preview-2', 'preview-3', 'preview-4'] as const
+/** pickAvatarPreset 해시로 각각 C · D 가 나오는 세션 id (이슈 #124). */
+const AVATAR_SESSION_IDS = ['preview-1', 'preview-2'] as const
 
 const SAMPLE_TEXT: Record<QuestionType, string> = {
   QUESTION: '포트폴리오에 랜덤 포레스트를 쓰셨네요. 왜 이 모델을 선택하셨나요?',
@@ -239,7 +239,7 @@ function LiveFullWidthPreview() {
           options={['off', 'on']}
           onChange={(v) => set('phase')(v === 'on' ? 'waitingNextQuestion' : 'answering')}
         />
-        <ControlGroup label="sessionId (아바타 A~D)" value={state.sessionId} options={AVATAR_SESSION_IDS} onChange={set('sessionId')} />
+        <ControlGroup label="sessionId (아바타 C · D)" value={state.sessionId} options={AVATAR_SESSION_IDS} onChange={set('sessionId')} />
         <div className="flex flex-col gap-1">
           <span className="text-body-sm text-neutral-500">speakingIntensity</span>
           <div className="flex flex-wrap gap-1">
